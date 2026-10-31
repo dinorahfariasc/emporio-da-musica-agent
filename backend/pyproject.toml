@@ -1,0 +1,38 @@
+[project]
+name = "emporio-agent-api"
+version = "0.1.0"
+description = "Customer service agent API for Empório da Música"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.120",
+    "pydantic-settings>=2.6",
+    "psycopg[binary]>=3.2",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.8",
+    "uvicorn>=0.32",
+]
+
+[tool.vercel]
+entrypoint = "app.main:app"
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
