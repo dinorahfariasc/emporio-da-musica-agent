@@ -116,7 +116,7 @@ duplicate in the real data is inactive.
 | body | text not null | cleaned section text |
 | search_text | text not null | breadcrumb + body |
 | tsv | tsvector generated | `to_tsvector('pt_unaccent', search_text)`, GIN |
-| embedding | vector(1024) not null | |
+| embedding | vector(768) not null | |
 | ordinal | int not null | document order |
 
 ### product_search_docs
@@ -125,7 +125,7 @@ duplicate in the real data is inactive.
 | product_id | int PK FK → products | |
 | search_text | text not null | name + category name + specs (`key: value`, sorted) + description **only if trusted** |
 | tsv | tsvector generated | GIN |
-| embedding | vector(1024) not null | also used by `similar_to_product` (no provider call) |
+| embedding | vector(768) not null | also used by `similar_to_product` (no provider call) |
 
 All 65 products are indexed. Availability and price filters join `products`, so "we have it but
 it's discontinued" stays answerable.
@@ -133,11 +133,11 @@ it's discontinued" stays answerable.
 ### embedding_cache (persistent, created if missing, never dropped by the seed)
 | Column | Type | Notes |
 |---|---|---|
-| provider | text | `voyage` \| `fake` |
-| model | text | `voyage-4` \| `fake-ngram-v1` |
+| provider | text | `gemini` \| `fake` |
+| model | text | `gemini-embedding-001` \| `fake-ngram-v1` |
 | input_type | text | `document` \| `query` |
 | text_key | text | documents: sha256 of exact NFC text; queries: sha256 of `normalize_for_cache` |
-| embedding | vector(1024) not null | |
+| embedding | vector(768) not null | |
 | created_at | timestamptz default now() | |
 | | | **PK (provider, model, input_type, text_key)** |
 

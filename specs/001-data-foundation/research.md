@@ -5,37 +5,48 @@ Revised after the PR #27 QA + senior review (scope cut to about 3–4 h in 2 PRs
 
 ## R1. Embeddings model
 
-- **Decision**: Voyage `voyage-4`, `output_dimension=1024`, `input_type="document"` for indexing and
-  `"query"` for searches. The model name is configurable (`EMBEDDINGS_MODEL`, default `voyage-4`);
-  the dimension is a code constant (`EMBEDDING_DIM = 1024`) shared by the fake embedder and the
-  `vector(1024)` columns.
-- **Rationale**: multilingual (PT/EN/ES needed for the cross-language criterion), current
-  general-purpose model. The corpus is under 100 documents, so size does not matter.
-- **Alternatives**: `voyage-4-large` (twice the price, not needed); 2048 dims (no benefit).
+- **Decision**: Gemini `gemini-embedding-001` (DL-007).
+  - `taskType=RETRIEVAL_DOCUMENT` for indexed documents and `RETRIEVAL_QUERY` for searches.
+  - `outputDimensionality=768`. Vectors are **L2-normalized after truncation**: Matryoshka outputs
+    below 3072 dims are not unit-length.
+  - The model name is configurable (`EMBEDDINGS_MODEL`, default `gemini-embedding-001`). The
+    dimension is a code constant (`EMBEDDING_DIM = 768`) shared by the fake embedder and the
+    `vector(768)` columns.
+- **Rationale**: free tier, multilingual (PT/EN/ES needed for the cross-language criterion),
+  retrieval-specific task types. 768 dims is enough for under 100 documents and keeps rows small.
+- **Alternatives**: 3072 dims (no benefit at this size); a local model (bundle size and cold start,
+  see DL-007).
 
-## R2. Voyage client and rate limits
+## R2. Gemini client and rate limits
 
-- **Decision**: call `POST https://api.voyageai.com/v1/embeddings` directly with `httpx.AsyncClient`.
+- **Decision**: call
+  `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents`
+  directly with `httpx.AsyncClient`. Header `x-goog-api-key: $GEMINI_API_KEY`. Body:
+  `{"requests": [{"model": "models/gemini-embedding-001", "content": {"parts": [{"text": ...}]},
+  "taskType": ..., "outputDimensionality": 768}, ...]}`. The response is
+  `{"embeddings": [{"values": [...]}]}`, in request order.
   - **Batching by token budget**: estimate tokens as `ceil(len(text) / 3)` (conservative for
-    Portuguese). Pack inputs into batches of at most 8,000 estimated tokens and 128 inputs, so a
-    single request stays under the free tier's 10K TPM.
-  - **Rate limits**: on 429, sleep for `Retry-After` seconds (default 20 s if the header is
-    missing) and retry the same batch. Give up after 5 attempts per batch, or after 180 s in total.
-    Batches are sent one after another, so the 3 RPM limit is respected once the budget is
-    exhausted.
+    Portuguese). Pack inputs into batches of at most 20,000 estimated tokens and 100 requests, so
+    one batch stays under the free tier's 30K TPM.
+  - **Rate limits** (free tier: 100 RPM, 1,000 RPD, 30K TPM): on 429 or 503, wait for the delay
+    from the `Retry-After` header, or else from the error body's `RetryInfo.retryDelay` (e.g.
+    `"30s"`), defaulting to 30 s, then retry the same batch. Give up after 5 attempts per batch or
+    120 s in total. Batches are sent one after another.
   - **Query time**: 1 attempt with a 3 s timeout; any failure raises `EmbeddingsUnavailable` and
     search falls back to full-text.
-- **Free tier**: without a payment method Voyage allows 3 RPM / 10K TPM. That is fine for seeding
-  (the corpus is about 8–10K tokens, so 1–2 requests), but query traffic above 3/min would mostly
-  fall back to full-text. The README states that production needs a payment method on the Voyage
-  account; the free token allowance still applies.
-- **Alternatives**: the `voyageai` SDK (extra deps, opaque retries); fixed-size batches (would
-  429 on the free tier).
+  - **The cache matters**: the seed embeds about 90 documents once (1–2 requests), and repeated
+    queries hit `embedding_cache`, so the 1,000 RPD budget goes to new queries only.
+  - The API key is never logged or included in exception messages (it travels in a header, not
+    the URL).
+- **Known limitation** (DL-007): on the free tier Google may use submitted content to improve its
+  products. That is acceptable for fictional store data, and the README documents it.
+- **Alternatives**: the `google-genai` SDK (extra dependency for one endpoint); one request per
+  text (wastes RPM).
 
 ## R3. Deterministic fake embedder
 
 - **Decision**: feature hashing of character 3- to 5-grams of the normalized text (NFC, casefold,
-  accents stripped, word boundaries padded), bucketed into 1024 dims with `blake2b`, signed, then
+  accents stripped, word boundaries padded), bucketed into 768 dims with `blake2b`, signed, then
   L2-normalized. No network; same input → same vector (`blake2b` is not salted per process,
   unlike `hash()`).
 - **Rationale**: lexical similarity (*devolver* ~ *devolução*) makes the CI retrieval criterion
@@ -170,16 +181,17 @@ Revised after the PR #27 QA + senior review (scope cut to about 3–4 h in 2 PRs
   - Unit tests (no DB): schemas, rules, sources, chunking, fake embedder, report and its drift
     check.
   - Integration tests (local DB): seed, idempotency, retrieval, fallback, cache.
-  - Marker `voyage` is opt-in (`addopts = "-m 'not voyage'"`) and covers the EN/ES retrieval and
+  - Marker `gemini` is opt-in (`addopts = "-m 'not gemini'"`) and covers the EN/ES retrieval and
     the real-API smoke test.
-  - One mocked-transport test covers the Voyage 429/`Retry-After` path.
+  - One mocked-transport test covers the Gemini 429/`Retry-After` path and post-truncation
+    normalization.
   - The Neon seed is a manual quickstart step.
 
 ## R14. Dependencies added
 
 | Dependency | Group | Why |
 |---|---|---|
-| `httpx` | runtime (moved from dev) | Voyage client |
+| `httpx` | runtime (moved from dev) | Gemini client |
 | `pydantic` | runtime (already transitive) | row schemas, typed results |
 | `psycopg-pool` | runtime | serverless connection reuse (R11) |
 | `pypdf` | `etl` group | PDF text extraction |

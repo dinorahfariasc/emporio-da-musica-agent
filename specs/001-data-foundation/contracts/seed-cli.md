@@ -16,14 +16,14 @@ pipeline functions with `tmp_path` instead of the CLI.
 **Environment** (via `app.config.Settings`):
 - `DATABASE_URL_UNPOOLED` (used when set), else `DATABASE_URL`;
 - `ENVIRONMENT`;
-- `EMBEDDINGS_PROVIDER` (`fake` \| `voyage`), `EMBEDDINGS_MODEL` (default `voyage-4`);
-- `VOYAGE_API_KEY` (required when the provider is `voyage`).
+- `EMBEDDINGS_PROVIDER` (`fake` \| `gemini`), `EMBEDDINGS_MODEL` (default `gemini-embedding-001`);
+- `GEMINI_API_KEY` (required when the provider is `gemini`).
 
 **Refusals** (exit 1 before any write):
 - no database URL;
 - non-local host without `--yes`;
 - `ENVIRONMENT=production` with `EMBEDDINGS_PROVIDER=fake`;
-- `voyage` without an API key.
+- `gemini` without an API key.
 
 **Exit codes**: `0` success; `1` any failure (refusal, validation error `file:row field: reason`,
 PDF table-of-contents mismatch, embeddings unavailable after retries, database error). On `1`

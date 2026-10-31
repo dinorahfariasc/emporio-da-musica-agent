@@ -162,8 +162,8 @@ although the manual says the store sells them. This is reported as an informatio
 |---|---|---|
 | Seed reloads only the tables it owns, in one transaction, with `TRUNCATE` **without** `CASCADE` | Drop/recreate schema; upsert by ID | Re-seeding production must never touch other epics' tables (users, history, usage). |
 | Seed-time embedding failure: retry, then abort (store unchanged) | Load without vectors; fall back to the fake | No half-built vector index in production; query-time full-text fallback covers runtime outages. |
-| One persistent `embedding_cache` table for query and document embeddings | In-memory LRU | Survives serverless cold starts; re-seeding costs no Voyage calls. |
-| `voyage-4`, 1024 dims, direct REST via httpx | SDK; `voyage-4-large` | Multilingual; enough quality for under 100 docs; fewer dependencies. |
+| One persistent `embedding_cache` table for query and document embeddings | In-memory LRU | Survives serverless cold starts; re-seeding makes no provider calls. |
+| Provider: `gemini-embedding-001` at 768 dims (normalized after truncation), direct REST via httpx (see DL-007) | SDK; 3072 dims | Free tier is ample for about 90 documents plus cached queries; fewer dependencies. |
 | Fake embedder = hashed character n-grams | Random vector per text | Makes the CI retrieval check (§4.1 in top 3) meaningful instead of chance. |
 | Hybrid ranking with Reciprocal Rank Fusion (k=60), exact scan, `pt_unaccent` full-text | Weighted score sum; HNSW index | No score calibration; the corpus is tiny; accent-less queries work. |
 | Policy chunks per subsection, validated against a hard-coded table of contents | Free-form splitting | Citable "§4.1"; extraction errors fail loudly. |

@@ -143,7 +143,7 @@ against production with confirmation (succeeds).
 - Duplicate promotions per product (93, 96, 99): all rows kept; resolution picks the effective one. Promotions have no validity dates: `is_active` is the only source of truth.
 - An order item references a non-sellable product (130 in orders 3 and 14): kept and flagged, never dropped.
 - Empty CSV cells: NULL for nullable columns (tracking code, estimated delivery, notes), a validation error for required ones.
-- Embeddings provider rate limit (free tier: 3 requests and 10K tokens per minute) during seeding: requests are batched by token budget and `Retry-After` is honoured; if it still fails, the seed aborts with the database unchanged.
+- Embeddings provider rate limit (Gemini free tier: 100 requests and 30K tokens per minute, 1,000 requests per day) during seeding: requests are batched by token budget and `Retry-After` is honoured; if it still fails, the seed aborts with the database unchanged.
 - Another feature's table has a foreign key to an owned table: the seed fails rather than touching that table.
 - Two seeds started at the same time: the second waits for the first (lock) and then runs on its own.
 - The source CSVs use CRLF line endings and the last row has no trailing newline: parsed values never carry a trailing `\r`, and the last row is read like any other. Git never rewrites the bytes of the challenge files.
@@ -212,7 +212,7 @@ against production with confirmation (succeeds).
 
 ### Measurable Outcomes
 
-- **SC-001**: A fresh environment is fully seeded (data + indexes + report) with one command in under 30 seconds with the fake embedder, and in under 3 minutes with the real provider on its free-tier rate limits.
+- **SC-001**: A fresh environment is fully seeded (data + indexes + report) with one command in under 30 seconds with the fake embedder, and in under 2 minutes with the real provider on its free-tier rate limits.
 - **SC-002**: Every DL-001 finding is traceable to an anomaly type in the report or to a validation rule; every correction rule has at least one dedicated test.
 - **SC-003**: Two consecutive seeds produce identical row counts and table checksums, and the committed report matches a fresh render.
 - **SC-004**: "posso devolver meu pedido?" returns §4.1 in the top 3 with the fake embedder (in CI, also in the vector ranking alone), and EN/ES variants do the same with the real provider.
@@ -229,4 +229,4 @@ against production with confirmation (succeeds).
 - The real clock is used elsewhere; this feature does not compute dates or eligibility.
 - Payment-method pricing (PIX discount, installments) belongs to the agent epic; this feature provides the promotional price it starts from.
 - The manual is in Portuguese; cross-language retrieval relies on the multilingual real embeddings provider (the fake embedder only guarantees the Portuguese CI case).
-- Voyage without a payment method is limited to 3 requests and 10K tokens per minute. Production needs a payment method on the account (the free token allowance still applies); the README says so.
+- The real provider is Gemini `gemini-embedding-001` on the free tier (DL-007): 100 requests per minute, 1,000 per day, 30K tokens per minute. Seeding needs 1–2 requests; query embeddings are cached. On the free tier Google may use submitted content to improve its products; acceptable for fictional data and documented in the README.

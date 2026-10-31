@@ -80,23 +80,23 @@ all sellable violões.
 ### 6. Opt-in real provider
 
 ```bash
-EMBEDDINGS_PROVIDER=voyage VOYAGE_API_KEY=... uv run python -m etl
-EMBEDDINGS_PROVIDER=voyage VOYAGE_API_KEY=... uv run pytest -m voyage
+EMBEDDINGS_PROVIDER=gemini GEMINI_API_KEY=... uv run python -m etl
+EMBEDDINGS_PROVIDER=gemini GEMINI_API_KEY=... uv run pytest -m gemini
 ```
 
-**Expected**: the seed takes under 3 min even on the free tier (429s are retried after
-`Retry-After`); a second seed has `computed=0`; EN/ES queries put §4.1 in the top 3.
+**Expected**: the seed takes under 2 min on the free tier (any 429 is retried after the
+returned delay); a second seed has `computed=0`; EN/ES queries put §4.1 in the top 3.
 
 ### 7. Production (Neon)
 
 ```bash
 DATABASE_URL_UNPOOLED='<neon direct url>' ENVIRONMENT=production \
-EMBEDDINGS_PROVIDER=voyage VOYAGE_API_KEY=... uv run python -m etl --yes
+EMBEDDINGS_PROVIDER=gemini GEMINI_API_KEY=... uv run python -m etl --yes
 ```
 
 **Expected**:
 - `target: <neon host>/<db> (remote)` and exit 0;
 - the **store tables** (categories, products, promotions, customers, orders, order_items) have
   the same counts and checksums as locally. `policy_chunks`, `product_search_docs` and
-  `index_metadata` differ by design (Voyage vs fake vectors);
+  `index_metadata` differ by design (Gemini vs fake vectors);
 - tables not owned by this feature are unchanged.

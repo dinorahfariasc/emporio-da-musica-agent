@@ -13,16 +13,18 @@ def get_pool(settings: Settings) -> AsyncConnectionPool
 ## `app/embeddings`
 
 ```python
-EMBEDDING_DIM: Final = 1024
+EMBEDDING_DIM: Final = 768
 InputType = Literal["document", "query"]
 
 class EmbeddingsUnavailable(Exception): ...
 
 class Embedder(Protocol):
-    provider: str          # "voyage" | "fake"
-    model: str             # "voyage-4" | "fake-ngram-v1"
+    provider: str          # "gemini" | "fake"
+    model: str             # "gemini-embedding-001" | "fake-ngram-v1"
     async def embed(self, texts: Sequence[str], input_type: InputType) -> list[list[float]]: ...
-        # len(result) == len(texts); each vector has EMBEDDING_DIM floats, L2-normalized.
+        # len(result) == len(texts); each vector has EMBEDDING_DIM floats, L2-normalized
+        # (Gemini: normalized after truncation to 768). input_type maps to Gemini's taskType:
+        # document → RETRIEVAL_DOCUMENT, query → RETRIEVAL_QUERY.
         # Raises EmbeddingsUnavailable on provider failure (after the profile's retries).
 
 def get_embedder(settings: Settings, *, purpose: Literal["seed", "query"]) -> Embedder

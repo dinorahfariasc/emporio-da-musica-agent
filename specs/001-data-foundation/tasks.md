@@ -32,11 +32,11 @@ tests use the `local_database_url` fixture (T005).
 - [ ] T001 Update `backend/pyproject.toml`:
   - move `httpx>=0.28` to `[project] dependencies` and add `pydantic>=2.9` and `psycopg-pool>=3.2`;
   - add `[dependency-groups] etl = ["pypdf>=5"]` and `[tool.uv] default-groups = ["dev", "etl"]`;
-  - add the pytest marker `voyage: calls the real Voyage API (opt-in)` and `addopts = "-m 'not voyage'"`;
+  - add the pytest marker `gemini: calls the real Gemini API (opt-in)` and `addopts = "-m 'not gemini'"`;
   - run `uv lock`.
 - [ ] T002 [P] Add a root `.gitattributes` with `challenge/** -text` and `backend/tests/fixtures/*.csv -text`. Confirm with `git ls-files --eol challenge/data/` that the CSVs keep `crlf` in the index and in the working tree.
 - [ ] T003 [P] Add `etl/**` to `services.backend.functions["app/main.py"].excludeFiles` in the root `vercel.json`.
-- [ ] T004 [P] Add `embeddings_model: str = "voyage-4"` and `database_url_unpooled: str | None = None` to `Settings` in `backend/app/config.py`; add `EMBEDDINGS_MODEL=voyage-4` and `DATABASE_URL_UNPOOLED=` (with a matrix comment: Neon direct URL, seed only) to `backend/.env.example`; extend `backend/tests/test_config.py`.
+- [ ] T004 [P] Add `embeddings_model: str = "gemini-embedding-001"` and `database_url_unpooled: str | None = None` to `Settings` in `backend/app/config.py`; add `EMBEDDINGS_MODEL=gemini-embedding-001` and `DATABASE_URL_UNPOOLED=` (with a matrix comment: Neon direct URL, seed only) to `backend/.env.example`; extend `backend/tests/test_config.py`.
 - [ ] T005 [P] In `backend/tests/conftest.py`, add the fixture `local_database_url`: it skips unless `DATABASE_URL` is set **and** its host is `localhost`, `127.0.0.1` or `::1`, or `ALLOW_DESTRUCTIVE_TESTS=1`.
 
 ## Phase 2: Foundational
@@ -137,15 +137,19 @@ tests use the `local_database_url` fixture (T005).
 ## Phase 6: US3: Search the policy manual (P1)
 
 - [ ] T021 [P] [US3] Tests:
-  - `backend/tests/embeddings/test_fake.py`: 1024 dims, L2 norm, deterministic within the process, cos("devolver", "devolução") > cos("devolver", "garantia");
+  - `backend/tests/embeddings/test_fake.py`: 768 dims, L2 norm, deterministic within the process, cos("devolver", "devolução") > cos("devolver", "garantia");
   - `backend/tests/etl/test_policies.py`:
     - headings equal the expected ToC (10 sections, 18 subsections);
     - §4.1 has title "Direito de Arrependimento (Compras Online)", parent "4", parent title "Política de Trocas e Devoluções", and its body contains "7 (sete) dias";
     - no chunk contains the page header, U+200B or cover text;
     - §2, §9 and §10 are single chunks.
-- [ ] T022 [P] [US3] Test `backend/tests/embeddings/test_voyage.py`:
-  - one `httpx.MockTransport` test: a 429 with `Retry-After: 1`, then 200, succeeds after about 1 s, and the batches respect the 8,000-token estimate (a long input list is split);
-  - one `@pytest.mark.voyage` smoke test against the real API.
+- [ ] T022 [P] [US3] Test `backend/tests/embeddings/test_gemini.py`:
+  - one `httpx.MockTransport` test:
+    - a 429 with `Retry-After: 1`, then 200, succeeds after about 1 s;
+    - the batches respect 20,000 estimated tokens and 100 requests (a long input list is split);
+    - the request carries `taskType` (`RETRIEVAL_DOCUMENT`/`RETRIEVAL_QUERY`) and `outputDimensionality: 768`;
+    - returned vectors are L2-normalized (norm 1 ± 1e-6) although the mocked values are not;
+  - one `@pytest.mark.gemini` smoke test against the real API (768 floats, norm 1).
 - [ ] T023 [US3] Test `backend/tests/retrieval/test_search_policies.py` (integration, fake):
   - "posso devolver meu pedido?" puts §4.1 in the top 3 **and** has `vector_rank <= 3`;
   - full-text only (embedder raising `EmbeddingsUnavailable`) still returns §4.1 for that query (any-term matching) with `mode="fulltext"`, and one warning is logged;
@@ -154,11 +158,12 @@ tests use the `local_database_url` fixture (T005).
   - seeding twice with a counting fake makes zero document embed calls on the second seed (FR-019; documents keyed by exact NFC text), and changing one chunk's text re-embeds only that chunk;
   - an `index_metadata` provider mismatch degrades with `index_provider_mismatch`;
   - `PolicyHit.breadcrumb` starts with "§4".
-  - Also add `backend/tests/retrieval/test_search_policies_voyage.py` (marker `voyage`): EN and ES variants put §4.1 in the top 3.
+  - Also add `backend/tests/retrieval/test_search_policies_gemini.py` (marker `gemini`): EN and ES variants put §4.1 in the top 3.
 - [ ] T024 [P] [US3] Implement `backend/app/embeddings/__init__.py` (`EMBEDDING_DIM`, `InputType`, `EmbeddingsUnavailable`, the `Embedder` Protocol, `get_embedder(settings, purpose)`) and `backend/app/embeddings/fake.py` (`FakeEmbedder`, model `fake-ngram-v1`, research R3).
-- [ ] T025 [P] [US3] Implement `backend/app/embeddings/voyage.py` per research R2:
-  - token-budget batching (≤ 8,000 estimated tokens, ≤ 128 inputs);
-  - on 429, sleep `Retry-After` (default 20 s); up to 5 attempts per batch, 180 s in total;
+- [ ] T025 [P] [US3] Implement `backend/app/embeddings/gemini.py` (`GeminiEmbedder`) per research R2:
+  - `batchEmbedContents` with the `x-goog-api-key` header; `taskType` from `input_type`; `outputDimensionality=768`; L2-normalize each returned vector;
+  - token-budget batching (≤ 20,000 estimated tokens, ≤ 100 requests);
+  - on 429/503, wait for `Retry-After` or `RetryInfo.retryDelay` (default 30 s); up to 5 attempts per batch, 120 s in total;
   - query profile: 1 attempt, 3 s timeout;
   - the API key never appears in errors.
 - [ ] T026 [US3] Implement `backend/app/embeddings/cache.py`, `embed_cached()`:
@@ -192,12 +197,12 @@ tests use the `local_database_url` fixture (T005).
 
 ## Phase 8: US5 (production part) and polish
 
-- [ ] T032 [US5] Manual. Before running, add a payment method to the Voyage account (the free token allowance still applies), or accept the free-tier limit. Run quickstart step 7 against Neon (`DATABASE_URL_UNPOOLED`, `--yes`, Voyage), then record:
-  - the wall time (SC-001: under 3 min);
+- [ ] T032 [US5] Manual. Run quickstart step 7 against Neon (`DATABASE_URL_UNPOOLED`, `--yes`, Gemini), then record:
+  - the wall time (SC-001: under 2 min);
   - that the **store-table** counts and checksums match local (excluding `policy_chunks`, `product_search_docs` and `index_metadata`);
   - that non-owned tables are unchanged.
 - [ ] T033 Polish:
-  - README "Data" section: the seed command, `--yes`, the env vars, and the Voyage free-tier note (3 RPM / 10K TPM; payment method needed in production);
+  - README "Data" section: the seed command, `--yes`, the env vars, the Gemini free-tier limits (100 RPM, 1,000 RPD, 30K TPM) and the free-tier data-use note (DL-007);
   - a DL entry for the implementation (rules as built, any-term full-text + RRF, the pool, the review cuts);
   - run the full quickstart plus `ruff` and `pytest`; check that the fake seed takes under 30 s;
   - tick the issue #5 acceptance criteria with evidence.

@@ -14,8 +14,9 @@ drift.
 
 Retrieval adds two hybrid indexes (policy sections, products):
 - Portuguese full-text matching any term, plus pgvector, fused with RRF;
-- an `Embedder` interface with Voyage (`voyage-4`, 1024 dims, token-budget batching with
-  `Retry-After`) and a deterministic n-gram fake;
+- an `Embedder` interface with Gemini (`gemini-embedding-001`, 768 dims normalized after
+  truncation, retrieval task types, token-budget batching honouring 429/`Retry-After`) and a
+  deterministic n-gram fake;
 - a persistent `embedding_cache`, full-text fallback, filters, similar-product search from stored
   vectors, and a module-level connection pool for serverless.
 
@@ -24,32 +25,32 @@ Retrieval adds two hybrid indexes (policy sections, products):
 | PR | Scope | Stories | Estimate |
 |---|---|---|---|
 | **A** `feat: store data, quality report and safe seed` | schema (store tables), validation, rules, load, CLI safety, report + drift test | US1, US2, US5 (safety) | ~1h45 |
-| **B** `feat: hybrid retrieval and production seed` | embeddings (fake, Voyage, cache), PDF chunks, product docs, search/filters/similar, pool, Neon seed | US3, US4, US5 (production run) | ~2h |
+| **B** `feat: hybrid retrieval and production seed` | embeddings (fake, Gemini, cache), PDF chunks, product docs, search/filters/similar, pool, Neon seed | US3, US4, US5 (production run) | ~2h |
 
 ## Technical Context
 
 **Language/Version**: Python 3.13 (from #3)
 
 **Primary Dependencies**: Pydantic v2 / pydantic-settings, psycopg 3 (async) + psycopg-pool,
-httpx (Voyage REST), pypdf (ETL group only)
+httpx (Gemini REST), pypdf (ETL group only)
 
 **Storage**: Postgres 16 with `vector` and `unaccent` (docker `pgvector/pgvector:pg16` locally and
 in CI; Neon in production, seeded through the unpooled URL)
 
 **Testing**: pytest + pytest-asyncio. Destructive integration tests use a `local_database_url`
-fixture; marker `voyage` is opt-in.
+fixture; marker `gemini` is opt-in.
 
 **Target Platform**: ETL runs on a developer machine or CI; retrieval runs inside the FastAPI
 backend service on Vercel (Services, DL-004).
 
 **Project Type**: web service backend (data layer + CLI)
 
-**Performance Goals**: seed < 30 s with the fake, < 3 min with Voyage on the free tier (SC-001);
+**Performance Goals**: seed < 30 s with the fake, < 2 min with Gemini on the free tier (SC-001);
 warm policy search without connection setup (pool)
 
 **Constraints**:
 - no paid calls in CI;
-- Voyage free tier: 3 RPM / 10K TPM;
+- Gemini free tier: 100 RPM, 1,000 RPD, 30K TPM;
 - Neon PgBouncer (`prepare_threshold=None`);
 - the backend bundle excludes `etl/**`.
 
@@ -65,10 +66,10 @@ about 25 policy chunks
 | I. Facts from the system | Availability, sellability, effective discount and promo price come from pure functions in `app/catalog/rules.py`, stored as columns; search returns IDs, category and availability, never prices or stock; order totals kept as paid; all SQL parameterized | ✅ |
 | II. LLM only where it adds value | No LLM in this feature | ✅ (n/a) |
 | III. Clean, traceable data | Inputs read-only and byte-stable (`.gitattributes`); Pydantic validation; one explicit rule per anomaly, each tested; DL-001 traceability table in the report; NFC everywhere | ✅ |
-| IV. Tested before done | Unit tests per rule, sources, chunker, fake embedder, report drift; integration tests for idempotency, retrieval (vector rank asserted), fallback, cache, filters; fake embedder in CI; Voyage opt-in | ✅ |
+| IV. Tested before done | Unit tests per rule, sources, chunker, fake embedder, report drift; integration tests for idempotency, retrieval (vector rank asserted), fallback, cache, filters; fake embedder in CI; Gemini opt-in | ✅ |
 | V. Safe and respectful | Emails masked in the report; DB URL never printed; `--yes` for remote targets; fake refused in production; destructive tests only on local hosts | ✅ |
 | VI. Simple, modular, replaceable | `Embedder` protocol selected by config; no SDK, ORM, migrations framework, ANN index or numpy; review cuts applied (no `--check`, fingerprint, heuristics, PDF conflict regex) | ✅ |
-| Tech constraints | uv, ruff, pytest; Postgres + pgvector; Voyage; `.env.example` updated | ✅ |
+| Tech constraints | uv, ruff, pytest; Postgres + pgvector; Gemini embeddings (constitution 1.0.2); `.env.example` updated | ✅ |
 
 Post-design re-check: passing.
 
@@ -95,7 +96,7 @@ backend/
 │   ├── db.py                     # + connect(), get_pool()                                       (A connect, B pool)
 │   ├── text.py                   # nfc(), normalize_for_cache()                                  (A)
 │   ├── catalog/rules.py          # availability, is_sellable, effective_promotion, promo_price  (A)
-│   ├── embeddings/               # __init__ (protocol, factory), fake.py, voyage.py, cache.py   (B)
+│   ├── embeddings/               # __init__ (protocol, factory), fake.py, gemini.py, cache.py   (B)
 │   └── retrieval/                # __init__ (models, search_*, similar_to_product), hybrid.py   (B)
 ├── etl/
 │   ├── __main__.py               # CLI: target print, --yes, refusals, exit 0/1                  (A, B wires index)
@@ -117,10 +118,10 @@ backend/
     ├── test_text.py, catalog/test_rules.py
     ├── etl/                      # test_sources, test_models, test_rules, test_report (incl. drift),
     │                             # test_seed (DB), test_cli, test_policies (B), test_documents (B)
-    ├── embeddings/               # test_fake, test_cache (DB), test_voyage (mock 429 + marker voyage)
-    └── retrieval/                # test_search_policies, test_search_products (DB), *_voyage (marker)
+    ├── embeddings/               # test_fake, test_cache (DB), test_gemini (mock 429 + marker gemini)
+    └── retrieval/                # test_search_policies, test_search_products (DB), *_gemini (marker)
 docs/data-quality-report.md       # generated, committed                                          (A)
-README.md                         # "Data" section incl. Voyage payment-method note               (A, B)
+README.md                         # "Data" section incl. Gemini free-tier limits and data-use note (A, B)
 ```
 
 **Structure Decision**: follow the flat `app/` package from #3 (DL-004). Code the agent needs at
@@ -146,5 +147,5 @@ its drift test run without a database.
 | Addition | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
 | Character n-gram fake embedder | Makes the CI retrieval criterion meaningful; the test asserts the vector rank | A random-by-hash fake tests nothing |
-| `index_metadata` provider check (cached) | Prevents comparing fake and Voyage vectors after an env mix-up | Wrong policy sections would be returned silently |
+| `index_metadata` provider check (cached) | Prevents comparing fake and Gemini vectors after an env mix-up | Wrong policy sections would be returned silently |
 | `psycopg-pool` | About 1.7 s per new connection from Vercel to Neon (DL-004) | A connection per request makes every warm query slow |
