@@ -1,0 +1,13 @@
+{
+  "status": 429,
+  "headers": {
+    "Retry-After": "3600"
+  },
+  "body": {
+    "error": {
+      "code": "budget_exhausted",
+      "message": "Você atingiu o limite diário de uso da Melody. O limite renova à meia-noite (horário de Campo Grande).",
+      "retryAfterSeconds": 3600
+    }
+  }
+}

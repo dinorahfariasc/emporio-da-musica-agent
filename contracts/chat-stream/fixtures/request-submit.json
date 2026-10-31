@@ -1,0 +1,16 @@
+{
+  "id": "chat_abc123",
+  "trigger": "submit-message",
+  "messages": [
+    {
+      "id": "u1",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Quais violões vocês têm até R$ 1000?"
+        }
+      ]
+    }
+  ]
+}

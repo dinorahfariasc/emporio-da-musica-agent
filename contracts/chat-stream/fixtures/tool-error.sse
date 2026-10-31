@@ -1,0 +1,28 @@
+data: {"type":"start","messageId":"msg_toolerr_1"}
+
+data: {"type":"start-step"}
+
+data: {"type":"tool-input-available","toolCallId":"call_1","toolName":"get_order_status","input":{"order_id":10,"email":"***"}}
+
+data: {"type":"tool-output-error","toolCallId":"call_1","errorText":"verification_failed"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"start-step"}
+
+data: {"type":"text-start","id":"txt_1"}
+
+data: {"type":"text-delta","id":"txt_1","delta":"Não consegui confirmar os dados desse pedido. "}
+
+data: {"type":"text-delta","id":"txt_1","delta":"Pode conferir o número do pedido e o e-mail ou telefone usado na compra?"}
+
+data: {"type":"text-end","id":"txt_1"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"message-metadata","messageMetadata":{"route":{"intent":"order_status","confidence":0.95,"router":"jev"},"model":"claude-haiku-4-5","usage":{"inputTokens":890,"outputTokens":41}}}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+
