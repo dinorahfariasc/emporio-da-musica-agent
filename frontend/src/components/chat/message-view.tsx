@@ -1,6 +1,11 @@
 "use client";
 
+import { getToolName, isToolUIPart } from "ai";
+
 import { Markdown } from "@/components/chat/markdown";
+import { ProductCards } from "@/components/chat/product-cards";
+import { ToolStatus } from "@/components/chat/tool-status";
+import { toToolDisplayState } from "@/lib/chat/tool-state";
 import type { ChatMessage } from "@/lib/chat/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +26,18 @@ export function MessageView({ message, streaming = false }: MessageViewProps) {
         )}
       >
         {message.parts.map((part, index) => {
+          if (isToolUIPart(part)) {
+            return (
+              <ToolStatus
+                key={part.toolCallId}
+                toolName={getToolName(part)}
+                state={toToolDisplayState(part.state)}
+              />
+            );
+          }
+          if (part.type === "data-products") {
+            return <ProductCards key={part.id ?? index} products={part.data.products} />;
+          }
           if (part.type !== "text") return null;
           // Customer text is shown verbatim; only Melody's answers are markdown.
           return isUser ? (
