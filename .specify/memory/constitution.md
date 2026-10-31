@@ -68,7 +68,7 @@ the agent.
 ## Technical Constraints
 
 - **Languages:** Python is the primary language (backend, agent, ETL); TypeScript for the frontend.
-- **Stack:** FastAPI, LangGraph, FastMCP, Postgres (Neon) with pgvector, Voyage embeddings,
+- **Stack:** FastAPI, LangGraph, FastMCP, Postgres (Neon) with pgvector, Gemini embeddings,
   Anthropic Claude, Jev (TypeSafe); Next.js, Vercel AI SDK, shadcn/ui.
 - **Deploy:** Vercel (Next.js + Python functions) and Neon; identical local environment via
   docker-compose.
@@ -98,4 +98,4 @@ entry with the reason and semantic versioning: MAJOR for removing or redefining 
 MINOR for a new principle or section, PATCH for clarifications. Runtime development guidance
 lives in `CLAUDE.md`.
 
-**Version**: 1.0.1 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31
+**Version**: 1.0.2 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31

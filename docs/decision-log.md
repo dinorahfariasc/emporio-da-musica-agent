@@ -157,3 +157,23 @@ instead of the removed `dynamic` segment config.
 
 **Role of AI.** Claude Code inspected the installed SDK's types and transport code to pin the
 exact chunk shapes and request body, wrote the fixtures, and made both test suites validate them.
+
+---
+
+## DL-007 — Embeddings: Gemini instead of Voyage (2026-10-31)
+
+**Supersedes** the embeddings row of DL-002.
+
+| Option | Cost | Limits | Vercel fit | Notes |
+|---|---|---|---|---|
+| Voyage AI | Requires a payment method to get usable limits (3 RPM without one) | — | HTTP call | Rejected: no card on file for a prototype |
+| **Gemini `gemini-embedding-001`** (chosen) | Free tier | 100 RPM, 1,000 RPD, 30K TPM | HTTP call; bundle stays ~13 MB | Multilingual; `RETRIEVAL_DOCUMENT` / `RETRIEVAL_QUERY` task types; 768-dim output (Matryoshka truncation) |
+| Local model (multilingual-e5-small via ONNX) | Free | None | ~120 MB model + runtime must be bundled; +2–5 s per cold start | Kept as a documented alternative behind the same interface |
+
+**Rationale.** The seed embeds ~90 documents once and query embeddings are cached, so the free
+tier is ample. **Known limitation:** on the free tier Google may use submitted content to improve
+its products — acceptable for fictional store data, documented in the README; a paid tier or the
+local model removes it. CI keeps the deterministic fake embedder (no key).
+
+**Role of AI.** Claude Code compared the three options (limits, bundle size, cold start, privacy);
+I chose Gemini.
