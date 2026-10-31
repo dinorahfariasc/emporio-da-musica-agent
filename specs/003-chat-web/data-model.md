@@ -50,7 +50,9 @@ Display rules (formatting only — no computation, constitution I):
 - `promoPriceBrl !== null` → show promo price large, `priceBrl` struck through, and
   `discountPercent` as "-N%" when not null.
 - Otherwise → show `priceBrl`.
-- Currency: `Intl.NumberFormat("pt-BR", {style: "currency", currency: "BRL"})`.
+- Currency: `formatBrl(value, locale)` → `Intl.NumberFormat(locale, {style: "currency", currency: "BRL"})`.
+- Discount: `formatPercent(20)` → "20%". The value is already a percentage, so it is formatted as
+  an integer + `%`, **not** with Intl `style: "percent"` (which would print "2.000%").
 - Availability badge label from `messages.availability[availability]`; unknown value → hidden.
 
 ## ChatMetadata
@@ -60,14 +62,16 @@ usage: { inputTokens: number; outputTokens: number } }` — typed for completene
 
 ## ChatErrorState
 
-Produced by `toChatError(error)` (pure).
+Produced by `toChatError(error)` (pure), plus the local dropped-stream error set in `onFinish`.
 
 | `kind` | From | Message | Action | Input |
 |---|---|---|---|---|
-| `unauthorized` | 401 `unauthorized` | — (redirect) | `router.replace("/login?reason=expired")` | — |
-| `rate_limited` | 429 `rate_limited` | body `message` | countdown; at 0 → "Tentar novamente" (`regenerate`) | disabled `retryAfterSeconds` s (default 60) |
+| `unauthorized` | 401 `unauthorized` | — (redirect) | `router.replace("/login?reason=expired&callbackUrl=/")` | — |
+| `rate_limited` | 429 `rate_limited` | body `message` | countdown; at 0 → "Tentar novamente" (`regenerate`) | disabled for body `retryAfterSeconds` s (default 60; headers unavailable) |
 | `budget_exhausted` | 429 `budget_exhausted` | body `message` | none | disabled for page session; body `retryAfterSeconds` ignored |
-| `retryable` | 400, 500, other status, network, mid-stream `error` chunk, unparseable body, stream closed without `finish` | body `message` / `errorText` / catalog fallback | "Tentar novamente" | enabled |
+| `retryable` | 400, 500, other status, network, mid-stream `error` chunk, unparseable body, stream ended with no finish reason and not aborted (`onFinish`) | body `message`; bare-`Error` `errorText`; otherwise catalog fallback (never SDK error text) | "Tentar novamente" | enabled |
+
+A customer Stop (`onFinish` with `isAbort: true`) produces **no** error state.
 
 ```ts
 type ChatErrorState =
@@ -85,13 +89,14 @@ type ChatErrorState =
 | `status === "submitted"`, or `streaming` with no visible part yet in the last assistant message | Typing indicator |
 | `status in {submitted, streaming}` | Stop button replaces Send; sending blocked |
 | `status === "error"` | `ChatError` below the last message per `ChatErrorState` |
-| input length > 2000 or blank | Send disabled; counter shown above 1,800 |
+| blank input | Send disabled (input has `maxLength` 2000) |
+| send already in flight (`sendingRef`) | Further sends ignored |
 
 ## Message catalog
 
-`Messages` type = shape of `src/lib/i18n/pt-BR.ts`:
+`Messages` type = shape of `src/lib/i18n/pt-BR.ts`, read in components via `useMessages()`:
 `app` (title, store name), `emptyState` (greeting, suggestions[]), `input` (placeholder, send,
 stop, counter), `status` (typing), `tools` (11 contract tool names + `fallback`), `toolState`
 (done/failed a11y suffixes), `availability` (4 values), `product` (discount, promo a11y),
 `errors` (fallback, retry, rateLimitedCountdown with `{seconds}`, budget), `login`
-(sessionExpired, placeholder).
+(sessionExpired, placeholder), `markdown` (Streamdown `translations` subset in pt-BR).

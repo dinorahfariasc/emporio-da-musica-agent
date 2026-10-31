@@ -40,9 +40,10 @@ report, safe seed).
 **In flight (check `gh pr list` and the board for the truth):**
 - **#5 PR B** (retrieval: Gemini embeddings, hybrid search, Neon seed): next for the data worktree;
   tasks in `specs/001-data-foundation/tasks.md`.
-- **#9 chat web:** spec PR #32 open. Review found a blocker (markdown image exfiltration:
-  block all images in Streamdown) and several fixes; see the review comment on PR #32. Implement
-  only after the spec is updated and merged.
+- **#9 chat web:** spec PR #32 updated with the full QA + senior review (blocker fixed:
+  hardened Streamdown with no images, allow-listed links and no raw HTML; prod fails closed to
+  `backend`; dropped-stream detection; 3 implementation PRs). Waiting for the user to merge. Then
+  implement PR 1 (Foundation + US1) per `specs/003-chat-web/tasks.md`.
 - **#6 agent core:** spec written on branch `docs/6-agent-core-spec` (not merged, no PR yet).
   Next: `/speckit-plan`, `/speckit-tasks`, `/speckit-analyze`, then PR + review. Depends on the
   retrieval API in `specs/001-data-foundation/contracts/retrieval-api.md`.
@@ -107,6 +108,13 @@ all P0 is in production.
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-10-31 — #9 spec review applied
+- Done: merged main into `dinorahfariasc/chat-web`; applied the PR #32 review to
+  `specs/003-chat-web/*`; decision log entry renumbered to DL-009; contract doc now says cards in #9.
+- Fixed: Streamdown 2.7.1 defaults allow any image/link (`*`), so they are overridden. ai@7 ends a dropped
+  stream as `ready` with no error, so it is detected in `onFinish`.
+- Next: user merges #32 → implement PR 1 (T001–T028).
 
 ### 2026-10-31 — Day 1 wrap-up
 - Done: scaffolding + production skeleton (#3), chat stream contract (#4), Gemini embeddings

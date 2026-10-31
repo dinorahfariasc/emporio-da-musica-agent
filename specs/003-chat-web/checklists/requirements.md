@@ -31,7 +31,7 @@
 
 ## Notes
 
-- The only technology named is the #4 stream protocol, referenced in Assumptions as an external
-  contract (a dependency, not an implementation choice made here).
-- Fixture names are placeholders until #4 lands; plan must reconcile them with
-  `contracts/fixtures/`.
+- Technology named in the spec is limited to the #4 contract (an external dependency) and the
+  existing `/api/chat` route and its mock.
+- Fixture names match `contracts/chat-stream/fixtures/` (#4 merged).
+- Re-validated after the PR #32 review: all items still pass.

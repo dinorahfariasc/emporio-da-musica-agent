@@ -44,7 +44,7 @@ start → (start-step → [tool-input-available → tool-output-available|tool-o
 | `tool-input-available` | `{toolCallId, toolName, input}` | Tool started; UI shows a status label |
 | `tool-output-available` | `{toolCallId, output}` | Tool finished (output is compact; full results go in data parts) |
 | `tool-output-error` | `{toolCallId, errorText}` | Tool failed; `errorText` is a code, not user copy |
-| `data-products` | `{id, data: {products: ProductCard[]}}` | Products to render (markdown in P0, cards in #20) |
+| `data-products` | `{id, data: {products: ProductCard[]}}` | Products to render as basic cards (#9; branded variants in #20). The answer text should summarize or recommend, not relist every product already in the cards (note for the agent prompt, #6) |
 | `text-start` / `text-delta` / `text-end` | `{id, delta?}` | Streamed answer (markdown) |
 | `message-metadata` | `{messageMetadata: {route, model, usage}}` | Router decision and token usage |
 | `finish` | `{finishReason?}` | End of message |

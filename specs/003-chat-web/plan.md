@@ -8,11 +8,12 @@
 
 A full-page chat for Melody at `/` in the existing Next.js app (`frontend/`). `useChat` from
 `@ai-sdk/react` consumes the #4 UI message stream through the existing `POST /api/chat` route
-(mock mode replays the contract fixtures). Assistant text is rendered with Streamdown, tool parts
+(mock mode replays the contract fixtures; production fails closed to the backend). Assistant text
+is rendered with a hardened Streamdown (no images, allow-listed links, no raw HTML), tool parts
 become pt-BR status lines, `data-products` parts become basic product cards, and errors are
 mapped by one pure function onto the contract's error-code table (401 → `/login` placeholder,
-429 rate/budget → disabled input, 500/stream errors → retry). All copy lives in a typed pt-BR
-catalog. Tests drive the real `useChat` with a stub `fetch` that serves the fixture files.
+429 rate/budget → disabled input, 500/stream errors/dropped streams → retry). All copy lives in a
+typed pt-BR catalog read through `useMessages()`. Tests drive the real `useChat` with a stub `fetch` that serves the fixture files.
 
 ## Technical Context
 
@@ -36,8 +37,9 @@ catalog. Tests drive the real `useChat` with a stub `fetch` that serves the fixt
 text rendering without jank (SDK throttling, Streamdown memoized blocks)
 
 **Constraints**: no backend/API key in dev and CI; no UI computation of prices/stock/discounts;
-no PII in console; Cache Components rules (`useSearchParams` under `<Suspense>`, no
-`export const dynamic`)
+no PII in console; markdown never renders or requests images; Cache Components rules
+(`useSearchParams` under `<Suspense>`, no `export const dynamic`, no random ids read during
+render)
 
 **Scale/Scope**: 2 routes (`/`, `/login`), ~9 chat components, 1 catalog, 4 SSE + 4 HTTP fixtures
 
@@ -51,7 +53,7 @@ no PII in console; Cache Components rules (`useSearchParams` under `<Suspense>`,
 | II. LLM only where it adds value | No LLM in the frontend; metadata not used. | ✅ N/A |
 | III. Clean, traceable data | Reads the shared contract fixtures; no data transformation. | ✅ N/A |
 | IV. Tested before done | Fixture rendering + every error state tested with no network/API key; contract test kept; bug fixes require regression tests. | ✅ |
-| V. Safe and respectful | Sanitized markdown, hardened links (FR-002); no message/PII logging (FR-017); 401 → login. Auth/limits enforcement stays server-side (#10). | ✅ |
+| V. Safe and respectful | Hardened Streamdown: no raw HTML, no images (blocks PII exfiltration via image URLs), links only `https/http/mailto` (FR-002, research R4); no message/PII logging (FR-017); 401 → login; mock never served in production by default (FR-011). Auth/limits enforcement stays server-side (#10). | ✅ |
 | VI. Simple, modular, replaceable | Reuses route + mock; one runtime dep (Streamdown) justified in research R4; test deps justified in R8; no i18n framework yet (R6). | ✅ |
 | Language policy | Code/docs in English; UI copy pt-BR in one catalog. | ✅ |
 
@@ -82,9 +84,11 @@ frontend/
 ├── vitest.config.ts                   # new: jsdom for *.test.tsx, @/ alias, setup file
 ├── src/
 │   ├── app/
+│   │   ├── layout.tsx                 # <html lang={locale}>, viewport export
+│   │   ├── globals.css                # + @source for streamdown dist
 │   │   ├── page.tsx                   # replaced: renders <Chat/>
 │   │   ├── login/page.tsx             # new: placeholder + <Suspense><LoginNotice/></Suspense>
-│   │   └── api/chat/route.ts          # existing (unchanged)
+│   │   └── api/chat/route.ts          # existing; uses chatMode() (fail closed in production)
 │   ├── components/
 │   │   ├── ui/                        # shadcn: button (exists), textarea, card, badge, alert
 │   │   ├── chat/
@@ -94,7 +98,8 @@ frontend/
 │   │   │   ├── message-view.tsx       # pure: parts → components
 │   │   │   ├── markdown.tsx           # Streamdown wrapper
 │   │   │   ├── tool-status.tsx
-│   │   │   ├── product-cards.tsx
+│   │   │   ├── product-cards.tsx      # grid
+│   │   │   ├── product-card.tsx       # single card (#20 restyles this)
 │   │   │   ├── chat-input.tsx
 │   │   │   ├── chat-error.tsx
 │   │   │   ├── typing-indicator.tsx
@@ -105,43 +110,48 @@ frontend/
 │   │   │   ├── types.ts               # ChatMessage, ProductCard, ChatMetadata
 │   │   │   ├── errors.ts              # toChatError (pure)
 │   │   │   ├── tool-state.ts          # SDK state → ToolDisplayState
+│   │   │   ├── mode.ts                # chatMode(): CHAT_MODE ?? (production ? backend : mock)
 │   │   │   ├── mock.ts                # existing
 │   │   │   └── contract.test.ts       # existing; uses src/test/fixtures.ts
-│   │   ├── format.ts                  # formatBrl, formatPercent
+│   │   ├── format.ts                  # formatBrl(value, locale), formatPercent
 │   │   └── i18n/
 │   │       ├── pt-BR.ts               # catalog (source of the Messages type)
-│   │       └── index.ts               # messages, format(template, vars)
+│   │       └── index.tsx              # locale, useMessages(), getMessages(), format()
 │   └── test/
 │       ├── setup.ts                   # jest-dom matchers
-│       └── fixtures.ts                # read fixtures, parse chunks, assemble UIMessage, stub fetch
+│       └── fixtures.ts                # read fixtures, assemble UIMessage, stub fetch (sequence, truncate)
 ```
 
 **Structure Decision**: single frontend package (`frontend/`) of the existing monorepo. Pure
 logic (`lib/`) is unit-tested in the node environment; components are tested in jsdom next to
 their source (`*.test.tsx`).
 
-## Delivery slices (small PRs)
+## Delivery slices (3 PRs, cut after review)
 
-1. **Foundation** — test setup (jsdom, fixtures helper, refactor `contract.test.ts` to use it),
-   types, catalog, formatters, `toChatError`, tool-state mapping, shadcn primitives. Pure-logic
-   tests. `Part of #9`.
-2. **US1** — chat page, `useChat`, message list, Streamdown, input (Enter/Shift+Enter/stop/limit),
-   empty state, typing indicator. Tests: `plain-text`, sanitization, input behaviour.
-3. **US2** — tool status + product cards. Tests: `tool-products`, `tool-error`, unknown tool,
-   empty products.
-4. **US3** — error states, countdown, budget lock, retry, `/login` placeholder. Tests: four
-   `http-*` fixtures + `stream-error`.
-5. **US4 + polish** — 375 px layout, a11y (live region, focus, 44 px), copy audit, decision-log
-   entry, quickstart run recorded. `Closes #9`.
+1. **PR 1 — Foundation + US1** (`Part of #9`): test setup, fixtures helper, types, catalog +
+   `useMessages`, formatters, `toChatError`, tool-state, `chatMode()` fail-closed, hardened
+   Markdown, chat page with streaming, input, stop, empty state, typing indicator, double-send
+   guard, dropped-stream detection. `pnpm build` run early to catch Cache Components issues.
+2. **PR 2 — US2 + US3** (`Part of #9`): tool status, product cards, all error states, retry,
+   countdown, budget lock, `/login` placeholder.
+3. **PR 3 — US4 + polish** (`Closes #9`): 375 px layout and a11y fixes, copy/colour audit, manual
+   quickstart with screenshot, DL-009 update.
+
+Cut by the review (deadline): class-name layout test (manual 375 px check instead), login-notice
+test, markdown-table parsing in the tool-label test (const list instead), pending-fetch helper and
+the 100 ms test, the 1,800-char counter (`maxLength` only), the separate decision-log task.
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
 | ai@7 / Next 16 APIs differ from docs | Verified in `node_modules` (research); re-check types before each slice |
-| Streamdown prop names differ in v2 | Confirm from its `.d.ts` in slice 2; fall back to `react-markdown` + `remark-gfm` with `urlTransform` if it blocks |
+| Streamdown prop names differ in v2 | Verified in 2.7.1 `.d.ts` (`rehypePlugins`, `components`, `controls`, `translations`, `mode`); fall back to `react-markdown` + `remark-gfm` with `urlTransform` if it blocks |
 | jsdom lacks `ReadableStream`/`TextDecoderStream` | Node 24 globals are available in vitest jsdom; polyfill in `setup.ts` if needed |
-| Mock defaults to `CHAT_MODE=mock` in prod | Out of scope; flagged for #10 |
+| Mock served in production if `CHAT_MODE` is unset | Fixed here: `chatMode()` fails closed to `backend` in production (R11) |
+| Streamdown defaults allow any image/link (PII exfiltration) | Hardened config + `img → null` + hostile-markdown test (R4) |
+| Fake timers stall streams in tests | Fake only `setInterval`; `userEvent` with `advanceTimers` (R8) |
+| Prerender error from random ids during render | Never read `chat.id` in render; build in PR 1 (R10) |
 
 ## Complexity Tracking
 
