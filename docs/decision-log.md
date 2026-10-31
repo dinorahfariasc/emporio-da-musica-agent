@@ -144,6 +144,39 @@ instead of the removed `dynamic` segment config.
 
 ---
 
+## DL-005 — Data foundation spec, plan and tasks (2026-10-31, #5)
+
+**Context.** Spec Kit artifacts for epic 001 (`specs/001-data-foundation/`), written against
+the #3 scaffolding (flat `backend/app/`, ETL in `backend/etl/`).
+
+**Correction to DL-001.** Both "Ponta Porã" values are already NFC; there are not two Unicode
+encodings. The CSVs use CRLF line endings and the last row has no trailing newline, so the
+`cut`-based profiling saw "Ponta Porã\r" (5 rows) and "Ponta Porã" (1 row) as different values.
+NFC normalization stays (it is tested with a decomposed fixture), CSV parsing must handle CRLF and
+a missing final newline (tested with a CRLF fixture), and the report shows the real NFC count (0).
+
+**New finding.** Categories 6, 7 and 8 (woodwinds, brass, orchestral strings) have no products,
+although the manual says the store sells them. This is reported as an informational anomaly.
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Seed reloads only the tables it owns, in one transaction, with `TRUNCATE` **without** `CASCADE` | Drop/recreate schema; upsert by ID | Re-seeding production must never touch other epics' tables (users, history, usage). |
+| Seed-time embedding failure: retry, then abort (store unchanged) | Load without vectors; fall back to the fake | No half-built vector index in production; query-time full-text fallback covers runtime outages. |
+| One persistent `embedding_cache` table for query and document embeddings | In-memory LRU | Survives serverless cold starts; re-seeding makes no provider calls. |
+| Provider: `gemini-embedding-001` at 768 dims (normalized after truncation), direct REST via httpx (see DL-007) | SDK; 3072 dims | Free tier is ample for about 90 documents plus cached queries; fewer dependencies. |
+| Fake embedder = hashed character n-grams | Random vector per text | Makes the CI retrieval check (§4.1 in top 3) meaningful instead of chance. |
+| Hybrid ranking with Reciprocal Rank Fusion (k=60), exact scan, `pt_unaccent` full-text | Weighted score sum; HNSW index | No score calibration; the corpus is tiny; accent-less queries work. |
+| Policy chunks per subsection, validated against a hard-coded table of contents | Free-form splitting | Citable "§4.1"; extraction errors fail loudly. |
+| Purchase channel missing on orders is reported as an anomaly | Ignore | The 7-day withdrawal right (§4.1) depends on it; the agent must ask the customer. |
+
+**Role of AI.** Claude Code ran the Spec Kit commands (specify, clarify, plan, tasks, analyze),
+profiled the data and the PDF, and proposed the options. I answered the four clarification
+questions and approved the remediation. The cross-artifact analysis caught a `CASCADE` truncation
+that could have emptied other features' tables, and a DL-001 conflict missing from the anomaly
+catalogue.
+
+---
+
 ## DL-006 — Chat stream contract (2026-10-31, #4)
 
 | Decision | Alternatives | Rationale |
