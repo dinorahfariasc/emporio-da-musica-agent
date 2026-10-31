@@ -22,7 +22,7 @@ class RouterProvider(StrEnum):
 
 
 class EmbeddingsProvider(StrEnum):
-    VOYAGE = "voyage"
+    GEMINI = "gemini"
     FAKE = "fake"
 
 
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = None
     typesafe_api_key: str | None = None
-    voyage_api_key: str | None = None
+    gemini_api_key: str | None = None
 
 
 @lru_cache

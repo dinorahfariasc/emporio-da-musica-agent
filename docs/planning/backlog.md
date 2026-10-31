@@ -113,7 +113,7 @@ size and Neon connectivity before any feature is built.
 - Generated `docs/data-quality-report.md` with every anomaly, the rule applied and counts.
 - Policy PDF → section-level chunks (number/title metadata); products indexed with name + specs
   (+ description except IDs 135–144); Postgres full-text (portuguese) + pgvector.
-- Embeddings behind an interface (Voyage | deterministic fake); query-embedding cache; full-text
+- Embeddings behind an interface (Gemini `gemini-embedding-001` | deterministic fake); query-embedding cache; full-text
   fallback when the embeddings provider fails.
 - Seed command works against any `DATABASE_URL` (local and Neon prod).
 
@@ -126,7 +126,7 @@ size and Neon connectivity before any feature is built.
 - [ ] Idempotent: two runs → same row counts and same table checksums.
 - [ ] No description text embedded for IDs 135–144 (tested).
 - [ ] CI (fake embedder): "posso devolver meu pedido?" returns §4.1 in top 3.
-- [ ] Opt-in `-m voyage`: EN and ES variants return §4.1 in top 3.
+- [ ] Opt-in `-m gemini`: EN and ES variants return §4.1 in top 3.
 - [ ] Seed runs successfully against Neon prod.
 
 ---
