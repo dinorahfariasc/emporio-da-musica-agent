@@ -135,21 +135,21 @@ tests use the `local_database_url` fixture (T005).
 
 ## Phase 6: US3: Search the policy manual (P1)
 
-- [ ] T021 [P] [US3] Tests:
+- [X] T021 [P] [US3] Tests:
   - `backend/tests/embeddings/test_fake.py`: 768 dims, L2 norm, deterministic within the process, cos("devolver", "devolução") > cos("devolver", "garantia");
   - `backend/tests/etl/test_policies.py`:
     - headings equal the expected ToC (10 sections, 18 subsections);
     - §4.1 has title "Direito de Arrependimento (Compras Online)", parent "4", parent title "Política de Trocas e Devoluções", and its body contains "7 (sete) dias";
     - no chunk contains the page header, U+200B or cover text;
     - §2, §9 and §10 are single chunks.
-- [ ] T022 [P] [US3] Test `backend/tests/embeddings/test_gemini.py`:
+- [X] T022 [P] [US3] Test `backend/tests/embeddings/test_gemini.py`:
   - one `httpx.MockTransport` test:
     - a 429 with `Retry-After: 1`, then 200, succeeds after about 1 s;
     - the batches respect 20,000 estimated tokens and 100 requests (a long input list is split);
     - the request carries `taskType` (`RETRIEVAL_DOCUMENT`/`RETRIEVAL_QUERY`) and `outputDimensionality: 768`;
     - returned vectors are L2-normalized (norm 1 ± 1e-6) although the mocked values are not;
   - one `@pytest.mark.gemini` smoke test against the real API (768 floats, norm 1).
-- [ ] T023 [US3] Test `backend/tests/retrieval/test_search_policies.py` (integration, fake):
+- [X] T023 [US3] Test `backend/tests/retrieval/test_search_policies.py` (integration, fake):
   - "posso devolver meu pedido?" puts §4.1 in the top 3 **and** has `vector_rank <= 3`;
   - full-text only (embedder raising `EmbeddingsUnavailable`) still returns §4.1 for that query (any-term matching) with `mode="fulltext"`, and one warning is logged;
   - each query in the new `backend/tests/fixtures/policy_reference_queries.json` (5 queries: returns → 4.1, shipping → 5.x, installments → 3.1, warranty → 8.x, contact → 1.2 or 7) has its expected section in the top 3, and the full-text-only run returns non-empty hits (SC-005);
@@ -158,31 +158,31 @@ tests use the `local_database_url` fixture (T005).
   - an `index_metadata` provider mismatch degrades with `index_provider_mismatch`;
   - `PolicyHit.breadcrumb` starts with "§4".
   - Also add `backend/tests/retrieval/test_search_policies_gemini.py` (marker `gemini`): EN and ES variants put §4.1 in the top 3.
-- [ ] T024 [P] [US3] Implement `backend/app/embeddings/__init__.py` (`EMBEDDING_DIM`, `InputType`, `EmbeddingsUnavailable`, the `Embedder` Protocol, `get_embedder(settings, purpose)`) and `backend/app/embeddings/fake.py` (`FakeEmbedder`, model `fake-ngram-v1`, research R3).
-- [ ] T025 [P] [US3] Move `httpx` from the dev group to `[project] dependencies`. Implement `backend/app/embeddings/gemini.py` (`GeminiEmbedder`) per research R2:
+- [X] T024 [P] [US3] Implement `backend/app/embeddings/__init__.py` (`EMBEDDING_DIM`, `InputType`, `EmbeddingsUnavailable`, the `Embedder` Protocol, `get_embedder(settings, purpose)`) and `backend/app/embeddings/fake.py` (`FakeEmbedder`, model `fake-ngram-v1`, research R3).
+- [X] T025 [P] [US3] Move `httpx` from the dev group to `[project] dependencies`. Implement `backend/app/embeddings/gemini.py` (`GeminiEmbedder`) per research R2:
   - `batchEmbedContents` with the `x-goog-api-key` header; `taskType` from `input_type`; `outputDimensionality=768`; L2-normalize each returned vector;
   - token-budget batching (≤ 20,000 estimated tokens, ≤ 100 requests);
   - on 429/503, wait for `Retry-After` or `RetryInfo.retryDelay` (default 30 s); up to 5 attempts per batch, 120 s in total;
   - query profile: 1 attempt, 3 s timeout;
   - the API key never appears in errors.
-- [ ] T026 [US3] Implement `backend/app/embeddings/cache.py`, `embed_cached()`:
+- [X] T026 [US3] Implement `backend/app/embeddings/cache.py`, `embed_cached()`:
   - documents keyed by `sha256(nfc(text))`, queries by `sha256(normalize_for_cache(text))`;
   - batched lookup; embeds only the misses; `ON CONFLICT DO NOTHING`;
   - vectors passed as `'[..]'::vector` literals.
-- [ ] T027 [US3] Add `[dependency-groups] etl = ["pypdf>=5"]` and make CI run `uv sync --locked --group etl` (locally: `uv sync --group etl`). Implement `backend/etl/policies.py` (pypdf, clean-up, ToC check, chunk rules, breadcrumb `search_text`, `parent_title`). Add `policy_chunks` and `index_metadata` to `backend/etl/schema.sql` and `OWNED_TABLES`.
-- [ ] T028 [US3] Add `psycopg-pool>=3.2` to `[project] dependencies`. Implement `backend/app/db.py::get_pool()` (module-level `AsyncConnectionPool`, `min_size=0`, `max_size=4`, `open=False` then lazy `await pool.open()`, `kwargs={"prepare_threshold": None}`). Implement `backend/app/retrieval/hybrid.py` and `backend/app/retrieval/__init__.py`:
+- [X] T027 [US3] Add `[dependency-groups] etl = ["pypdf>=5"]` and make CI run `uv sync --locked --group etl` (locally: `uv sync --group etl`). Implement `backend/etl/policies.py` (pypdf, clean-up, ToC check, chunk rules, breadcrumb `search_text`, `parent_title`). Add `policy_chunks` and `index_metadata` to `backend/etl/schema.sql` and `OWNED_TABLES`.
+- [X] T028 [US3] Add `psycopg-pool>=3.2` to `[project] dependencies`. Implement `backend/app/db.py::get_pool()` (module-level `AsyncConnectionPool`, `min_size=0`, `max_size=4`, `open=False` then lazy `await pool.open()`, `kwargs={"prepare_threshold": None}`). Implement `backend/app/retrieval/hybrid.py` and `backend/app/retrieval/__init__.py`:
   - `PolicyHit` (with `parent_title` and `breadcrumb`), `SearchResult` and `search_policies()`;
   - one parameterized SQL query: a full-text CTE with the OR'd tsquery from research R4 and `ts_rank_cd` (top 20), a vector CTE (top 20) and RRF k=60;
   - `index_metadata` read through a 5-minute in-process cache;
   - fallback to full-text only, with one warning.
-- [ ] T029 [US3] Wire the index into the ETL. Also key the fake-embedder guard on the remote target, not only on `ENVIRONMENT`: a laptop `.env` seeding Neon says `local` (#31 review). In `backend/etl/__main__.py`, after `build_payload`:
+- [X] T029 [US3] Wire the index into the ETL. Also key the fake-embedder guard on the remote target, not only on `ENVIRONMENT`: a laptop `.env` seeding Neon says `local` (#31 review). In `backend/etl/__main__.py`, after `build_payload`:
   - call `get_embedder(settings, purpose="seed")` and `embed_cached` for the policy chunks, before `reload`, committed separately;
   - `reload` inserts `policy_chunks` and `index_metadata`;
   - print the `embeddings:` line.
 
 ## Phase 7: US4: Search and recommend products (P2)
 
-- [ ] T030 [P] [US4] Tests:
+- [X] T030 [P] [US4] Tests:
   - `backend/tests/etl/test_documents.py`:
     - for each of 135–144, `search_text` contains none of its description's distinctive tokens (e.g. "Fender Jazz Bass" for 135, "88 teclas" for 142);
     - trusted products include their description;
@@ -192,7 +192,7 @@ tests use the `local_database_url` fixture (T005).
     - "Yamaha C40" ranks 81 first, and the hit has `category_id=5` and `availability="in_stock"`;
     - with `only_sellable`, no 96/113/130/136; with `category_id=5`, only violões; with `max_price`, every hit has `promo_price_brl <= max_price`; with `exclude_ids`, those IDs are absent;
     - `similar_to_product(96, only_sellable, category_id=…)` excludes 96 and the non-sellable products, returns `mode="vector"` and makes zero embedder calls (no embedder is passed).
-- [ ] T031 [US4] Implement `backend/etl/documents.py` (`build_product_doc`). Add `product_search_docs` to the schema, `OWNED_TABLES`, the embed step and `reload`. Implement `ProductHit`, `ProductFilters`, `search_products()` and `similar_to_product()` in `backend/app/retrieval/` (filters join `products`; `similar_to_product` orders by `embedding <=> (SELECT embedding FROM product_search_docs WHERE product_id = %s)`).
+- [X] T031 [US4] Implement `backend/etl/documents.py` (`build_product_doc`). Add `product_search_docs` to the schema, `OWNED_TABLES`, the embed step and `reload`. Implement `ProductHit`, `ProductFilters`, `search_products()` and `similar_to_product()` in `backend/app/retrieval/` (filters join `products`; `similar_to_product` orders by `embedding <=> (SELECT embedding FROM product_search_docs WHERE product_id = %s)`).
 
 ## Phase 8: US5 (production part) and polish
 
