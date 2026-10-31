@@ -103,3 +103,15 @@ all P0 is in production.
 > item in "Status", following the working agreements (spec-driven, two-reviewer gate, no AI
 > mentions in commits, user merges). Ask the user before any production deploy, secret handling
 > or merge. Update `docs/HANDOFF.md` and the decision log when you finish.
+
+## 8. Session log (newest first)
+
+Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-10-31 — Day 1 wrap-up
+- Done: scaffolding + production skeleton (#3), chat stream contract (#4), Gemini embeddings
+  (DL-007), store ETL + quality report + safe seed (#31), 002 agent-core spec drafted, 003
+  chat-web spec PR #32 reviewed (blocker: block markdown images), handoff docs (#33).
+- Fixed: Vercel env vars only apply to new deployments; stacked squash-merge conflicts resolved
+  with `rebase --onto`.
+- Next: #5 PR B (retrieval + Neon seed); apply review to #32 and merge; 002 plan/tasks/review.

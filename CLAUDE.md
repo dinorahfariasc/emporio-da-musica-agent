@@ -25,3 +25,6 @@ music store. Source material lives in `challenge/` (brief, CSVs, policies PDF).
 - Prices, stock, discounts and eligibility are computed deterministically in Python — never by
   the LLM.
 - Python: `uv`, `ruff`, `pytest`. Frontend: `pnpm`.
+- **Keep `docs/HANDOFF.md` alive:** after every meaningful action (PR opened/merged, feature done,
+  bug fixed, decision, review received, deploy), update its Status and add a short Session log
+  entry (Done / Fixed / Next). No secrets. Personal skill `living-handoff` describes the routine.
