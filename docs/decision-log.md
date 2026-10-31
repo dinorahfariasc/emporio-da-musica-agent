@@ -126,3 +126,35 @@ backend/frontend work, the agent epic was split, and acceptance criteria became 
 
 **Role of AI.** Claude Code checked Vercel's current Python runtime docs (500 MB bundle limit,
 zero-config FastAPI, streaming support) before choosing the topology, then scaffolded the code.
+
+---
+
+## DL-005 — Data foundation spec, plan and tasks (2026-10-31, #5)
+
+**Context.** Spec Kit artifacts for epic 001 (`specs/001-data-foundation/`), written against
+the #3 scaffolding (flat `backend/app/`, ETL in `backend/etl/`).
+
+**Correction to DL-001.** The committed `customers.csv` already stores every "Ponta Porã" in NFC.
+The two-encodings finding came from the original download and did not survive the copy. NFC
+normalization stays, and it is tested with a decomposed (NFD) fixture. The report shows the real
+count (0).
+
+**New finding.** Categories 6, 7 and 8 (woodwinds, brass, orchestral strings) have no products,
+although the manual says the store sells them. This is reported as an informational anomaly.
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Seed reloads only the tables it owns, in one transaction, with `TRUNCATE` **without** `CASCADE` | Drop/recreate schema; upsert by ID | Re-seeding production must never touch other epics' tables (users, history, usage). |
+| Seed-time embedding failure: retry, then abort (store unchanged) | Load without vectors; fall back to the fake | No half-built vector index in production; query-time full-text fallback covers runtime outages. |
+| One persistent `embedding_cache` table for query and document embeddings | In-memory LRU | Survives serverless cold starts; re-seeding costs no Voyage calls. |
+| `voyage-4`, 1024 dims, direct REST via httpx | SDK; `voyage-4-large` | Multilingual; enough quality for under 100 docs; fewer dependencies. |
+| Fake embedder = hashed character n-grams | Random vector per text | Makes the CI retrieval check (§4.1 in top 3) meaningful instead of chance. |
+| Hybrid ranking with Reciprocal Rank Fusion (k=60), exact scan, `pt_unaccent` full-text | Weighted score sum; HNSW index | No score calibration; the corpus is tiny; accent-less queries work. |
+| Policy chunks per subsection, validated against a hard-coded table of contents | Free-form splitting | Citable "§4.1"; extraction errors fail loudly. |
+| Purchase channel missing on orders is reported as an anomaly | Ignore | The 7-day withdrawal right (§4.1) depends on it; the agent must ask the customer. |
+
+**Role of AI.** Claude Code ran the Spec Kit commands (specify, clarify, plan, tasks, analyze),
+profiled the data and the PDF, and proposed the options. I answered the four clarification
+questions and approved the remediation. The cross-artifact analysis caught a `CASCADE` truncation
+that could have emptied other features' tables, and a DL-001 conflict missing from the anomaly
+catalogue.
