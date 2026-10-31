@@ -13,7 +13,8 @@ music store. Source material lives in `challenge/` (brief, CSVs, policies PDF).
 
 ## Rules
 - Workflow is Spec-Driven: no implementation without a spec + plan + tasks for the epic.
-- Code, identifiers, tests and commit messages in English; docs and agent persona in Portuguese.
+- Everything in English (code, docs, commits, PRs, issues) except the agent persona and website
+  copy, which are Portuguese-first (site has a PT/EN switch; the agent replies in the user's language).
 - Semantic commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`). **Never mention AI/Claude in
   commits or PRs, and never add Co-Authored-By trailers.** AI usage is documented in
   `docs/decision-log.md` instead.
