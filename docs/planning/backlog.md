@@ -2,8 +2,32 @@
 
 Epic-level backlog. Each P0 epic maps to one Spec Kit feature (`specs/NNN-*`); task-level issues
 are generated from its `tasks.md` and attached as sub-issues after the spec is approved.
-IDs below (`E0`, `S1`…) are temporary; GitHub numbers are assigned on creation and links are
-rewritten then.
+IDs below are planning IDs; the GitHub issue for each is:
+
+| ID | Issue |
+|---|---|
+| E0 | #2 |
+| C1 | #3 |
+| C2 | #4 |
+| E2 | #5 |
+| E3a | #6 |
+| E3b | #7 |
+| E3c | #8 |
+| E4 | #9 |
+| E5 | #10 |
+| E6 | #11 |
+| S7 | #12 |
+| S8 | #13 |
+| S9 | #14 |
+| S10 | #15 |
+| S11 | #16 |
+| S12 | #17 |
+| S13 | #18 |
+| S14 | #19 |
+| S15 | #20 |
+| E16 | #21 |
+| S17 | #22 |
+| S18 | #23 |
 
 **Milestones:** `D1 – MVP` (due 2026-11-01 23:59 America/Campo_Grande) ·
 `D2 – Improvements` (due 2026-11-02) — subject to the delivery-freeze rule (see Open questions).
