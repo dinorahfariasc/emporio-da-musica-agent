@@ -110,3 +110,19 @@ moved to the start (walking-skeleton deploy), a written chat stream contract ena
 backend/frontend work, the agent epic was split, and acceptance criteria became concrete
 (numeric payment cases, identity edge cases, named injection attacks). See the review log in
 `docs/planning/backlog.md`.
+
+---
+
+## DL-004 — Scaffolding and deployment topology (2026-10-31, #3)
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| **Two Vercel projects** from the monorepo: `emporio-web` (root `frontend/`) and `emporio-api` (root `backend/`) | One project with Vercel Services | Each side builds and deploys independently; the web app talks to the API server-to-server (BFF, #10), so a shared domain is not needed and CORS never applies. |
+| Backend as a flat `app/` package, entrypoint `app.main:app` via `[tool.vercel] entrypoint` | `src/` layout with an installed package | Vercel imports the module from the project root; a non-installed flat package avoids relying on the build installing the project itself. |
+| Python 3.13 | 3.12 (Vercel default) | Supported by Vercel and already installed locally. |
+| Providers selected by env (`LLM_PROVIDER`, `ROUTER_PROVIDER`, `EMBEDDINGS_PROVIDER`), defaulting to `fake` | Real providers by default | CI and fresh clones run with no API keys (constitution IV). |
+| Local Postgres published on port 5433 (configurable via `POSTGRES_PORT`) | 5432 | Avoids clashing with a Postgres already running on the developer machine. |
+| DB connections use `prepare_threshold=None` | Default psycopg prepared statements | Neon's pooled endpoint (PgBouncer, transaction mode) does not support server-side prepared statements. |
+
+**Role of AI.** Claude Code checked Vercel's current Python runtime docs (500 MB bundle limit,
+zero-config FastAPI, streaming support) before choosing the topology, then scaffolded the code.
