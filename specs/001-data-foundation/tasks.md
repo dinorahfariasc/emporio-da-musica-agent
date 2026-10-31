@@ -76,7 +76,7 @@ tests use the `local_database_url` fixture (T005).
     - an empty required field (e.g. `price_brl`) raises with a `file:row field` message;
     - an order item with an unknown product raises.
 - [ ] T013 [P] [US1] Tests in `backend/tests/catalog/test_rules.py` and `backend/tests/etl/test_rules.py`, one per rule:
-  - **availability**: 136 → `discontinued`, 113 → `discontinued`, 130 → `coming_soon`, 96 → `out_of_stock`, active with stock > 0 → `available`;
+  - **availability**: 136 → `discontinued`, 113 → `discontinued`, 130 → `coming_soon`, 96 → `out_of_stock`, active with stock > 0 → `in_stock`;
   - **promotions**: `effective_promotion` on the multi-active fixture gives 25%, and a tie goes to the lowest id. On the real data, exactly the effective promotions `{90: 18, 94: 8, 121: 20, 127: 10}`; 96 has none;
   - **price**: `promo_price(Decimal("599.90"), 18) == Decimal("491.92")`, and with 0% it equals the price;
   - **orders**: 3 (3450 vs 3498) and 20 (1400 vs 1488) are flagged and keep `total_brl`; orders 3 and 14 are `non_sellable_in_order`;
@@ -185,7 +185,7 @@ tests use the `local_database_url` fixture (T005).
     - specs are rendered as sorted `key: value`;
     - all 65 products get a doc;
   - `backend/tests/retrieval/test_search_products.py` (integration, fake):
-    - "Yamaha C40" ranks 81 first, and the hit has `category_id=5` and `availability="available"`;
+    - "Yamaha C40" ranks 81 first, and the hit has `category_id=5` and `availability="in_stock"`;
     - with `only_sellable`, no 96/113/130/136; with `category_id=5`, only violões; with `max_price`, every hit has `promo_price_brl <= max_price`; with `exclude_ids`, those IDs are absent;
     - `similar_to_product(96, only_sellable, category_id=…)` excludes 96 and the non-sellable products, returns `mode="vector"` and makes zero embedder calls (no embedder is passed).
 - [ ] T031 [US4] Implement `backend/etl/documents.py` (`build_product_doc`). Add `product_search_docs` to the schema, `OWNED_TABLES`, the embed step and `reload`. Implement `ProductHit`, `ProductFilters`, `search_products()` and `similar_to_product()` in `backend/app/retrieval/` (filters join `products`; `similar_to_product` orders by `embedding <=> (SELECT embedding FROM product_search_docs WHERE product_id = %s)`).

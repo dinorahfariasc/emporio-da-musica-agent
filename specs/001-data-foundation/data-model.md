@@ -32,8 +32,8 @@ feature**: every table below.
 | specs | jsonb not null | authoritative over description (FR-007); schema per category, see below |
 | description | text not null | original text, kept for audit |
 | description_trusted | bool not null | false for 135–144 (FR-006) |
-| availability | text not null | derived: `available` \| `out_of_stock` \| `discontinued` \| `coming_soon` (FR-009) |
-| is_sellable | bool not null | derived: `availability = 'available'` |
+| availability | text not null | derived: `in_stock` \| `out_of_stock` \| `discontinued` \| `coming_soon` (FR-009) |
+| is_sellable | bool not null | derived: `availability = 'in_stock'` |
 | effective_promotion_id | int null FK → promotions | derived (FR-008) |
 | effective_discount_percent | int not null default 0 | derived (FR-008) |
 | promo_price_brl | numeric(10,2) not null | derived: `promo_price(price_brl, effective_discount_percent)`, ROUND_HALF_UP; equals `price_brl` when there is no promotion |
@@ -43,7 +43,7 @@ feature**: every table below.
 - `discontinued` → `discontinued`, whatever the stock (113, 136);
 - `coming_soon` → `coming_soon` (130);
 - `active` and stock = 0 → `out_of_stock` (96);
-- otherwise `available`.
+- otherwise `in_stock` (values match `Availability` in `app/chat/protocol.py`, chat contract #4).
 
 **Effective promotion** (`effective_promotion`): among `is_active` promotions for the product,
 the largest `discount_percent`; ties are broken by the lowest `promotion_id`. None → null / 0.

@@ -86,13 +86,20 @@ async def similar_to_product(conn, product_id: int, *, filters: ProductFilters =
 - Full-text matches **any** query lexeme (research R4).
 - Never raises because the provider failed: degrades to `mode="fulltext"` and logs one warning.
 - `index_metadata` is read at most once per 5 minutes per process.
+- Mapping to the chat contract's `ProductCard` (#4), done by the #6 tools:
+  - `priceBrl` = `products.price_brl`;
+  - `promoPriceBrl` = `products.promo_price_brl` when `effective_discount_percent > 0`, else `null`;
+  - `discountPercent` = `effective_discount_percent` or `null`;
+  - `availability` is passed through unchanged.
+
+  The `find_similar_products` tool wraps `similar_to_product`.
 - Only parameterized SQL (constitution I). Hits carry IDs, category and availability; prices and
   stock are read by the tools from `products` (deterministic).
 
 ## `app/catalog/rules.py` (PR A)
 
 ```python
-Availability = Literal["available", "out_of_stock", "discontinued", "coming_soon"]
+from app.chat.protocol import Availability   # "in_stock" | "out_of_stock" | "coming_soon" | "discontinued" (chat contract, #4)
 
 def availability(status: str, stock_quantity: int) -> Availability
 def is_sellable(status: str, stock_quantity: int) -> bool
