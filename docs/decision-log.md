@@ -129,3 +129,15 @@ bundle limit, zero-config FastAPI, streaming, bindings) and proposed switching t
 Vercel's own detection suggested it; I confirmed service names, public routes and bindings.
 Also found: Next.js 16 enables Cache Components, so dynamic route handlers use `connection()`
 instead of the removed `dynamic` segment config.
+
+**Walking skeleton verified in production (2026-10-31).** `https://emporio-da-musica-agent.vercel.app`
+- `/api/stream-test`: 10 SSE chunks arrive ~300 ms apart in the client — no buffering across
+  browser → Next.js → service binding → FastAPI.
+- `/api/health`: `{"status":"ok","db":"ok"}` against Neon.
+- Backend function bundle: **12.9 MB** (limit 500 MB); frontend functions ~0.6 MB.
+- Latency: health cold ~3.1 s, warm ~1.7 s (opens a new DB connection per request, functions run
+  in `iad1`); plain streaming warm ~0.4 s to first byte. Follow-ups: reuse connections and
+  co-locate the function region with the Neon region.
+- Lessons: Neon Marketplace env vars only reach deployments created *after* they exist (needed a
+  production redeploy); `vercel link` and create-next-app add `.env*` ignores that also hide
+  `.env.example`, fixed with an explicit `!.env.example`.
