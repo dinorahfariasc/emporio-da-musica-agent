@@ -1,0 +1,112 @@
+# Decision Log
+
+Living record of how this project's decisions were made, which alternatives were considered,
+and how AI assistants took part in the process. Updated throughout development; the README
+summarizes it and links here.
+
+**Entry format:** context → decision → alternatives → rationale → role of AI.
+
+---
+
+## DL-001 — Kickoff: reading the brief and the data (2026-10-31)
+
+**Context.** Artefact technical challenge (AI Engineer): a customer-service agent for the
+fictional store Empório da Música, backed by operational CSVs and a policies manual (PDF).
+Deadline: P0 done by 2026-11-01 evening; 2026-11-02 reserved for improvements.
+
+**What was done.** Full read of the brief, the manual (8 pages) and profiling of the 6 CSVs.
+Several inconsistencies were found; handling them became data requirements:
+
+| Source | Finding |
+|---|---|
+| products | IDs 135–144: name contradicts description (e.g. "Music Man Bass 1X" described as a Fender Jazz Bass); specs contradict description (5 vs 4 strings, 88 vs 61 keys); `specs` JSON schema varies by category |
+| products | 96 `active` with zero stock; 113 `discontinued`; 136 `discontinued` with 13 units; 130 `coming_soon` yet present in orders |
+| promotions | Duplicates per product (96: 18% and 40%); only 4 active (90, 94, 121, 127); no validity dates |
+| orders | Totals differ from the sum of items (order 3: 3498 vs 3450; order 20: 1488 vs 1400) |
+| customers | "Ponta Porã" stored with two different Unicode encodings; customers 11 and 43 share the email `bruno.martins@jmail.com` (found in backlog QA review) |
+| manual | Two WhatsApp numbers (3341-4444 in §1.2, 3321-4500 in §7); email with and without accent; installment table contradicts §3.1; 7-day withdrawal right applies only to online purchases, but orders don't record the channel |
+
+Challenge files were renamed to paths without spaces/accents (`challenge/`,
+`challenge/data/*.csv`, `store_policies.pdf`).
+
+**Role of AI.** Claude Code read the PDFs and CSVs and produced the profiling; I validated the
+findings.
+
+---
+
+## DL-002 — Architecture and workflow defined in a "grilling" session (2026-10-31)
+
+**Context.** Before specifying anything, I used a *grilling* skill (a structured interview in
+rounds, each question carrying a recommended answer) to settle the decision tree. The job
+description was used as the baseline of what is expected (LangGraph, Vercel AI SDK, MCP,
+assistants that execute tasks, AI in production).
+
+### Decisions
+
+| Topic | Decision | Alternatives considered | Rationale |
+|---|---|---|---|
+| Orchestration | **LangGraph** | Plain SDK, PydanticAI, LangChain agents | The flow is naturally a graph: router → specialized nodes → fallback (conditional edge). Named in the job description. |
+| Routing | **Jev (TypeSafe AI)** as intent classifier, **Claude Haiku (structured output) as fallback** | LLM-only routing | Typed decision with confidence, in milliseconds and at near-zero cost; LLMs only write answers or handle ambiguity. Jev × Haiku comparison goes into the README. |
+| LLMs | **Claude Haiku 4.5** writes answers for specialized nodes; **Claude Sonnet 5.5** in a ReAct agent for low confidence / multi-intent | One model for everything | Cost and latency proportional to difficulty. |
+| Data access | **Deterministic** tools with parameterized SQL; price/stock/discount computed in Python | Text-to-SQL agent | The manual forbids quoting price/stock without checking the system; text-to-SQL is non-deterministic. |
+| Policies | **Hybrid RAG** (Postgres full-text + pgvector), one chunk per manual section | Whole manual in the prompt; BM25 only | Manual is small, but the architecture must scale; semantic search works across languages. |
+| Embeddings | **Voyage AI** (free tier) | Local fastembed, Gemini, no vectors | Anthropic has no embeddings API; a local model doesn't fit a serverless function. |
+| Recommendation | `find_similar_products`: structured filters + vector similarity | Name search only | "We don't carry guitar X, but here are similar ones" — fulfils manual §7.3 (suggest alternatives). |
+| Tools | Exposed through an **MCP server** (FastMCP) mounted in FastAPI | Direct function calls | Named in the job description; the same server can be used from Claude Desktop/Code. |
+| Actions | `request_return`, `register_complaint`, `handoff_to_human`; confirmation via `interrupt` (P1) | Answer-only agent | Job description asks for assistants that execute tasks. |
+| Identity | Orders are revealed only with order number + email or phone | Trust the logged-in user | LGPD; the logged-in user is the evaluator, not the customer. |
+| Persona | **Melody**, informal-but-professional tone (manual §7.1), §7.2 flow, multilingual | — | Visuals/branding will come from a Figma mockup later. |
+| Dates | Use the **real current date** | Configurable reference date | Simplicity; accepted consequence: returns for dataset orders will be refused as out of window. |
+| Frontend | **Next.js + Vercel AI SDK (`useChat`) + shadcn/ui**, i18n PT/EN | CLI, Streamlit | Production-like deliverable; AI SDK named in the job description. |
+| Deploy | **Everything on Vercel** (Next.js + Python functions) + **Neon Postgres** (free) | Railway, HF Spaces, Fly | Free, single deploy and single database; low traffic. |
+| Access | Login without public sign-up (accounts created by script) + daily token budget and rate limit | Open to the public | A paid API key is exposed. |
+| Quality | pytest (fake LLM/Jev), reference-conversation evals, GitHub Actions CI; guardrails P0; Langfuse P1 | — | "What works in production". |
+| Data (ETL) | `etl/` module with Pydantic validation, explicit correction rules and a generated report | Ad hoc cleanup | Reproducible and testable. |
+
+### Data correction rules
+- Order total mismatch: keep the original `total_brl` (amount paid) and flag it.
+- Name × description: the **name** wins; contradictory descriptions are not shown.
+- Specs × description: **specs** win.
+- Promotions: only `is_active=1`; if several are active, the largest applies.
+- `discontinued` is not for sale; zero stock = unavailable (suggest alternatives); `coming_soon` = "coming soon".
+- Official contact: §1.2 (67) 3341-4444; email without accent; conflict documented.
+- Installments: §3.1 overrides the table.
+- Text normalized to Unicode NFC.
+
+### Priorities
+- **P0 (by 11/01 evening):** full agent, backend + MCP, Next.js chat with login, deploy, README, decision log, 3–5 conversations.
+- **P1:** refined token limits, persisted history, i18n, `interrupt`, Langfuse, Playwright, MCP demo in Claude Desktop.
+- **P2 (11/02):** admin dashboard (charts + insights chat), EDA notebook, LLM-as-judge.
+
+### Process
+- **Spec-Driven Development with Spec Kit**: constitution → one spec per epic
+  (`001-data-foundation`, `002-agent-core`, `003-chat-web`, `004-auth-limits-deploy`,
+  `005-admin-dashboard`) → plan → tasks.
+- **Agile on GitHub**: tasks become draft issues, reviewed by two agents (QA and senior
+  engineering) before being created in GitHub Projects; PRs use `Closes #n`.
+- **Parallelization**: backend and frontend in separate worktrees (Orca) once specs exist.
+- Example conversations are **generated** by a script against the real agent (they double as
+  evals), including non-obvious scenarios (prompt injection, someone else's order, PIX + promo,
+  discontinued product with stock, language switch).
+
+**Role of AI.** Claude Code ran the grilling (questions + recommendations); the decisions were
+mine. Research on Jev was done by the agent through web search.
+
+---
+
+## DL-003 — Language policy and roadmap-first backlog (2026-10-31)
+
+**Decision.** Everything is written in English (code, docs, commits, PRs, issues) except the
+agent persona and the website copy, which are Portuguese-first (site with PT/EN switch; the
+agent answers in the customer's language).
+
+**Decision.** The backlog is created top-down: epic issues now (one per Spec Kit epic, plus
+P1/P2 items) so branches and PRs can be linked from day one; task-level issues are generated
+from each epic's `tasks.md` and attached as sub-issues once the spec is approved.
+
+**Role of AI.** Epic drafts written by Claude Code and reviewed by two reviewer agents (QA and
+senior engineer), both "approve with changes". Their findings reshaped the plan: platform risk
+moved to the start (walking-skeleton deploy), a written chat stream contract enables parallel
+backend/frontend work, the agent epic was split, and acceptance criteria became concrete
+(numeric payment cases, identity edge cases, named injection attacks). See the review log in
+`docs/planning/backlog.md`.

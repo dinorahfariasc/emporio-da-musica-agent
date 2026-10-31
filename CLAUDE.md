@@ -1,0 +1,24 @@
+# Empório da Música — Customer Service Agent
+
+Artefact AI Engineer technical challenge. Customer-service agent ("Melody") for a fictional
+music store. Source material lives in `challenge/` (brief, CSVs, policies PDF).
+
+## Where things are
+- `challenge/` — original brief and data (read-only inputs)
+- `.specify/memory/constitution.md` — project principles; every spec/plan must comply
+- `specs/NNN-*/` — Spec Kit artifacts per epic (spec → plan → tasks)
+- `docs/decision-log.md` — running log of decisions and AI usage; **append an entry after every
+  meaningful decision or phase**
+- `backend/` (Python, FastAPI, LangGraph, MCP) and `frontend/` (Next.js, Vercel AI SDK) — once created
+
+## Rules
+- Workflow is Spec-Driven: no implementation without a spec + plan + tasks for the epic.
+- Everything in English (code, docs, commits, PRs, issues) except the agent persona and website
+  copy, which are Portuguese-first (site has a PT/EN switch; the agent replies in the user's language).
+- Semantic commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`). **Never mention AI/Claude in
+  commits or PRs, and never add Co-Authored-By trailers.** AI usage is documented in
+  `docs/decision-log.md` instead.
+- Small PRs linked to issues (`Closes #n`); the user merges.
+- Prices, stock, discounts and eligibility are computed deterministically in Python — never by
+  the LLM.
+- Python: `uv`, `ruff`, `pytest`. Frontend: `pnpm`.
