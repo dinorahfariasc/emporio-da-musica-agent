@@ -23,7 +23,7 @@ Several inconsistencies were found; handling them became data requirements:
 | products | 96 `active` with zero stock; 113 `discontinued`; 136 `discontinued` with 13 units; 130 `coming_soon` yet present in orders |
 | promotions | Duplicates per product (96: 18% and 40%); only 4 active (90, 94, 121, 127); no validity dates |
 | orders | Totals differ from the sum of items (order 3: 3498 vs 3450; order 20: 1488 vs 1400) |
-| customers | "Ponta Porã" stored with two different Unicode encodings |
+| customers | "Ponta Porã" stored with two different Unicode encodings; customers 11 and 43 share the email `bruno.martins@jmail.com` (found in backlog QA review) |
 | manual | Two WhatsApp numbers (3341-4444 in §1.2, 3321-4500 in §7); email with and without accent; installment table contradicts §3.1; 7-day withdrawal right applies only to online purchases, but orders don't record the channel |
 
 Challenge files were renamed to paths without spaces/accents (`challenge/`,
@@ -105,4 +105,8 @@ P1/P2 items) so branches and PRs can be linked from day one; task-level issues a
 from each epic's `tasks.md` and attached as sub-issues once the spec is approved.
 
 **Role of AI.** Epic drafts written by Claude Code and reviewed by two reviewer agents (QA and
-senior engineer) before my approval.
+senior engineer), both "approve with changes". Their findings reshaped the plan: platform risk
+moved to the start (walking-skeleton deploy), a written chat stream contract enables parallel
+backend/frontend work, the agent epic was split, and acceptance criteria became concrete
+(numeric payment cases, identity edge cases, named injection attacks). See the review log in
+`docs/planning/backlog.md`.
