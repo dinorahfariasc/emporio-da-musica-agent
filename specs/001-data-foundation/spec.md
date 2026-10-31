@@ -14,7 +14,7 @@
 
 ### Session 2026-10-31
 
-- Q: The committed customers.csv already stores every "Ponta Porã" in NFC; how is the NFC criterion met? → A: Keep NFC normalization, test it with a synthetic decomposed (NFD) fixture; the report shows the real count (0 in the current data) and the decision log corrects DL-001 (the finding came from the original download and was lost when the file was copied).
+- Q: The committed customers.csv already stores every "Ponta Porã" in NFC; how is the NFC criterion met? → A: Keep NFC normalization, test it with a synthetic decomposed (NFD) fixture; the report shows the real count (0 in the current data) and the decision log corrects DL-001 (both values are already NFC; the profiling split them because of a trailing `\r`: the CSVs use CRLF and the last row has no trailing newline).
 - Q: What may the seed do to a database shared with other epics' tables? → A: It touches only the tables it owns (store data, search indexes, report data): create if missing, then truncate and reload them in a single transaction. Other tables are never touched. The query-embedding cache is kept across seeds.
 - Q: What happens if the real embeddings provider fails during seeding? → A: Retry with backoff; if it still fails, abort and roll back so nothing is committed. Query-time fallback to full-text covers runtime outages.
 - Q: Where does the query-embedding cache live? → A: In a database table keyed by provider, model and normalized query, so it survives serverless cold starts and is shared across instances. A small in-process cache may sit in front.
@@ -133,7 +133,7 @@ the configured database URL.
 - Embedding provider rate limit or failure during seeding: retried with backoff, then the seed aborts with store tables unchanged (FR-023).
 - Another feature's table has a foreign key to an owned table: the seed fails rather than emptying that table (FR-020).
 - Re-seeding production while other epics' tables (users, chat history, token usage) exist: those tables are untouched (FR-020).
-- The source CSVs mix CRLF and LF line endings and the last line has no trailing newline: parsing is unaffected.
+- The source CSVs use CRLF line endings and the last row has no trailing newline: parsed values never carry a trailing `\r`, and the last row is read like any other (DL-001 correction).
 
 ## Requirements *(mandatory)*
 

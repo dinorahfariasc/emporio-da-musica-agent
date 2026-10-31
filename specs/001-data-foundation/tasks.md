@@ -30,7 +30,7 @@ skip without `DATABASE_URL`).
   - add `[dependency-groups] etl = ["pypdf>=5"]` and `[tool.uv] default-groups = ["dev", "etl"]`;
   - add the pytest marker `voyage: calls the real Voyage API (opt-in)` and `addopts = "-m 'not voyage'"`;
   - run `uv lock`.
-- [ ] T002 [P] Add `"etl/**"` to `excludeFiles` in `backend/vercel.json`.
+- [ ] T002 [P] Add `etl/**` to `services.backend.functions["app/main.py"].excludeFiles` in the root `vercel.json` (Vercel Services, DL-004).
 - [ ] T003 [P] Add `embeddings_model: str = "voyage-4"` to `Settings` in `backend/app/config.py`; add `EMBEDDINGS_MODEL=voyage-4` to `backend/.env.example`; extend `backend/tests/test_config.py` for the new default.
 - [ ] T004 [P] Create empty packages `backend/app/catalog/__init__.py`, `backend/app/embeddings/__init__.py`, `backend/app/retrieval/__init__.py`, `backend/etl/__init__.py`, and test dirs `backend/tests/{etl,catalog,embeddings,retrieval,fixtures}/` (with `__init__.py` where needed for pytest).
 
@@ -38,7 +38,7 @@ skip without `DATABASE_URL`).
 
 ## Phase 2: Foundational (blocks all stories)
 
-- [ ] T005 [P] Write `backend/tests/test_text.py`: `nfc("Ponta Porã") == "Ponta Porã"`; zero-width characters U+200B..U+200D and U+FEFF are removed; `normalize_for_cache("  Posso  DEVOLVER? ")` gives `"posso devolver?"`.
+- [ ] T005 [P] Write `backend/tests/test_text.py`: `nfc("Ponta Pora\u0303") == "Ponta Porã"`; zero-width characters U+200B..U+200D and U+FEFF are removed; `normalize_for_cache("  Posso  DEVOLVER? ")` gives `"posso devolver?"`.
 - [ ] T006 [P] Implement `nfc()` and `normalize_for_cache()` in `backend/app/text.py` per contracts/retrieval-api.md.
 - [ ] T007 Add `async def connect(database_url: str) -> psycopg.AsyncConnection` to `backend/app/db.py`, using `prepare_threshold=None` and `connect_timeout=10`; make `ping()` reuse it.
 - [ ] T008 Write `backend/etl/schema.sql` with idempotent DDL for **all** owned tables in data-model.md:
@@ -55,7 +55,7 @@ skip without `DATABASE_URL`).
   - `async def reload(conn, payload)`: one transaction that applies the schema, runs a single `TRUNCATE <all owned tables> RESTART IDENTITY` (**no `CASCADE`**: a foreign key from a non-owned table must make the seed fail, not empty that table), inserts in PK order and upserts `index_metadata`.
 - [ ] T010 [P] Implement `backend/etl/checksums.py`: `async def table_stats(conn) -> list[tuple[str, int, str]]`, using row count and `md5(string_agg(row_to_json(t)::text, E'\n' ORDER BY <pk>))` per owned table (excluding `embedding_cache`, and excluding the `tsv` column).
 - [ ] T011 [P] Implement `backend/etl/sources.py`:
-  - read the CSVs with `csv.DictReader` (CRLF/LF safe, no trailing newline);
+  - read the CSVs with `open(..., newline="")` + `csv.DictReader`, so CRLF line endings never leave a trailing `\r` and a last row without a trailing newline is still read;
   - apply `nfc()` to every string cell;
   - record per-file/row/field which cells changed under NFC (feeds the `nfc_normalized` anomaly);
   - `dataset_fingerprint(paths)` = sha256 over sorted file bytes.
@@ -94,7 +94,8 @@ skip without `DATABASE_URL`).
   - all 20 orders are flagged `missing_purchase_channel` (one anomaly row listing every order);
   - `backend/tests/fixtures/nfd_customers.csv` (NFD and NFC "Ponta Porã") gives equal cities and `nfc_normalized` count 1;
   - categories 6, 7 and 8 are flagged `empty_category`.
-- [ ] T016 [P] [US1] Create the fixtures `backend/tests/fixtures/nfd_customers.csv` (write the decomposed form with explicit `̃` bytes) and `backend/tests/fixtures/promotions_multi_active.csv`.
+- [ ] T015a [P] [US1] `backend/tests/etl/test_sources.py`: reading `crlf_customers.csv` gives cities with no `\r`; the middle-row and last-row "Ponta Porã" compare equal and count as one distinct city; the row count includes the last row; the real `challenge/data/customers.csv` gives exactly one distinct "Ponta Porã" (6 customers) and no value ends in `\r`.
+- [ ] T016 [P] [US1] Create the fixtures `backend/tests/fixtures/nfd_customers.csv` (write the decomposed form, `a` + U+0303, as explicit bytes), `backend/tests/fixtures/crlf_customers.csv` (CRLF line endings, last row without a trailing newline, "Ponta Porã" on a middle row and on the last row) and `backend/tests/fixtures/promotions_multi_active.csv`. Write the CRLF fixture as bytes and mark it `-text` in `.gitattributes` so git never rewrites its line endings.
 - [ ] T017 [US1] `backend/tests/etl/test_seed.py` (integration):
   - seed the store tables (no index tables yet; they arrive with T039 and T044); check the row counts; the facts from T015 queried from the DB; that a second run gives identical `table_stats`;
   - the dataset fingerprint of `challenge/` is the same before and after the seed (inputs read-only, FR-001);
@@ -244,7 +245,7 @@ skip without `DATABASE_URL`).
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T048 [P] Append a DL entry to `docs/decision-log.md` for the data-foundation implementation: rules as implemented, fake-embedder design, RRF, and the DL-001 correction (the "Ponta Porã" two-encodings finding came from the original download; the repo copy is all NFC; the rule is tested with a fixture).
+- [ ] T048 [P] Append a DL entry to `docs/decision-log.md` for the data-foundation implementation: rules as implemented, fake-embedder design, RRF, and a pointer to the DL-001 correction in DL-005 (CRLF line endings, not two encodings), noting the CRLF and NFD fixtures that cover it.
 - [ ] T049 [P] Add a "Data" section to `README.md`: the seed command, the report link and the env vars.
 - [ ] T050 Run the full quickstart (steps 1–6) and `uv run ruff check . && uv run ruff format --check . && uv run pytest`; check that the fake-embedder seed takes under 30 s (SC-001); fix any findings.
 - [ ] T051 Tick the acceptance criteria in issue #5 against the evidence (test names and the report).
@@ -270,7 +271,7 @@ Setup (T001–T004)
 
 ## Parallel Examples
 
-- **After Foundational**: T013, T014, T015 and T016 (US1 tests) alongside T026, T027 and T032 (US3 unit tests). They touch different files.
+- **After Foundational**: T013, T014, T015, T015a and T016 (US1 tests) alongside T026, T027 and T032 (US3 unit tests). They touch different files.
 - **US1 implementation**: T018 (`app/catalog/rules.py`) ∥ T019 (`etl/models.py`), then T020 → T021 → T022.
 - **US3 implementation**: T033 ∥ T034 ∥ T035, then T036 → T037 ∥ T038 → T039.
 

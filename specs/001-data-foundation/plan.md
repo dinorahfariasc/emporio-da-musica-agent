@@ -122,8 +122,8 @@ backend/
 │   └── retrieval/                # test_search (DB: §4.1 top 3, product name top 1, fallback,
 │                                 # provider mismatch, cache hit), test_search_voyage (EN/ES)
 ├── pyproject.toml                # deps, etl group, default-groups, voyage marker
-└── vercel.json                   # excludeFiles += etl/**
 docs/data-quality-report.md       # generated, committed
+vercel.json                       # services.backend excludeFiles += etl/**
 ```
 
 **Structure Decision**: follow the flat `app/` package from #3 (DL-004). Code the agent needs

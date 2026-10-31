@@ -35,5 +35,6 @@
   come from the acceptance criteria in issue #5, which is the source of truth, and they are data
   facts, not implementation choices.
 - Validation finding: the committed `challenge/data/customers.csv` already stores every
-  "Ponta Porã" in NFC (bytes `c3 a3`). DL-001's "two encodings" finding does not reproduce on the
-  repo copy. Raised in `/speckit-clarify`.
+  "Ponta Porã" in NFC (bytes `c3 a3`). DL-001's "two encodings" came from CRLF line endings plus a
+  last row with no trailing newline: line-based profiling saw "Ponta Porã\r" and "Ponta Porã".
+  Raised in `/speckit-clarify`; corrected in DL-005.

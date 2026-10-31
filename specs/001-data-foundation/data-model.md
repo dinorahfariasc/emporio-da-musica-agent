@@ -167,7 +167,7 @@ comparable, so search uses full-text only and logs a warning.
 | duplicate_promotions | promotion | 3 products (93, 96, 99) | only active apply; max wins |
 | shared_email | customer | 1 group (11, 43) | both kept; flagged |
 | missing_purchase_channel | order | 1 group (all 20 orders) | §4.1 withdrawal right applies only to online purchases and orders don't record the channel; eligibility tools (epic 002) must ask the customer |
-| nfc_normalized | customer/any | 0 | normalize to NFC (DL-001 corrected, see DL entry) |
+| nfc_normalized | customer/any | 0 | normalize to NFC (DL-001 corrected in DL-005: CRLF, not two encodings) |
 | empty_category | category | 3 (6, 7, 8) | informational; agent says not available |
 | policy_conflict | policy | 3 (WhatsApp 3341-4444 in §1.2 vs 3321-4500 in §7 intro; accented email in §1.2 vs cover; installment table vs §3.1) | §1.2 number; unaccented email; §3.1 wins |
 
