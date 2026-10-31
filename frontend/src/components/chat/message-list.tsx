@@ -4,8 +4,9 @@ import type { ChatStatus } from "ai";
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 import { MessageView } from "@/components/chat/message-view";
+import { hasVisibleContent } from "@/lib/chat/parts";
 import type { ChatMessage } from "@/lib/chat/types";
-import { useMessages } from "@/lib/i18n";
+import { useMessages } from "@/lib/i18n/context";
 
 const STICK_THRESHOLD_PX = 80;
 
@@ -53,13 +54,17 @@ export function MessageList({ messages, status, children }: MessageListProps) {
       className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto"
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-4">
-        {messages.map((message, index) => (
-          <MessageView
-            key={message.id}
-            message={message}
-            streaming={busy && index === messages.length - 1}
-          />
-        ))}
+        {messages.map((message, index) =>
+          // An assistant message with only `step-start` or empty text is not shown yet; the
+          // typing indicator covers it.
+          message.role === "assistant" && !hasVisibleContent(message) ? null : (
+            <MessageView
+              key={message.id}
+              message={message}
+              streaming={busy && index === messages.length - 1}
+            />
+          ),
+        )}
         {children}
       </div>
       <div aria-live="polite" className="sr-only" data-testid="chat-announcer">

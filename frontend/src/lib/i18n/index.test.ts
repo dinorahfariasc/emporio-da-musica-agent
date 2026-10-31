@@ -22,6 +22,7 @@ describe("i18n", () => {
       "Você poderá enviar em 30s",
     );
     expect(format("{a} e {b}", { a: 1 })).toBe("1 e {b}");
+    expect(format("{toString}", {})).toBe("{toString}");
   });
 
   it("has a label for every contract tool plus the fallback", () => {

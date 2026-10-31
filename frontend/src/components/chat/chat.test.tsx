@@ -29,25 +29,44 @@ describe("Chat", () => {
 
     expect(await screen.findByText(suggestion)).toBeInTheDocument();
     expect(fetch).toHaveProperty("requests.length", 1);
+    expect(screen.getByRole("textbox")).toHaveFocus();
   });
 
-  it("streams the answer after the user bubble and typing indicator", async () => {
-    const fetch = fixtureFetch("plain-text");
+  it("keeps the typing indicator, and no empty bubble, until the first token", async () => {
+    // start, start-step and text-start, then the stream holds before the first delta.
+    const fetch = fixtureFetch("plain-text", { pauseAfter: 3 });
     const user = userEvent.setup();
     render(<Chat fetch={fetch} />);
 
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
 
     expect(within(userBubbles()[0]).getByText("Oi")).toBeInTheDocument();
+    await waitFor(() => expect(fetch.requests).toHaveLength(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.getByText(messages.status.typing)).toBeInTheDocument();
+    expect(screen.queryByTestId("message-assistant")).toBeNull();
+
+    act(() => fetch.release());
     const log = screen.getByRole("log");
     await waitFor(() => expect(log).toHaveTextContent(ANSWER));
     await waitFor(() => expect(screen.queryByText(messages.status.typing)).toBeNull());
-
-    const live = screen.getByTestId("chat-announcer");
-    await waitFor(() => expect(live).toHaveTextContent(ANSWER));
-    expect(live.textContent?.split(ANSWER)).toHaveLength(2);
     expect(screen.getByRole("textbox")).toBeEnabled();
+  });
+
+  it("announces the answer once it finishes, not while streaming", async () => {
+    // Holds after the first delta.
+    const fetch = fixtureFetch("plain-text", { pauseAfter: 4 });
+    const user = userEvent.setup();
+    render(<Chat fetch={fetch} />);
+
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent("Oi! Eu sou a Melody,"));
+    const live = screen.getByTestId("chat-announcer");
+    expect(live).toBeEmptyDOMElement();
+
+    act(() => fetch.release());
+    await waitFor(() => expect(live).toHaveTextContent(ANSWER));
+    expect(live.textContent?.trim()).toBe(ANSWER);
   });
 
   it("reuses the same chat id for the next message", async () => {
@@ -113,6 +132,20 @@ describe("Chat", () => {
     await waitFor(() => expect(screen.getByRole("textbox")).toBeEnabled());
     await waitFor(() => expect(screen.getByRole("button", { name: "Enviar" })).toBeInTheDocument());
     expect(screen.getByRole("log")).toHaveTextContent("Oi! Eu sou a Melody,");
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    // The customer can send again after stopping.
+    await user.type(screen.getByRole("textbox"), "Outra pergunta{Enter}");
+    await waitFor(() => expect(fetch.requests).toHaveLength(2));
+  });
+
+  it("treats a finish without finishReason as a complete answer", async () => {
+    const fetch = fixtureFetch("plain-text", { omitFinishReason: true });
+    const user = userEvent.setup();
+    render(<Chat fetch={fetch} />);
+
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+    await waitFor(() => expect(screen.getByTestId("chat-announcer")).toHaveTextContent(ANSWER));
     expect(screen.queryByRole("alert")).toBeNull();
   });
 

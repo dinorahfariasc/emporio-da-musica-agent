@@ -68,11 +68,17 @@ export function readHttpFixture(name: string): HttpFixture {
 type FixtureFetchOptions = {
   /** Drop the `finish` chunk and `[DONE]`, like a connection that closes early. */
   truncate?: boolean;
-  /** Send this many events, then hold the stream open until the request is aborted. */
+  /** Send `finish` without `finishReason` (optional in the contract). */
+  omitFinishReason?: boolean;
+  /** Send this many events, then hold the stream until `release()` or the request aborts. */
   pauseAfter?: number;
 };
 
-export type FixtureFetch = typeof fetch & { requests: Record<string, unknown>[] };
+export type FixtureFetch = typeof fetch & {
+  requests: Record<string, unknown>[];
+  /** Resume a stream held by `pauseAfter`. */
+  release: () => void;
+};
 
 /**
  * A `fetch` stub for `DefaultChatTransport` that answers with fixtures. An array serves the
@@ -80,10 +86,11 @@ export type FixtureFetch = typeof fetch & { requests: Record<string, unknown>[] 
  */
 export function fixtureFetch(
   names: string | string[],
-  { truncate = false, pauseAfter }: FixtureFetchOptions = {},
+  { truncate = false, omitFinishReason = false, pauseAfter }: FixtureFetchOptions = {},
 ): FixtureFetch {
   const queue = Array.isArray(names) ? names : [names];
   const requests: Record<string, unknown>[] = [];
+  let release = () => {};
 
   const stub = async (_input: RequestInfo | URL, init?: RequestInit) => {
     requests.push(JSON.parse(String(init?.body ?? "{}")));
@@ -98,18 +105,24 @@ export function fixtureFetch(
     if (truncate) {
       events = events.filter((e) => !e.includes('"type":"finish"') && !e.includes("[DONE]"));
     }
+    if (omitFinishReason) {
+      events = events.map((e) => e.replace(/,"finishReason":"[a-z-]+"/, ""));
+    }
     const encoder = new TextEncoder();
     const signal = init?.signal;
     const body = new ReadableStream<Uint8Array>({
       async start(controller) {
         for (const [i, event] of events.entries()) {
           if (pauseAfter !== undefined && i === pauseAfter) {
-            await new Promise<void>((resolve) => {
-              if (signal?.aborted) return resolve();
-              signal?.addEventListener("abort", () => resolve(), { once: true });
+            const released = await new Promise<boolean>((resolve) => {
+              if (signal?.aborted) return resolve(false);
+              signal?.addEventListener("abort", () => resolve(false), { once: true });
+              release = () => resolve(true);
             });
-            controller.error(new DOMException("The operation was aborted.", "AbortError"));
-            return;
+            if (!released) {
+              controller.error(new DOMException("The operation was aborted.", "AbortError"));
+              return;
+            }
           }
           controller.enqueue(encoder.encode(`${event}\n\n`));
           await new Promise((resolve) => setTimeout(resolve, 0));
@@ -120,5 +133,5 @@ export function fixtureFetch(
     return new Response(body, { headers: STREAM_HEADERS });
   };
 
-  return Object.assign(stub, { requests }) as FixtureFetch;
+  return Object.assign(stub, { requests, release: () => release() }) as FixtureFetch;
 }

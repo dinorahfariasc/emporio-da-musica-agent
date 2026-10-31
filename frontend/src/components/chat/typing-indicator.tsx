@@ -1,6 +1,6 @@
 "use client";
 
-import { useMessages } from "@/lib/i18n";
+import { useMessages } from "@/lib/i18n/context";
 
 export function TypingIndicator() {
   const messages = useMessages();

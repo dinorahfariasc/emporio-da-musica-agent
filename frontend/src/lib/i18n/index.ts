@@ -1,7 +1,7 @@
+// Server-safe: client components read copy with `useMessages` from "./context".
 import { ptBR, type Messages } from "./pt-BR";
 
 export type { Messages };
-export { MessagesContext, useMessages } from "./context";
 
 export const locale = "pt-BR";
 
@@ -13,6 +13,6 @@ export function getMessages(target: string = locale): Messages {
 
 export function format(template: string, vars: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in vars ? String(vars[key]) : match,
+    Object.hasOwn(vars, key) ? String(vars[key]) : match,
   );
 }

@@ -1,32 +1,32 @@
 "use client";
 
 import { ArrowUp, Square } from "lucide-react";
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useState, type FormEvent, type KeyboardEvent, type RefObject } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useMessages } from "@/lib/i18n";
+import { useMessages } from "@/lib/i18n/context";
 
 export const MAX_MESSAGE_LENGTH = 2000;
 
 type ChatInputProps = {
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
   disabled: boolean;
   busy: boolean;
-  onSend: (text: string) => void;
+  /** Returns false when the send was not started; the text is then kept. */
+  onSend: (text: string) => boolean;
   onStop: () => void;
 };
 
-export function ChatInput({ disabled, busy, onSend, onStop }: ChatInputProps) {
+export function ChatInput({ inputRef, disabled, busy, onSend, onStop }: ChatInputProps) {
   const messages = useMessages();
   const [text, setText] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const canSend = !disabled && !busy && text.trim().length > 0;
 
   function submit() {
     if (!canSend) return;
-    onSend(text.trim());
-    setText("");
-    textareaRef.current?.focus();
+    if (onSend(text.trim())) setText("");
+    inputRef?.current?.focus();
   }
 
   function handleSubmit(event: FormEvent) {
@@ -44,7 +44,7 @@ export function ChatInput({ disabled, busy, onSend, onStop }: ChatInputProps) {
   return (
     <form onSubmit={handleSubmit} className="flex items-end gap-2">
       <Textarea
-        ref={textareaRef}
+        ref={inputRef}
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={handleKeyDown}

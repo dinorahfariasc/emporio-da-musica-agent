@@ -5,7 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { ChatErrorState } from "@/lib/chat/errors";
-import { useMessages } from "@/lib/i18n";
+import { useMessages } from "@/lib/i18n/context";
 
 type ChatErrorProps = { error: ChatErrorState; onRetry: () => void };
 

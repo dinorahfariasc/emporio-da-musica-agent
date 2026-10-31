@@ -44,6 +44,25 @@ describe("toChatError", () => {
     });
   });
 
+  it.each([0, -5, "30", null])("defaults an invalid retryAfterSeconds (%s) to 60 s", (value) => {
+    const body = { error: { code: "rate_limited", message: "Aguarde.", retryAfterSeconds: value } };
+    expect(toChatError(apiError(429, JSON.stringify(body)))).toMatchObject({
+      retryAfterSeconds: 60,
+    });
+  });
+
+  it("maps a 429 with an unknown code to retryable", () => {
+    const body = { error: { code: "overloaded", message: "Muito movimento." } };
+    expect(toChatError(apiError(429, JSON.stringify(body)))).toEqual({
+      kind: "retryable",
+      message: "Muito movimento.",
+    });
+  });
+
+  it("maps 401 to unauthorized even with a non-JSON body", () => {
+    expect(toChatError(apiError(401, "<html>"))).toEqual({ kind: "unauthorized" });
+  });
+
   it("maps 429 budget_exhausted with the body message", () => {
     expect(toChatError(fromFixture("http-429-budget-exhausted"))).toEqual({
       kind: "budget_exhausted",

@@ -11,6 +11,11 @@ describe("chatMode", () => {
     expect(chatMode({ NODE_ENV: "development" })).toBe("mock");
   });
 
+  it("treats an empty or unknown value as backend", () => {
+    expect(chatMode({ NODE_ENV: "development", CHAT_MODE: "" })).toBe("backend");
+    expect(chatMode({ NODE_ENV: "development", CHAT_MODE: "fixtures" })).toBe("backend");
+  });
+
   it("lets an explicit value win", () => {
     expect(chatMode({ NODE_ENV: "production", CHAT_MODE: "mock" })).toBe("mock");
     expect(chatMode({ NODE_ENV: "development", CHAT_MODE: "backend" })).toBe("backend");

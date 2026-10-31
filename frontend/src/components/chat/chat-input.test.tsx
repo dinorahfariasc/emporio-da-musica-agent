@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ChatInput } from "@/components/chat/chat-input";
 
 function setup(props: Partial<Parameters<typeof ChatInput>[0]> = {}) {
-  const onSend = vi.fn();
+  const onSend = vi.fn(() => true);
   const onStop = vi.fn();
   render(<ChatInput disabled={false} busy={false} onSend={onSend} onStop={onStop} {...props} />);
   return { onSend, onStop, user: userEvent.setup(), textarea: screen.getByRole("textbox") };
@@ -18,6 +18,12 @@ describe("ChatInput", () => {
     expect(onSend).toHaveBeenCalledWith("Oi Melody");
     expect(textarea).toHaveValue("");
     expect(textarea).toHaveFocus();
+  });
+
+  it("keeps the text when the send is not started", async () => {
+    const { user, textarea } = setup({ onSend: vi.fn(() => false) });
+    await user.type(textarea, "Oi{Enter}");
+    expect(textarea).toHaveValue("Oi");
   });
 
   it("inserts a newline on Shift+Enter", async () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useMessages } from "@/lib/i18n";
+import { useMessages } from "@/lib/i18n/context";
 
 type EmptyStateProps = { onPick: (text: string) => void };
 
