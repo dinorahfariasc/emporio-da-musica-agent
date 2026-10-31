@@ -285,6 +285,11 @@ the cross-artifact analysis whose 9 findings (3 medium) were fixed before review
 - The chat log is `aria-live="off"`; a separate polite region announces each finished answer once.
 - A minimal `ChatError` (retryable notice only) ships in PR 1 for the dropped-stream case; PR 2
   adds the countdown and budget lock.
+- Review (QA + senior): `finishReason` is optional in the contract and the backend omits it when
+  unset, so `finishReason == null` would flag complete answers as dropped. A small `ChatTransport`
+  subclass now records whether the `finish` chunk arrived. Assistant bubbles with no visible part
+  (`step-start`, empty text) are hidden so the typing indicator stays until the first content.
+- Raw HTML in an answer is shown as escaped text, never parsed (accepted; safe).
 - The double-send guard and the dropped-stream detection were mutation-checked: disabling either
   makes its flow test fail.
 
