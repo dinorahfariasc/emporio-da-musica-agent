@@ -177,3 +177,27 @@ local model removes it. CI keeps the deterministic fake embedder (no key).
 
 **Role of AI.** Claude Code compared the three options (limits, bundle size, cold start, privacy);
 I chose Gemini.
+
+---
+
+## DL-008 — Chat web spec (2026-10-31, #9)
+
+Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks → analyze).
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Full-page chat at `/` | Landing page with a floating widget; both | Fastest path to P0, best on mobile; the evaluator lands in the conversation. A landing page can come with the Figma pass (#18). |
+| **Basic product cards in #9** from the contract's `ProductCard` (no image field) | Markdown list now, cards in #20 | Chosen over the contract doc's "markdown in P0" note; #20 keeps branded variants. Cards only format values (constitution I). |
+| 401 → `/login?reason=expired` with a placeholder page | Inline notice; redirect to a 404 until #10 | Testable now; #10 replaces the page behind a fixed path and query. |
+| Errors mapped by one pure `toChatError()` over the SDK's `APICallError` (`statusCode`, `responseBody`) | Custom `fetch` wrapper | Verified in `ai@7` source that the transport keeps status and body; trivially unit-tested from the `http-*` fixtures. |
+| Retry via `regenerate()`; also offered when the 429 countdown ends | `sendMessage` with the same text | Never duplicates the user bubble. |
+| **Streamdown** for streaming markdown | `react-markdown` + `remark-gfm`; AI Elements | Closes incomplete markdown mid-stream, sanitizes HTML and hardens links; v2 keeps heavy plugins opt-in. |
+| Typed pt-BR catalog, no i18n framework yet | `next-intl` now | YAGNI until the PT/EN switch (#13); the catalog's type is what `en` must satisfy. |
+| Component tests drive the real `useChat` with a stub `fetch` serving the fixture files (jsdom + Testing Library) | MSW; Playwright | No network or keys; fixtures stay the single source. Playwright is #16. |
+
+**Open item for #10.** `/api/chat` defaults to `CHAT_MODE=mock` when unset; production must set
+`backend`.
+
+**Role of AI.** Claude Code drafted the artifacts, asked the clarification questions (decisions
+were mine), checked `ai@7`, `@ai-sdk/react@4` and Next 16 behaviour in `node_modules`, and ran
+the cross-artifact analysis whose 9 findings (3 medium) were fixed before review.
