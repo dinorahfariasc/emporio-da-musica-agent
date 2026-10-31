@@ -102,7 +102,7 @@ duplicate in the real data is inactive.
 | order_id | int FK → orders | PK (order_id, product_id) |
 | product_id | int FK → products | |
 | quantity | int not null | > 0 |
-| product_not_sellable | bool not null | product is not sellable now (130 in orders 3, 14) |
+| product_not_on_sale | bool not null | product status is not `active`: discontinued or coming soon (130 in orders 3, 14). A stock-out does not count (96 in order 4 is not flagged) |
 
 ## Retrieval tables (PR B)
 
@@ -162,13 +162,13 @@ minutes). On a mismatch it runs full-text only and logs a warning.
 | out_of_stock_active | product | 1 | 96 | unavailable; suggest alternatives |
 | discontinued | product | 2 | 113, 136 | not sellable; 136 has stock 13 |
 | coming_soon | product | 1 | 130 | not sellable; shown as coming soon |
-| non_sellable_in_order | order | 2 | 3, 14 (product 130) | kept; flagged |
+| not_on_sale_in_order | order | 2 | 3, 14 (product 130) | kept; flagged |
 | duplicate_promotions | product | 3 | 93, 96, 99 | only active apply; max wins |
 | active_promotions | product | 4 | 90, 94, 121, 127 | informational: the only effective promotions |
 | no_promotion_validity_dates | promotion | 25 | all | `is_active` is the only source of truth; no date logic |
 | shared_email | customer | 2 | 11, 43 | both kept; flagged; identity checks use order number + email/phone |
 | missing_purchase_channel | order | 20 | all | §4.1 withdrawal right needs the channel; #6 asks the customer |
-| nfc_normalized | customer/any | 0 | none | normalize to NFC (DL-001 corrected in DL-005: CRLF, not two encodings) |
+| nfc_normalized | any | 0 | none | normalize to NFC (DL-001 corrected in DL-005: CRLF, not two encodings) |
 | empty_category | category | 3 | 6, 7, 8 | informational; agent says not available |
 | policy_conflict | policy | 3 | `1.2-vs-7-whatsapp`, `1.2-email-accent`, `3-vs-3.1-installments` | static records: §1.2 number (67) 3341-4444; unaccented email; §3.1 wins |
 
@@ -182,7 +182,7 @@ minutes). On a mismatch it runs full-text only and logs a warning.
 | 96 active with zero stock | `out_of_stock_active` |
 | 113 discontinued | `discontinued` |
 | 136 discontinued with 13 units | `discontinued` |
-| 130 coming_soon yet present in orders | `coming_soon` + `non_sellable_in_order` |
+| 130 coming_soon yet present in orders | `coming_soon` + `not_on_sale_in_order` |
 | Duplicate promotions per product (96: 18% and 40%) | `duplicate_promotions` |
 | Only 4 promotions active | `active_promotions` |
 | Promotions have no validity dates | `no_promotion_validity_dates` |

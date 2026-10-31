@@ -7,7 +7,7 @@
       "entrypoint": "app.main:app",
       "functions": {
         "app/main.py": {
-          "excludeFiles": "{tests/**,.venv/**,.pytest_cache/**,.ruff_cache/**}"
+          "excludeFiles": "{tests/**,etl/**,.venv/**,.pytest_cache/**,.ruff_cache/**}"
         }
       }
     },

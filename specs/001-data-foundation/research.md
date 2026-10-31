@@ -191,11 +191,12 @@ Revised after the PR #27 QA + senior review (scope cut to about 3–4 h in 2 PRs
 
 | Dependency | Group | Why |
 |---|---|---|
-| `httpx` | runtime (moved from dev) | Gemini client |
-| `pydantic` | runtime (already transitive) | row schemas, typed results |
-| `psycopg-pool` | runtime | serverless connection reuse (R11) |
-| `pypdf` | `etl` group | PDF text extraction |
+| `pydantic` | runtime (already transitive) — PR A | row schemas, typed results |
+| `httpx` | runtime (moved from dev) — PR B | Gemini client |
+| `psycopg-pool` | runtime — PR B | serverless connection reuse (R11) |
+| `pypdf` | `etl` group — PR B | PDF text extraction |
 
-The `etl` group is in `[tool.uv] default-groups` for local/CI. The root `vercel.json` backend
+Each dependency is added when first used. The `etl` group is **not** a default group, so the
+Vercel function never installs it; CI and local use `uv sync --group etl`. The root `vercel.json` backend
 service excludes `etl/**`. No `pgvector` Python package: vectors are passed as text literals
 cast to `vector` (avoids numpy).

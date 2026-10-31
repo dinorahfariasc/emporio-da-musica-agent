@@ -1,0 +1,2 @@
+challenge/** -text
+backend/tests/fixtures/*.csv -text

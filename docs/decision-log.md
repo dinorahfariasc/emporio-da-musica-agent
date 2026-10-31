@@ -210,3 +210,30 @@ local model removes it. CI keeps the deterministic fake embedder (no key).
 
 **Role of AI.** Claude Code compared the three options (limits, bundle size, cold start, privacy);
 I chose Gemini.
+
+---
+
+## DL-008 — Store data, quality report and safe seed (2026-10-31, #5, PR A)
+
+**What was built.**
+- `python -m etl` validates the CSVs (Pydantic, per-category specs, referential integrity;
+  `''` → NULL for optional fields) and applies the DL-002 rules.
+- It reloads the store tables in one transaction under an advisory lock (drop and recreate, no
+  `CASCADE`).
+- It writes `docs/data-quality-report.md`, with 14 anomaly types and a DL-001 traceability table.
+- Guards: the target host is printed first; non-local hosts need `--yes`; the fake embedder is
+  refused in production; the unpooled Neon URL is used when set.
+
+**Decision.** `not_on_sale_in_order` (column `order_items.product_not_on_sale`) flags products
+whose **status** is not `active`: coming soon (never on sale) or discontinued (no longer offered,
+so the order item cannot be exchanged for the same product). It does not flag products that are
+merely out of stock: `products.is_sellable` is the stock-aware flag, and the two names were made
+different on purpose. Order 4 contains
+product 96, which is out of stock today; that says nothing about the past order. Only orders 3
+and 14 (product 130) are flagged, matching DL-001.
+
+**Decision.** The report is rendered from the in-memory payload, so a CI test can compare it
+byte for byte with the committed file without a database.
+
+**Role of AI.** Claude Code implemented the tasks test-first from `tasks.md`. Running the
+pipeline on the real data surfaced the order-4 case, and I agreed with the refinement.
