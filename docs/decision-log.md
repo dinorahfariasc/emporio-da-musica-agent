@@ -117,15 +117,30 @@ backend/frontend work, the agent epic was split, and acceptance criteria became 
 
 | Decision | Alternatives | Rationale |
 |---|---|---|
-| **Two Vercel projects** from the monorepo: `emporio-web` (root `frontend/`) and `emporio-api` (root `backend/`) | One project with Vercel Services | Each side builds and deploys independently; the web app talks to the API server-to-server (BFF, #10), so a shared domain is not needed and CORS never applies. |
+| **One Vercel project with Services** (Beta): `frontend` (Next.js) is the only public service; `backend` (FastAPI) is private and reached through a service binding (`BACKEND_URL`) | Two Vercel projects (web + api), the initial choice | Vercel detected the monorepo and suggested Services. A private backend with an internal binding *is* the BFF pattern recommended in the backlog review: no CORS, no public API surface, one domain and one place for firewall/protection. `/mcp` will get its own public rewrite in #8. Walking-skeleton routes (`/api/health`, `/api/stream-test`) live in Next.js and proxy to the backend, so they exercise the full browser → Next.js → FastAPI → Neon path. |
 | Backend as a flat `app/` package, entrypoint `app.main:app` via `[tool.vercel] entrypoint` | `src/` layout with an installed package | Vercel imports the module from the project root; a non-installed flat package avoids relying on the build installing the project itself. |
 | Python 3.13 | 3.12 (Vercel default) | Supported by Vercel and already installed locally. |
 | Providers selected by env (`LLM_PROVIDER`, `ROUTER_PROVIDER`, `EMBEDDINGS_PROVIDER`), defaulting to `fake` | Real providers by default | CI and fresh clones run with no API keys (constitution IV). |
 | Local Postgres published on port 5433 (configurable via `POSTGRES_PORT`) | 5432 | Avoids clashing with a Postgres already running on the developer machine. |
 | DB connections use `prepare_threshold=None` | Default psycopg prepared statements | Neon's pooled endpoint (PgBouncer, transaction mode) does not support server-side prepared statements. |
 
-**Role of AI.** Claude Code checked Vercel's current Python runtime docs (500 MB bundle limit,
-zero-config FastAPI, streaming support) before choosing the topology, then scaffolded the code.
+**Role of AI.** Claude Code checked Vercel's current Python runtime and Services docs (500 MB
+bundle limit, zero-config FastAPI, streaming, bindings) and proposed switching to Services after
+Vercel's own detection suggested it; I confirmed service names, public routes and bindings.
+Also found: Next.js 16 enables Cache Components, so dynamic route handlers use `connection()`
+instead of the removed `dynamic` segment config.
+
+**Walking skeleton verified in production (2026-10-31).** `https://emporio-da-musica-agent.vercel.app`
+- `/api/stream-test`: 10 SSE chunks arrive ~300 ms apart in the client — no buffering across
+  browser → Next.js → service binding → FastAPI.
+- `/api/health`: `{"status":"ok","db":"ok"}` against Neon.
+- Backend function bundle: **12.9 MB** (limit 500 MB); frontend functions ~0.6 MB.
+- Latency: health cold ~3.1 s, warm ~1.7 s (opens a new DB connection per request, functions run
+  in `iad1`); plain streaming warm ~0.4 s to first byte. Follow-ups: reuse connections and
+  co-locate the function region with the Neon region.
+- Lessons: Neon Marketplace env vars only reach deployments created *after* they exist (needed a
+  production redeploy); `vercel link` and create-next-app add `.env*` ignores that also hide
+  `.env.example`, fixed with an explicit `!.env.example`.
 
 ---
 
@@ -134,10 +149,11 @@ zero-config FastAPI, streaming support) before choosing the topology, then scaff
 **Context.** Spec Kit artifacts for epic 001 (`specs/001-data-foundation/`), written against
 the #3 scaffolding (flat `backend/app/`, ETL in `backend/etl/`).
 
-**Correction to DL-001.** The committed `customers.csv` already stores every "Ponta Porã" in NFC.
-The two-encodings finding came from the original download and did not survive the copy. NFC
-normalization stays, and it is tested with a decomposed (NFD) fixture. The report shows the real
-count (0).
+**Correction to DL-001.** Both "Ponta Porã" values are already NFC; there are not two Unicode
+encodings. The CSVs use CRLF line endings and the last row has no trailing newline, so the
+`cut`-based profiling saw "Ponta Porã\r" (5 rows) and "Ponta Porã" (1 row) as different values.
+NFC normalization stays (it is tested with a decomposed fixture), CSV parsing must handle CRLF and
+a missing final newline (tested with a CRLF fixture), and the report shows the real NFC count (0).
 
 **New finding.** Categories 6, 7 and 8 (woodwinds, brass, orchestral strings) have no products,
 although the manual says the store sells them. This is reported as an informational anomaly.

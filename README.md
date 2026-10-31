@@ -31,8 +31,16 @@ uv run uvicorn app.main:app --reload   # http://localhost:8000/api/health
 
 # Frontend (in another terminal)
 cd frontend
+cp .env.example .env.local             # BACKEND_URL=http://localhost:8000
 pnpm install
-pnpm dev                               # http://localhost:3000
+pnpm dev                               # http://localhost:3000/api/health
 ```
 
 No API keys are needed to run the tests: providers default to deterministic fakes.
+
+## Deployment
+
+One Vercel project using [Services](https://vercel.com/docs/services) (`vercel.json` at the repo
+root): the Next.js `frontend` is the only public service; the FastAPI `backend` is private and
+reached by the frontend through a service binding (`BACKEND_URL`). Postgres is Neon, connected
+through the Vercel Marketplace.
