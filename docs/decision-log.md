@@ -174,3 +174,19 @@ profiled the data and the PDF, and proposed the options. I answered the four cla
 questions and approved the remediation. The cross-artifact analysis caught a `CASCADE` truncation
 that could have emptied other features' tables, and a DL-001 conflict missing from the anomaly
 catalogue.
+
+---
+
+## DL-006 — Chat stream contract (2026-10-31, #4)
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Use the **AI SDK UI message stream protocol v1** as-is, documented in `docs/contracts/chat-stream.md` | Custom SSE format + adapter in the frontend | `useChat` consumes it natively; tool and data parts come for free. Verified against the installed `ai@7` type definitions, not only the docs page (which described v5). |
+| Shared fixtures in a repo-root `contracts/` folder, tested by **both** sides: the frontend parses them with the SDK's own `uiMessageChunkSchema`; the backend re-encodes them byte for byte with its Pydantic models | Contract only in prose; JSON Schema | Drift fails CI on whichever side changed; no shared toolchain needed. |
+| Products travel as a `data-products` part; tool outputs stay compact | Product list inside the tool output | UI rendering (cards in #20) is decoupled from tool internals. |
+| Pre-stream errors are JSON `{error: {code, message, retryAfterSeconds?}}` with 401/429/500; mid-stream errors use the `error` chunk | Errors only inside the stream | Lets the BFF (#10) reject before opening a stream and the UI react per code. |
+| Security state (verified orders, failed attempts) is server-side, keyed by chat `id` | Infer from client-sent history | The client controls `messages` and could forge assistant turns. |
+| Next.js `/api/chat` with `CHAT_MODE=mock` replays fixtures (`/fixture <name>`) | MSW or a separate mock server | Frontend work (#9) runs before the agent exists, with zero extra tooling. |
+
+**Role of AI.** Claude Code inspected the installed SDK's types and transport code to pin the
+exact chunk shapes and request body, wrote the fixtures, and made both test suites validate them.

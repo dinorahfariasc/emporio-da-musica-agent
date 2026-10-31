@@ -1,0 +1,10 @@
+{
+  "status": 401,
+  "headers": {},
+  "body": {
+    "error": {
+      "code": "unauthorized",
+      "message": "Sua sessão expirou. Entre novamente para continuar."
+    }
+  }
+}

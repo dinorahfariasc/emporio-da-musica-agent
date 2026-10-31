@@ -1,0 +1,34 @@
+data: {"type":"start","messageId":"msg_products_1"}
+
+data: {"type":"start-step"}
+
+data: {"type":"tool-input-available","toolCallId":"call_1","toolName":"search_products","input":{"query":"violão","category_id":5,"max_price":1000,"only_sellable":true}}
+
+data: {"type":"tool-output-available","toolCallId":"call_1","output":{"count":2,"productIds":[91,87]}}
+
+data: {"type":"data-products","id":"products_1","data":{"products":[{"id":91,"name":"Tagima Woodstock Dreadnought Natural","categoryId":5,"priceBrl":899.0,"promoPriceBrl":null,"discountPercent":null,"availability":"in_stock"},{"id":87,"name":"Yamaha F310 Aço Natural","categoryId":5,"priceBrl":699.9,"promoPriceBrl":null,"discountPercent":null,"availability":"in_stock"}]}}
+
+data: {"type":"finish-step"}
+
+data: {"type":"start-step"}
+
+data: {"type":"text-start","id":"txt_1"}
+
+data: {"type":"text-delta","id":"txt_1","delta":"Encontrei estas opções de violão até R$ 1.000 com estoque:\n\n"}
+
+data: {"type":"text-delta","id":"txt_1","delta":"- **Tagima Woodstock Dreadnought Natural** — R$ 899,00\n"}
+
+data: {"type":"text-delta","id":"txt_1","delta":"- **Yamaha F310 Aço Natural** — R$ 699,90\n\n"}
+
+data: {"type":"text-delta","id":"txt_1","delta":"No PIX você ganha 5% de desconto. Quer saber mais sobre algum?"}
+
+data: {"type":"text-end","id":"txt_1"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"message-metadata","messageMetadata":{"route":{"intent":"product_search","confidence":0.93,"router":"jev"},"model":"claude-haiku-4-5","usage":{"inputTokens":1210,"outputTokens":96}}}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+
