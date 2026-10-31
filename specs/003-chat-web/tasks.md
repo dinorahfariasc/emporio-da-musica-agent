@@ -185,7 +185,7 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
 
   Done when T018 passes.
 - [x] T027 [US1] Replace `frontend/src/app/page.tsx` with a server page rendering `<Chat/>`. In `frontend/src/app/layout.tsx`, set `<html lang={locale}>`. Run `pnpm build` and fix any Cache Components prerender error (R10).
-- [ ] T028 PR 1 gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` green; open PR 1 (`Part of #9`)
+- [x] T028 PR 1 gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` green; open PR 1 (`Part of #9`)
 
 ---
 
@@ -195,11 +195,11 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
 
 **Independent test:** `tool-products` shows the done status "Buscando no catálogo…" and 2 cards with the exact fixture values. `tool-error` shows a failed status and no error code.
 
-- [ ] T029 [P] [US2] `frontend/src/components/chat/tool-status.test.tsx`:
+- [x] T029 [P] [US2] `frontend/src/components/chat/tool-status.test.tsx`:
   - running, done and failed render the label plus a distinct state (the accessible name includes the state suffix);
   - an unknown tool shows "Consultando…";
   - the technical tool name never appears in the DOM.
-- [ ] T030 [P] [US2] `frontend/src/components/chat/product-cards.test.tsx`:
+- [x] T030 [P] [US2] `frontend/src/components/chat/product-cards.test.tsx`:
   - The `tool-products` products show the names "Tagima Woodstock Dreadnought Natural" and "Yamaha F310 Aço Natural", the prices "R$ 899,00" and "R$ 699,90", and the badge "Em estoque".
   - A product with `promoPriceBrl: 160, priceBrl: 200, discountPercent: 20` shows:
     - "R$ 160,00";
@@ -208,35 +208,35 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
   - An unknown `availability` shows no badge.
   - `[]` renders nothing.
   - A long name wraps.
-- [ ] T031 [P] [US2] Extend `message-view.test.tsx`:
+- [x] T031 [P] [US2] Extend `message-view.test.tsx`:
   - `tool-products` renders the done tool status, then the 2 cards, then the text, in that order;
   - `tool-error` renders a failed status, no "verification_failed", and the recovery text;
   - an unknown `data-*` part is ignored.
-- [ ] T032 [P] [US2] `frontend/src/components/chat/tool-status.tsx` (`{toolName, state}`):
+- [x] T032 [P] [US2] `frontend/src/components/chat/tool-status.tsx` (`{toolName, state}`):
   - running: lucide `Loader2`, spinning, with `motion-reduce:animate-none`;
   - done: `Check`;
   - failed: `AlertCircle`, muted;
   - never renders tool input, output or `errorText`.
 
   Done when T029 passes.
-- [ ] T033 [P] [US2] Card components:
+- [x] T033 [P] [US2] Card components:
   - `frontend/src/components/chat/product-card.tsx` (`{product}`): one card (shadcn `Card` + `Badge`), formatting with `formatBrl(value, locale)` and `formatPercent`. No arithmetic on values (constitution I).
   - `frontend/src/components/chat/product-cards.tsx` (`{products}`): a `grid grid-cols-1 sm:grid-cols-2 gap-2` grid that renders nothing for `[]`.
 
   Done when T030 passes.
-- [ ] T034 [US2] Extend `message-view.tsx`: `isToolUIPart` → `ToolStatus` with `getToolName`; `data-products` → `ProductCards`; ignore other parts. Done when T031 passes.
+- [x] T034 [US2] Extend `message-view.tsx`: `isToolUIPart` → `ToolStatus` with `getToolName`; `data-products` → `ProductCards`; ignore other parts. Done when T031 passes.
 
 ## Phase 5: User Story 3 — Errors and limits (P1)
 
 **Independent test:** flow tests with `fixtureFetch` for each `http-*` fixture and for `stream-error`.
 
-- [ ] T035 [P] [US3] `frontend/src/components/chat/chat-error.test.tsx`. Use `vi.useFakeTimers({toFake: ["setInterval"]})` and `userEvent.setup({advanceTimers: vi.advanceTimersByTime})`.
+- [x] T035 [P] [US3] `frontend/src/components/chat/chat-error.test.tsx`. Use `vi.useFakeTimers({toFake: ["setInterval"]})` and `userEvent.setup({advanceTimers: vi.advanceTimersByTime})`.
   - `rate_limited` shows the message and a countdown that decreases, and calls `onExpire` at 0.
   - `budget_exhausted` shows the message and no retry button.
   - `retryable` shows the message and "Tentar novamente", which calls `onRetry`.
   - The root has `role="alert"`.
   - No status codes or error codes are rendered.
-- [ ] T036 [US3] Extend `chat.test.tsx`. Mock `useRouter` from `next/navigation` and use the same fake-timer setup as T035.
+- [x] T036 [US3] Extend `chat.test.tsx`. Mock `useRouter` from `next/navigation` and use the same fake-timer setup as T035.
   - `http-401` → `replace("/login?reason=expired&callbackUrl=/")`.
   - `http-429-rate-limited`:
     - the notice shows the fixture message and the textarea is disabled;
@@ -245,13 +245,13 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
   - `http-429-budget-exhausted` → disabled, no retry.
   - `fixtureFetch(["http-500", "plain-text"])` then retry → the answer renders, with exactly one user bubble, and focus returns to the input.
   - `stream-error` keeps the partial "Deixa eu verificar isso pra você", shows the `errorText`, and offers retry.
-- [ ] T037 [P] [US3] `frontend/src/components/chat/chat-error.tsx` (`{error, onRetry, onExpire}`):
+- [x] T037 [P] [US3] `frontend/src/components/chat/chat-error.tsx` (`{error, onRetry, onExpire}`):
   - shadcn `Alert` with `role="alert"`;
   - the countdown uses `setInterval`, cleared on unmount;
   - the server message is shown, with the catalog fallback when there is none.
 
   Done when T035 passes.
-- [ ] T038 [US3] Wire errors in `chat.tsx` using `toChatError(error)`, with these behaviours:
+- [x] T038 [US3] Wire errors in `chat.tsx` using `toChatError(error)`, with these behaviours:
 
   | Error | Behaviour |
   |---|---|
@@ -261,8 +261,8 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
   | `retryable` (and local dropped-stream) | Retry button |
 
   Retry runs `clearError(); regenerate();` and then focuses the input. `ChatError` renders after the last message. Done when T036 passes.
-- [ ] T039 [P] [US3] `frontend/src/components/login/login-notice.tsx` (`"use client"`): reads `useSearchParams()`; when `reason === "expired"`, shows an `Alert` with the catalog copy.
-- [ ] T040 [US3] `frontend/src/app/login/page.tsx`: a server page using `getMessages(locale)`, with a heading, the placeholder note, `<Suspense><LoginNotice/></Suspense>` (required under Cache Components) and a link back to `/`. `pnpm build` passes.
+- [x] T039 [P] [US3] `frontend/src/components/login/login-notice.tsx` (`"use client"`): reads `useSearchParams()`; when `reason === "expired"`, shows an `Alert` with the catalog copy.
+- [x] T040 [US3] `frontend/src/app/login/page.tsx`: a server page using `getMessages(locale)`, with a heading, the placeholder note, `<Suspense><LoginNotice/></Suspense>` (required under Cache Components) and a link back to `/`. `pnpm build` passes.
 - [ ] T041 PR 2 gate: lint, typecheck, test and build green; open PR 2 (`Part of #9`)
 
 ---

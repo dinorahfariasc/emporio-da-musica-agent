@@ -16,14 +16,15 @@ export function ProductCard({ product }: ProductCardProps) {
   const badge = Object.hasOwn(availability, product.availability)
     ? availability[product.availability]
     : null;
-  const onPromo = product.promoPriceBrl !== null;
+  const promoPrice = product.promoPriceBrl;
+  const onPromo = promoPrice !== null;
 
   return (
     <Card size="sm" role="article" aria-label={product.name} className="min-w-0 gap-2 px-3">
       <h3 className="text-sm leading-snug font-medium break-words">{product.name}</h3>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="text-base font-semibold">
-          {formatBrl(onPromo ? product.promoPriceBrl! : product.priceBrl, locale)}
+          {formatBrl(promoPrice ?? product.priceBrl, locale)}
         </span>
         {onPromo && (
           <>

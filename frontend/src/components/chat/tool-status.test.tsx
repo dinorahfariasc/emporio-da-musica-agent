@@ -11,10 +11,10 @@ describe("ToolStatus", () => {
     ["running", "Buscando no catálogo…"],
     ["done", `Buscando no catálogo… ${messages.toolState.done}`],
     ["failed", `Buscando no catálogo… ${messages.toolState.failed}`],
-  ] as const)("renders the %s state with its accessible name", (state, name) => {
+  ] as const)("renders the %s state with its announced text", (state, name) => {
     render(<ToolStatus toolName="search_products" state={state} />);
     const status = screen.getByRole("status");
-    expect(status).toHaveAccessibleName(name);
+    expect(status).toHaveTextContent(name);
     expect(status).toHaveAttribute("data-state", state);
   });
 

@@ -11,6 +11,7 @@ export function toToolDisplayState(state: ToolUIPart["state"]): ToolDisplayState
     case "output-error":
     case "output-denied":
       return "failed";
+    // Approval states are not in the contract (no tool asks for approval); they show as running.
     default:
       return "running";
   }

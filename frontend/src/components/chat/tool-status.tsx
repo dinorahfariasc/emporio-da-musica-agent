@@ -17,7 +17,6 @@ export function ToolStatus({ toolName, state }: ToolStatusProps) {
   return (
     <div
       role="status"
-      aria-label={`${label}${suffix}`}
       data-state={state}
       className={cn(
         "flex items-center gap-1.5 text-xs",
@@ -30,6 +29,8 @@ export function ToolStatus({ toolName, state }: ToolStatusProps) {
       {state === "done" && <Check aria-hidden className="size-3.5" />}
       {state === "failed" && <AlertCircle aria-hidden className="size-3.5" />}
       <span>{label}</span>
+      {/* In the content, not aria-label, so the state change is announced. */}
+      {suffix && <span className="sr-only">{suffix}</span>}
     </div>
   );
 }

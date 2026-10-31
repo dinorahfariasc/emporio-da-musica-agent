@@ -28,6 +28,8 @@ export function Chat({ fetch }: ChatProps) {
   // Rate limit: input locked until the countdown ends. Budget: locked for the page session.
   const [rateLimitedUntilExpire, setRateLimited] = useState(false);
   const [locked, setLocked] = useState(false);
+  // Remounts ChatError per error so a repeated rate limit always restarts its countdown.
+  const [errorKey, setErrorKey] = useState(0);
 
   // A stream closed without its `finish` chunk ends as `ready` with no error (research R2).
   const [droppedStream, setDroppedStream] = useState(false);
@@ -36,6 +38,7 @@ export function Chat({ fetch }: ChatProps) {
       transport,
       onError: (error) => {
         const kind = toChatError(error, copy).kind;
+        setErrorKey((key) => key + 1);
         if (kind === "unauthorized") router.replace("/login?reason=expired&callbackUrl=/");
         if (kind === "rate_limited") setRateLimited(true);
         if (kind === "budget_exhausted") setLocked(true);
@@ -54,6 +57,7 @@ export function Chat({ fetch }: ChatProps) {
     if (sendingRef.current || locked) return false;
     sendingRef.current = true;
     setDroppedStream(false);
+    setRateLimited(false);
     if (error) clearError();
     void request().finally(() => {
       sendingRef.current = false;
@@ -94,6 +98,7 @@ export function Chat({ fetch }: ChatProps) {
             {typing && <TypingIndicator />}
             {chatError && !busy && (
               <ChatError
+                key={errorKey}
                 error={chatError}
                 onRetry={handleRetry}
                 onExpire={() => setRateLimited(false)}

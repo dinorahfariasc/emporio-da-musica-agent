@@ -246,4 +246,19 @@ describe("Chat errors and limits", () => {
     expect(screen.getByRole("log")).toHaveTextContent("Deixa eu verificar isso pra você");
     expect(within(alert).getByRole("button", { name: messages.errors.retry })).toBeInTheDocument();
   });
+
+  it("retries a stream error by replacing the partial answer", async () => {
+    const user = userEvent.setup();
+    const fetch = fixtureFetch(["stream-error", "plain-text"]);
+    render(<Chat fetch={fetch} />);
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    await user.click(within(alert).getByRole("button", { name: messages.errors.retry }));
+
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(ANSWER));
+    expect(screen.getByRole("log")).not.toHaveTextContent("Deixa eu verificar isso pra você");
+    expect(userBubbles()).toHaveLength(1);
+    expect(screen.getAllByTestId("message-assistant")).toHaveLength(1);
+  });
 });

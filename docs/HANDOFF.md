@@ -43,8 +43,8 @@ report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
 - **#9 chat web:** PR 1 (Foundation + US1, T001–T027) implemented on branch
   `feat/9-chat-web-foundation` (worktree `chat-web`): streaming chat at `/` on the mock, hardened
   Streamdown, fail-closed `chatMode()`, double-send guard, dropped-stream notice; 65 tests, lint,
-  typecheck and build green; QA + senior review applied; PR open (`Part of #9`). Next: PR 2
-  (US2+US3, T029–T041) then PR 3 (US4+polish, T042–T047, `Closes #9`). Deviations from the
+  typecheck and build green; QA + senior review applied; PR #36 open (`Part of #9`). PR 2
+  (US2+US3, T029–T041) on `feat/9-chat-web-tools-errors`, stacked on #36, reviewed, PR open. Next: PR 3 (US4+polish, T042–T047, `Closes #9`). Deviations from the
   plan are in DL-009 (harden prefixes are origin-based → `["*"]` + href re-check; `@source`
   path is `../../node_modules/...`; i18n split into server-safe `index.ts` + client `context.tsx`).
 - **#6 agent core:** spec written on branch `docs/6-agent-core-spec` (not merged, no PR yet).
@@ -119,6 +119,12 @@ all P0 is in production.
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-10-31 — #9 PR 2 (tools, cards, errors)
+- Done: tool status, product cards, 401/429/budget/retry states, `/login` placeholder; 90 tests.
+- Review: QA approve, senior approve with minors (countdown remount key, rate-limit flag reset,
+  announced tool state) — applied.
+- Next: user merges #36 then PR 2 (retarget to main after #36 squash: `rebase --onto`); PR 3.
 
 ### 2026-10-31 — #9 PR 1 implemented
 - Done: T001–T027 on `feat/9-chat-web-foundation` (4 semantic commits); tests first; guard and
