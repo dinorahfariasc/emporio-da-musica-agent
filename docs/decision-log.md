@@ -269,6 +269,25 @@ Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks
 were mine), checked `ai@7`, `@ai-sdk/react@4` and Next 16 behaviour in `node_modules`, and ran
 the cross-artifact analysis whose 9 findings (3 medium) were fixed before review.
 
+**Implementation, PR 1 (Foundation + US1).** Findings that changed the plan:
+- `rehype-harden` 1.1.8 matches link prefixes by **origin**, so `["https://", "http://", "mailto:"]`
+  blocked every real link (and required a `defaultOrigin`). Links now use `["*"]`, which harden
+  limits to http(s) and which always blocks `javascript:`, `data:`, `file:` and `vbscript:`. The
+  custom `a` renderer re-checks `^(https?:|mailto:)` before rendering an anchor. Images stay
+  blocked (`allowedImagePrefixes: []`, `img: () => null`). Blocked items are removed or shown as
+  plain text, never harden's English "[blocked]" placeholder with hard-coded grays.
+- Streamdown's own link-safety modal is disabled (`linkSafety.enabled: false`); links open in a
+  new tab with `rel="noopener noreferrer"`.
+- `@source` in `globals.css` is `../../node_modules/streamdown/dist/*.js` (relative to
+  `src/app/`), not `../node_modules/…` as written in the tasks. Verified in the built CSS.
+- `src/lib/i18n` is split: `index.ts` (server-safe `locale`, `getMessages`, `format`) and
+  `context.tsx` (`"use client"` context and `useMessages`), so server pages can read the catalog.
+- The chat log is `aria-live="off"`; a separate polite region announces each finished answer once.
+- A minimal `ChatError` (retryable notice only) ships in PR 1 for the dropped-stream case; PR 2
+  adds the countdown and budget lock.
+- The double-send guard and the dropped-stream detection were mutation-checked: disabling either
+  makes its flow test fail.
+
 ## DL-010 — Retrieval and search index (2026-10-31, #5, PR B)
 
 | Decision | Alternatives | Rationale |
