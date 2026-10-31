@@ -102,7 +102,7 @@ duplicate in the real data is inactive.
 | order_id | int FK → orders | PK (order_id, product_id) |
 | product_id | int FK → products | |
 | quantity | int not null | > 0 |
-| product_not_sellable | bool not null | product is not sellable now (130 in orders 3, 14) |
+| product_not_sellable | bool not null | product status is not `active`: discontinued or coming soon (130 in orders 3, 14). A stock-out does not count (96 in order 4 is not flagged) |
 
 ## Retrieval tables (PR B)
 

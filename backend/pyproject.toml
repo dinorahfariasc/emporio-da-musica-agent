@@ -7,15 +7,20 @@ dependencies = [
     "fastapi>=0.120",
     "pydantic-settings>=2.6",
     "psycopg[binary]>=3.2",
+    "psycopg-pool>=3.2",
+    "httpx>=0.28",
+    "pydantic>=2.9",
 ]
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28",
     "pytest>=8.3",
     "pytest-asyncio>=0.25",
     "ruff>=0.8",
     "uvicorn>=0.32",
+]
+etl = [
+    "pypdf>=5",
 ]
 
 [tool.vercel]
@@ -23,12 +28,17 @@ entrypoint = "app.main:app"
 
 [tool.uv]
 package = false
+default-groups = ["dev", "etl"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-m 'not gemini' --import-mode=importlib"
+markers = [
+    "gemini: calls the real Gemini API (opt-in: uv run pytest -m gemini)",
+]
 
 [tool.ruff]
 line-length = 100

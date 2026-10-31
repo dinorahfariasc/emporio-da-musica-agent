@@ -31,10 +31,13 @@ class Settings(BaseSettings):
 
     environment: Environment = Environment.LOCAL
     database_url: str | None = None
+    # Direct (non-pooled) URL; used by the seed when set.
+    database_url_unpooled: str | None = None
 
     llm_provider: LLMProvider = LLMProvider.FAKE
     router_provider: RouterProvider = RouterProvider.FAKE
     embeddings_provider: EmbeddingsProvider = EmbeddingsProvider.FAKE
+    embeddings_model: str = "gemini-embedding-001"
 
     anthropic_api_key: str | None = None
     typesafe_api_key: str | None = None

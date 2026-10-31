@@ -29,42 +29,42 @@ tests use the `local_database_url` fixture (T005).
 
 ## Phase 1: Setup
 
-- [ ] T001 Update `backend/pyproject.toml`:
+- [X] T001 Update `backend/pyproject.toml`:
   - move `httpx>=0.28` to `[project] dependencies` and add `pydantic>=2.9` and `psycopg-pool>=3.2`;
   - add `[dependency-groups] etl = ["pypdf>=5"]` and `[tool.uv] default-groups = ["dev", "etl"]`;
   - add the pytest marker `gemini: calls the real Gemini API (opt-in)` and `addopts = "-m 'not gemini'"`;
   - run `uv lock`.
-- [ ] T002 [P] Add a root `.gitattributes` with `challenge/** -text` and `backend/tests/fixtures/*.csv -text`. Confirm with `git ls-files --eol challenge/data/` that the CSVs keep `crlf` in the index and in the working tree.
-- [ ] T003 [P] Add `etl/**` to `services.backend.functions["app/main.py"].excludeFiles` in the root `vercel.json`.
-- [ ] T004 [P] Add `embeddings_model: str = "gemini-embedding-001"` and `database_url_unpooled: str | None = None` to `Settings` in `backend/app/config.py`; add `EMBEDDINGS_MODEL=gemini-embedding-001` and `DATABASE_URL_UNPOOLED=` (with a matrix comment: Neon direct URL, seed only) to `backend/.env.example`; extend `backend/tests/test_config.py`.
-- [ ] T005 [P] In `backend/tests/conftest.py`, add the fixture `local_database_url`: it skips unless `DATABASE_URL` is set **and** its host is `localhost`, `127.0.0.1` or `::1`, or `ALLOW_DESTRUCTIVE_TESTS=1`.
+- [X] T002 [P] Add a root `.gitattributes` with `challenge/** -text` and `backend/tests/fixtures/*.csv -text`. Confirm with `git ls-files --eol challenge/data/` that the CSVs keep `crlf` in the index and in the working tree.
+- [X] T003 [P] Add `etl/**` to `services.backend.functions["app/main.py"].excludeFiles` in the root `vercel.json`.
+- [X] T004 [P] Add `embeddings_model: str = "gemini-embedding-001"` and `database_url_unpooled: str | None = None` to `Settings` in `backend/app/config.py`; add `EMBEDDINGS_MODEL=gemini-embedding-001` and `DATABASE_URL_UNPOOLED=` (with a matrix comment: Neon direct URL, seed only) to `backend/.env.example`; extend `backend/tests/test_config.py`.
+- [X] T005 [P] In `backend/tests/conftest.py`, add the fixture `local_database_url`: it skips unless `DATABASE_URL` is set **and** its host is `localhost`, `127.0.0.1` or `::1`, or `ALLOW_DESTRUCTIVE_TESTS=1`.
 
 ## Phase 2: Foundational
 
-- [ ] T006 [P] Write `backend/tests/test_text.py`, then implement `nfc()` and `normalize_for_cache()` in `backend/app/text.py` (contracts/retrieval-api.md). Cases:
+- [X] T006 [P] Write `backend/tests/test_text.py`, then implement `nfc()` and `normalize_for_cache()` in `backend/app/text.py` (contracts/retrieval-api.md). Cases:
   - `nfc("Ponta Pora" + "\u0303") == "Ponta Porã"`;
   - U+200B..U+200D and U+FEFF are removed;
   - `normalize_for_cache("  Posso  DEVOLVER? ") == "posso devolver?"`.
-- [ ] T007 Add `async def connect(url: str) -> psycopg.AsyncConnection` (`prepare_threshold=None`, `connect_timeout=10`) to `backend/app/db.py`; make `ping()` reuse it.
-- [ ] T008 Write `backend/etl/schema.sql`:
+- [X] T007 Add `async def connect(url: str) -> psycopg.AsyncConnection` (`prepare_threshold=None`, `connect_timeout=10`) to `backend/app/db.py`; make `ping()` reuse it.
+- [X] T008 Write `backend/etl/schema.sql`:
   - `CREATE EXTENSION IF NOT EXISTS vector` and `unaccent`;
   - a `DO $$ ... $$` block that creates `pt_unaccent` (copy of `portuguese`, mapping `asciiword, word, hword, hword_part, hword_asciipart, asciihword` to `unaccent, portuguese_stem`) only if `pg_ts_config` has no such config;
   - `CREATE TABLE IF NOT EXISTS embedding_cache` (data-model.md);
   - plain `CREATE TABLE` for the store tables, with every column, CHECK and FK from data-model.md: `status IN ('active','discontinued','coming_soon')`, the order status and payment enums, `discount_percent BETWEEN 1 AND 100`, `price_brl > 0`, `stock_quantity >= 0`, `quantity > 0`, and nullable `tracking_code`, `estimated_delivery` and `notes`.
-- [ ] T009 Implement `backend/etl/load.py`:
+- [X] T009 Implement `backend/etl/load.py`:
   - `OWNED_TABLES` in dependency order;
   - `async def reload(conn, payload)`, one transaction that runs `SELECT pg_advisory_xact_lock(hashtext('emporio:seed'))`, applies the extension/config/cache part of the schema, runs `DROP TABLE IF EXISTS` on each owned table in reverse order (**no `CASCADE`**), runs the `CREATE TABLE` statements, and inserts the rows in PK order.
-- [ ] T010 [P] Implement `backend/etl/checksums.py`: `async def table_stats(conn) -> list[tuple[str, int, str]]`, using the row count and `md5(string_agg(row_to_json(t)::text, E'\n' ORDER BY <pk>))` per owned table (excluding `embedding_cache` and the `tsv` columns).
+- [X] T010 [P] Implement `backend/etl/checksums.py`: `async def table_stats(conn) -> list[tuple[str, int, str]]`, using the row count and `md5(string_agg(row_to_json(t)::text, E'\n' ORDER BY <pk>))` per owned table (excluding `embedding_cache` and the `tsv` columns).
 
 ## Phase 3: US1: Seed a clean, trustworthy store database (P1)
 
 **Independent test**: seed twice on local; counts 9/65/25/50/20/22, identical checksums, per-rule facts.
 
-- [ ] T011 [P] [US1] Write the fixtures as bytes from a small script (so the escapes are exact):
+- [X] T011 [P] [US1] Write the fixtures as bytes from a small script (so the escapes are exact):
   - `backend/tests/fixtures/nfd_customers.csv`: one row with "Ponta Pora" + U+0303 and one with "Ponta Porã";
   - `backend/tests/fixtures/crlf_customers.csv`: CRLF line endings, last row without a trailing newline, "Ponta Porã" on a middle row and on the last row;
   - `backend/tests/fixtures/promotions_multi_active.csv`: product 90 with active 10% and 25%, and a tie case.
-- [ ] T012 [P] [US1] Tests in `backend/tests/etl/test_sources.py` and `backend/tests/etl/test_models.py`.
+- [X] T012 [P] [US1] Tests in `backend/tests/etl/test_sources.py` and `backend/tests/etl/test_models.py`.
   - **Sources**:
     - the CRLF fixture yields no value ending in `\r`; both "Ponta Porã" rows are equal and the last row is read;
     - the NFD fixture yields equal cities and an NFC-change count of 1;
@@ -75,7 +75,7 @@ tests use the `local_database_url` fixture (T005).
     - real order 1 keeps `tracking_code="BRAB1234567BR"` and `estimated_delivery=2025-10-25`; real order 9 gets `None` for both;
     - an empty required field (e.g. `price_brl`) raises with a `file:row field` message;
     - an order item with an unknown product raises.
-- [ ] T013 [P] [US1] Tests in `backend/tests/catalog/test_rules.py` and `backend/tests/etl/test_rules.py`, one per rule:
+- [X] T013 [P] [US1] Tests in `backend/tests/catalog/test_rules.py` and `backend/tests/etl/test_rules.py`, one per rule:
   - **availability**: 136 → `discontinued`, 113 → `discontinued`, 130 → `coming_soon`, 96 → `out_of_stock`, active with stock > 0 → `in_stock`;
   - **promotions**: `effective_promotion` on the multi-active fixture gives 25%, and a tie goes to the lowest id. On the real data, exactly the effective promotions `{90: 18, 94: 8, 121: 20, 127: 10}`; 96 has none;
   - **price**: `promo_price(Decimal("599.90"), 18) == Decimal("491.92")`, and with 0% it equals the price;
@@ -83,21 +83,21 @@ tests use the `local_database_url` fixture (T005).
   - **products**: 135–144 have `description_trusted=False`;
   - **customers**: 11 and 43 are `shared_email`;
   - **other anomalies**: categories 6–8 are `empty_category`; all 20 orders are `missing_purchase_channel`; all 25 promotions are `no_promotion_validity_dates`; exactly 3 `policy_conflict` records.
-- [ ] T014 [US1] `backend/tests/etl/test_seed.py` (integration, `local_database_url`):
+- [X] T014 [US1] `backend/tests/etl/test_seed.py` (integration, `local_database_url`):
   - seed and check the row counts, the T013 facts in the DB (including `promo_price_brl` for 90) and the NULLs for order 9;
   - a second seed gives identical `table_stats`;
   - the `challenge/data` bytes are unchanged;
   - a validation error leaves a previously seeded DB unchanged;
   - after adding a column to `products` by hand, a reseed restores the declared shape (drop/recreate).
-- [ ] T015 [P] [US1] Implement `backend/app/catalog/rules.py`: `availability`, `is_sellable`, `effective_promotion` (with a `PromotionLike` Protocol) and `promo_price` (`Decimal`, `ROUND_HALF_UP`, 2 places).
-- [ ] T016 [P] [US1] Implement `backend/etl/sources.py` and `backend/etl/models.py`.
+- [X] T015 [P] [US1] Implement `backend/app/catalog/rules.py`: `availability`, `is_sellable`, `effective_promotion` (with a `PromotionLike` Protocol) and `promo_price` (`Decimal`, `ROUND_HALF_UP`, 2 places).
+- [X] T016 [P] [US1] Implement `backend/etl/sources.py` and `backend/etl/models.py`.
   - **Sources**: open the CSVs with `newline=""` + `csv.DictReader`, apply `nfc()` to every cell and record NFC changes.
   - **Models** (Pydantic rows, data-model.md):
     - per-category specs map;
     - `''` → `None` for `tracking_code`, `estimated_delivery` and `notes`, and an error for required fields;
     - email lowercased; phone `^\(\d{2}\) \d{4,5}-\d{4}$`;
     - `validate_dataset()` checks referential integrity and raises `ValidationFailed` with every error as `file:row field: reason`.
-- [ ] T017 [US1] Implement `backend/etl/rules.py` and `backend/etl/pipeline.py`.
+- [X] T017 [US1] Implement `backend/etl/rules.py` and `backend/etl/pipeline.py`.
   - **`rules.py`**:
     - `Anomaly` dataclass and `UNTRUSTED_DESCRIPTION_IDS` (reason per ID);
     - detectors and derivations for every catalogue type in data-model.md (`items_total_brl` from current prices, `total_mismatch`, `description_trusted`, `availability`, `is_sellable`, `effective_*`, `promo_price_brl`, `email_shared`, `phone_digits`, `product_not_sellable`);
@@ -107,17 +107,17 @@ tests use the `local_database_url` fixture (T005).
 
 ## Phase 4: US2: Data quality report (P1)
 
-- [ ] T018 [P] [US2] Write `backend/tests/etl/test_report.py` (renders only to `tmp_path`):
+- [X] T018 [P] [US2] Write `backend/tests/etl/test_report.py` (renders only to `tmp_path`):
   - the summary counts equal the data-model catalogue (2, 10, 1, 2, 1, 2, 3, 4, 25, 2, 20, 0, 3, 3);
   - the DL-001 traceability table is present with every row from data-model.md;
   - each Details section starts with its description line;
   - emails are masked and no phone numbers appear;
   - **drift**: `render(build_payload(challenge/data))` equals the committed `docs/data-quality-report.md` byte for byte.
-- [ ] T019 [US2] Implement `backend/etl/report.py` (`render(payload) -> str`, per contracts/data-quality-report.md). Generate and commit `docs/data-quality-report.md`.
+- [X] T019 [US2] Implement `backend/etl/report.py` (`render(payload) -> str`, per contracts/data-quality-report.md). Generate and commit `docs/data-quality-report.md`.
 
 ## Phase 5: US5 (safety part): Seed any environment safely
 
-- [ ] T020 [US5] Implement `backend/etl/__main__.py` per contracts/seed-cli.md, with tests in `backend/tests/etl/test_cli.py`.
+- [X] T020 [US5] Implement `backend/etl/__main__.py` per contracts/seed-cli.md, with tests in `backend/tests/etl/test_cli.py`.
   - **Implementation**:
     - resolve the URL (`DATABASE_URL_UNPOOLED` or `DATABASE_URL`);
     - print `target: host/db (local|remote)`;
