@@ -30,8 +30,7 @@ tests use the `local_database_url` fixture (T005).
 ## Phase 1: Setup
 
 - [X] T001 Update `backend/pyproject.toml`:
-  - move `httpx>=0.28` to `[project] dependencies` and add `pydantic>=2.9` and `psycopg-pool>=3.2`;
-  - add `[dependency-groups] etl = ["pypdf>=5"]` and `[tool.uv] default-groups = ["dev", "etl"]`;
+  - add `pydantic>=2.9` to `[project] dependencies`. Each other dependency is added by the task that first uses it (#31 review): `httpx` (T025), `psycopg-pool` (T028), the `etl` group with `pypdf` (T027). No `default-groups`, so ETL-only packages never reach the Vercel function;
   - add the pytest marker `gemini: calls the real Gemini API (opt-in)` and `addopts = "-m 'not gemini'"`;
   - run `uv lock`.
 - [X] T002 [P] Add a root `.gitattributes` with `challenge/** -text` and `backend/tests/fixtures/*.csv -text`. Confirm with `git ls-files --eol challenge/data/` that the CSVs keep `crlf` in the index and in the working tree.
@@ -79,7 +78,7 @@ tests use the `local_database_url` fixture (T005).
   - **availability**: 136 → `discontinued`, 113 → `discontinued`, 130 → `coming_soon`, 96 → `out_of_stock`, active with stock > 0 → `in_stock`;
   - **promotions**: `effective_promotion` on the multi-active fixture gives 25%, and a tie goes to the lowest id. On the real data, exactly the effective promotions `{90: 18, 94: 8, 121: 20, 127: 10}`; 96 has none;
   - **price**: `promo_price(Decimal("599.90"), 18) == Decimal("491.92")`, and with 0% it equals the price;
-  - **orders**: 3 (3450 vs 3498) and 20 (1400 vs 1488) are flagged and keep `total_brl`; orders 3 and 14 are `non_sellable_in_order`;
+  - **orders**: 3 (3450 vs 3498) and 20 (1400 vs 1488) are flagged and keep `total_brl`; orders 3 and 14 are `not_on_sale_in_order`;
   - **products**: 135–144 have `description_trusted=False`;
   - **customers**: 11 and 43 are `shared_email`;
   - **other anomalies**: categories 6–8 are `empty_category`; all 20 orders are `missing_purchase_channel`; all 25 promotions are `no_promotion_validity_dates`; exactly 3 `policy_conflict` records.
@@ -100,7 +99,7 @@ tests use the `local_database_url` fixture (T005).
 - [X] T017 [US1] Implement `backend/etl/rules.py` and `backend/etl/pipeline.py`.
   - **`rules.py`**:
     - `Anomaly` dataclass and `UNTRUSTED_DESCRIPTION_IDS` (reason per ID);
-    - detectors and derivations for every catalogue type in data-model.md (`items_total_brl` from current prices, `total_mismatch`, `description_trusted`, `availability`, `is_sellable`, `effective_*`, `promo_price_brl`, `email_shared`, `phone_digits`, `product_not_sellable`);
+    - detectors and derivations for every catalogue type in data-model.md (`items_total_brl` from current prices, `total_mismatch`, `description_trusted`, `availability`, `is_sellable`, `effective_*`, `promo_price_brl`, `email_shared`, `phone_digits`, `product_not_on_sale`);
     - the 3 static `policy_conflict` records;
     - emails masked in `detail`.
   - **`pipeline.py`**: `build_payload(data_dir) -> Payload` (rows + sorted anomalies + row counts), pure, no DB.
@@ -160,7 +159,7 @@ tests use the `local_database_url` fixture (T005).
   - `PolicyHit.breadcrumb` starts with "§4".
   - Also add `backend/tests/retrieval/test_search_policies_gemini.py` (marker `gemini`): EN and ES variants put §4.1 in the top 3.
 - [ ] T024 [P] [US3] Implement `backend/app/embeddings/__init__.py` (`EMBEDDING_DIM`, `InputType`, `EmbeddingsUnavailable`, the `Embedder` Protocol, `get_embedder(settings, purpose)`) and `backend/app/embeddings/fake.py` (`FakeEmbedder`, model `fake-ngram-v1`, research R3).
-- [ ] T025 [P] [US3] Implement `backend/app/embeddings/gemini.py` (`GeminiEmbedder`) per research R2:
+- [ ] T025 [P] [US3] Move `httpx` from the dev group to `[project] dependencies`. Implement `backend/app/embeddings/gemini.py` (`GeminiEmbedder`) per research R2:
   - `batchEmbedContents` with the `x-goog-api-key` header; `taskType` from `input_type`; `outputDimensionality=768`; L2-normalize each returned vector;
   - token-budget batching (≤ 20,000 estimated tokens, ≤ 100 requests);
   - on 429/503, wait for `Retry-After` or `RetryInfo.retryDelay` (default 30 s); up to 5 attempts per batch, 120 s in total;
@@ -170,13 +169,13 @@ tests use the `local_database_url` fixture (T005).
   - documents keyed by `sha256(nfc(text))`, queries by `sha256(normalize_for_cache(text))`;
   - batched lookup; embeds only the misses; `ON CONFLICT DO NOTHING`;
   - vectors passed as `'[..]'::vector` literals.
-- [ ] T027 [US3] Implement `backend/etl/policies.py` (pypdf, clean-up, ToC check, chunk rules, breadcrumb `search_text`, `parent_title`). Add `policy_chunks` and `index_metadata` to `backend/etl/schema.sql` and `OWNED_TABLES`.
-- [ ] T028 [US3] Implement `backend/app/db.py::get_pool()` (module-level `AsyncConnectionPool`, `min_size=0`, `max_size=4`, `open=False` then lazy `await pool.open()`, `kwargs={"prepare_threshold": None}`). Implement `backend/app/retrieval/hybrid.py` and `backend/app/retrieval/__init__.py`:
+- [ ] T027 [US3] Add `[dependency-groups] etl = ["pypdf>=5"]` and make CI run `uv sync --locked --group etl` (locally: `uv sync --group etl`). Implement `backend/etl/policies.py` (pypdf, clean-up, ToC check, chunk rules, breadcrumb `search_text`, `parent_title`). Add `policy_chunks` and `index_metadata` to `backend/etl/schema.sql` and `OWNED_TABLES`.
+- [ ] T028 [US3] Add `psycopg-pool>=3.2` to `[project] dependencies`. Implement `backend/app/db.py::get_pool()` (module-level `AsyncConnectionPool`, `min_size=0`, `max_size=4`, `open=False` then lazy `await pool.open()`, `kwargs={"prepare_threshold": None}`). Implement `backend/app/retrieval/hybrid.py` and `backend/app/retrieval/__init__.py`:
   - `PolicyHit` (with `parent_title` and `breadcrumb`), `SearchResult` and `search_policies()`;
   - one parameterized SQL query: a full-text CTE with the OR'd tsquery from research R4 and `ts_rank_cd` (top 20), a vector CTE (top 20) and RRF k=60;
   - `index_metadata` read through a 5-minute in-process cache;
   - fallback to full-text only, with one warning.
-- [ ] T029 [US3] Wire the index into the ETL. In `backend/etl/__main__.py`, after `build_payload`:
+- [ ] T029 [US3] Wire the index into the ETL. Also key the fake-embedder guard on the remote target, not only on `ENVIRONMENT`: a laptop `.env` seeding Neon says `local` (#31 review). In `backend/etl/__main__.py`, after `build_payload`:
   - call `get_embedder(settings, purpose="seed")` and `embed_cached` for the policy chunks, before `reload`, committed separately;
   - `reload` inserts `policy_chunks` and `index_metadata`;
   - print the `embeddings:` line.

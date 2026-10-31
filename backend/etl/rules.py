@@ -43,9 +43,10 @@ ANOMALY_TYPES: dict[str, AnomalyType] = {
         "Product not launched yet.",
         "Not sellable; shown as coming soon (DL-002).",
     ),
-    "non_sellable_in_order": AnomalyType(
+    "not_on_sale_in_order": AnomalyType(
         "order",
-        "Order contains a product that is not on sale (discontinued or coming soon).",
+        "Order contains a product that is not on sale (discontinued or coming soon); "
+        "a product that is only out of stock does not count.",
         "Kept as historical data; flagged on the order item.",
     ),
     "duplicate_promotions": AnomalyType(
@@ -110,7 +111,8 @@ POLICY_CONFLICTS: dict[str, str] = {
     "1.2-email-accent": "§1.2 lists contato@empóriodamusica.com.br; the cover lists "
     "contato@emporiodamusica.com.br. Use the address without the accent.",
     "3-vs-3.1-installments": "§3 table says up to 12x with a R$ 100,00 minimum installment; "
-    "§3.1 sets 1–3x with no minimum, 4–6x with R$ 80,00, 7–12x with R$ 100,00. §3.1 wins.",
+    "§3.1 sets up to 3x without a minimum installment (except below R$ 50,00), 4–6x with a "
+    "R$ 80,00 minimum and 7–12x with R$ 100,00. §3.1 wins.",
 }
 
 
@@ -272,11 +274,11 @@ def apply_rules(ds: Dataset) -> Derived:
         )
         if blocked:
             listed = ", ".join(f"product {i}" for i in blocked)
-            add(Anomaly("non_sellable_in_order", f"order {o.order_id}", f"contains {listed}"))
+            add(Anomaly("not_on_sale_in_order", f"order {o.order_id}", f"contains {listed}"))
         add(Anomaly("missing_purchase_channel", f"order {o.order_id}", "channel not recorded"))
 
     order_items = [
-        {**i.model_dump(), "product_not_sellable": not offered[i.product_id]}
+        {**i.model_dump(), "product_not_on_sale": not offered[i.product_id]}
         for i in sorted(ds.order_items, key=lambda i: (i.order_id, i.product_id))
     ]
 

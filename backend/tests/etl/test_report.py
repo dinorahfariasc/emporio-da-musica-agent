@@ -21,7 +21,7 @@ def test_summary_counts_match_the_catalogue(report):
         "out_of_stock_active": "1",
         "discontinued": "2",
         "coming_soon": "1",
-        "non_sellable_in_order": "2",
+        "not_on_sale_in_order": "2",
         "duplicate_promotions": "3",
         "active_promotions": "4",
         "no_promotion_validity_dates": "25",

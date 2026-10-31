@@ -5,7 +5,9 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS unaccent;
 
--- There is no CREATE TEXT SEARCH CONFIGURATION IF NOT EXISTS.
+-- There is no CREATE TEXT SEARCH CONFIGURATION IF NOT EXISTS. Being create-if-missing, a later
+-- change to this mapping is NOT applied to an existing database: drop pt_unaccent by hand
+-- (after the tables whose tsv columns use it) and re-seed.
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_ts_config WHERE cfgname = 'pt_unaccent') THEN
@@ -97,6 +99,6 @@ CREATE TABLE order_items (
     order_id              int NOT NULL REFERENCES orders,
     product_id            int NOT NULL REFERENCES products,
     quantity              int NOT NULL CHECK (quantity > 0),
-    product_not_sellable  boolean NOT NULL,
+    product_not_on_sale  boolean NOT NULL,
     PRIMARY KEY (order_id, product_id)
 );

@@ -25,8 +25,9 @@ class SourceData:
 
 def read_csv(path: Path, nfc_changes: list[str]) -> list[SourceRow]:
     rows = []
-    # newline="" lets the csv module handle CRLF, so no value keeps a trailing "\r".
-    with path.open(encoding="utf-8", newline="") as f:
+    # newline="" lets the csv module handle CRLF, so no value keeps a trailing "\r";
+    # utf-8-sig drops a byte-order mark if an editor ever adds one.
+    with path.open(encoding="utf-8-sig", newline="") as f:
         for line, raw in enumerate(csv.DictReader(f), start=2):
             values = {}
             for key, value in raw.items():

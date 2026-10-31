@@ -8,6 +8,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from urllib.parse import urlsplit
 
+import psycopg
+
 from app.config import EmbeddingsProvider, Environment, Settings
 from app.db import connect
 from etl.checksums import table_stats
@@ -26,9 +28,14 @@ class Refused(Exception):
 
 
 def seed_url(settings: Settings) -> str:
-    url = settings.database_url_unpooled or settings.database_url
+    if settings.database_url_unpooled:
+        return settings.database_url_unpooled
+    url = settings.database_url
     if not url:
         raise Refused("DATABASE_URL (or DATABASE_URL_UNPOOLED) is not set")
+    if "-pooler" in (urlsplit(url).hostname or ""):
+        # A long DDL transaction should not go through PgBouncer.
+        raise Refused("DATABASE_URL is Neon's pooled endpoint; set DATABASE_URL_UNPOOLED")
     return url
 
 
@@ -51,12 +58,14 @@ def check_guards(settings: Settings, is_local: bool, confirmed: bool) -> None:
 
 async def seed(url: str, data_dir: Path = DATA_DIR, report_path: Path = REPORT_PATH) -> None:
     payload = build_payload(data_dir)
+    # Written before the reload: the report depends only on the inputs, and a failed write must
+    # not leave the tables replaced while the command reports an error.
+    await asyncio.to_thread(report_path.write_text, render(payload), encoding="utf-8")
+    print(f"report: {report_path}")
     async with await connect(url) as conn:
         await reload(conn, payload.tables)
         for table, count, checksum in await table_stats(conn):
             print(f"{table:<20} {count:>4}  {checksum}")
-    await asyncio.to_thread(report_path.write_text, render(payload), encoding="utf-8")
-    print(f"report: {report_path}")
 
 
 def main(argv: Sequence[str] | None = None, settings: Settings | None = None) -> int:
@@ -66,6 +75,7 @@ def main(argv: Sequence[str] | None = None, settings: Settings | None = None) ->
     logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(levelname)s %(message)s")
     settings = settings or Settings()
 
+    target = "?"
     try:
         url = seed_url(settings)
         target, is_local = describe_target(url)
@@ -77,6 +87,10 @@ def main(argv: Sequence[str] | None = None, settings: Settings | None = None) ->
         return 1
     except ValidationFailed as exc:
         logger.error("validation failed:\n%s", exc)
+        return 1
+    except psycopg.OperationalError as exc:
+        # Connection errors can echo the host and user; report only the masked target.
+        logger.error("seed failed: %s connecting to %s", type(exc).__name__, target)
         return 1
     except Exception as exc:  # noqa: BLE001 - any failure is exit 1 with a message
         logger.error("seed failed: %s: %s", type(exc).__name__, exc)

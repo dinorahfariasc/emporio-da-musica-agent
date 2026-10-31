@@ -224,8 +224,11 @@ I chose Gemini.
 - Guards: the target host is printed first; non-local hosts need `--yes`; the fake embedder is
   refused in production; the unpooled Neon URL is used when set.
 
-**Decision.** `non_sellable_in_order` flags products whose **status** is not `active`
-(discontinued or coming soon), not products that are merely out of stock. Order 4 contains
+**Decision.** `not_on_sale_in_order` (column `order_items.product_not_on_sale`) flags products
+whose **status** is not `active`: coming soon (never on sale) or discontinued (no longer offered,
+so the order item cannot be exchanged for the same product). It does not flag products that are
+merely out of stock: `products.is_sellable` is the stock-aware flag, and the two names were made
+different on purpose. Order 4 contains
 product 96, which is out of stock today; that says nothing about the past order. Only orders 3
 and 14 (product 130) are flagged, matching DL-001.
 

@@ -8,6 +8,8 @@ from psycopg.types.json import Jsonb
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 # Insert order (parents first). The seed drops these and nothing else; embedding_cache persists.
+# A new table that references one of these must be added here (and to schema.sql); otherwise the
+# drop fails, by design, because the seed never touches tables it does not own.
 OWNED_TABLES = ("categories", "products", "promotions", "customers", "orders", "order_items")
 
 

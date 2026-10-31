@@ -1,8 +1,8 @@
 """Deterministic catalog rules (DL-002). The ETL stores their results; agent tools reuse them."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Protocol
+from typing import Any, Protocol
 
 from app.chat.protocol import Availability
 
@@ -35,6 +35,11 @@ def effective_promotion[P: PromotionLike](promos: Iterable[P]) -> P | None:
     if not active:
         return None
     return min(active, key=lambda p: (-p.discount_percent, p.promotion_id))
+
+
+def display_description(product: Mapping[str, Any]) -> str | None:
+    """The only way tools should read a description: untrusted ones (135–144) are hidden."""
+    return product["description"] if product["description_trusted"] else None
 
 
 def promo_price(price_brl: Decimal, discount_percent: int) -> Decimal:

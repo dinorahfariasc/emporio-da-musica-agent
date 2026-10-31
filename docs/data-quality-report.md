@@ -11,7 +11,7 @@
 | out_of_stock_active | product | 1 | Unavailable; suggest alternatives (DL-002). |
 | discontinued | product | 2 | Not sellable (DL-002). |
 | coming_soon | product | 1 | Not sellable; shown as coming soon (DL-002). |
-| non_sellable_in_order | order | 2 | Kept as historical data; flagged on the order item. |
+| not_on_sale_in_order | order | 2 | Kept as historical data; flagged on the order item. |
 | duplicate_promotions | product | 3 | Only active promotions apply; the largest discount wins (DL-002). |
 | active_promotions | product | 4 | Informational: these are the only discounts the agent may quote. |
 | no_promotion_validity_dates | promotion | 25 | `is_active` is the only source of truth; no date logic. |
@@ -31,7 +31,7 @@
 | 96 active with zero stock | `out_of_stock_active` |
 | 113 discontinued | `discontinued` |
 | 136 discontinued with 13 units | `discontinued` |
-| 130 coming_soon yet present in orders | `coming_soon` + `non_sellable_in_order` |
+| 130 coming_soon yet present in orders | `coming_soon` + `not_on_sale_in_order` |
 | Duplicate promotions per product (96: 18% and 40%) | `duplicate_promotions` |
 | Only 4 promotions active | `active_promotions` |
 | Promotions have no validity dates | `no_promotion_validity_dates` |
@@ -98,9 +98,9 @@ Product not launched yet.
 |---|---|
 | product 130 | stock 2 |
 
-### non_sellable_in_order
+### not_on_sale_in_order
 
-Order contains a product that is not on sale (discontinued or coming soon).
+Order contains a product that is not on sale (discontinued or coming soon); a product that is only out of stock does not count.
 
 | Record | Detail |
 |---|---|
@@ -214,7 +214,7 @@ The policy manual contradicts itself.
 |---|---|
 | 1.2-email-accent | §1.2 lists contato@empóriodamusica.com.br; the cover lists contato@emporiodamusica.com.br. Use the address without the accent. |
 | 1.2-vs-7-whatsapp | §1.2 lists WhatsApp (67) 3341-4444; §7 lists (67) 3321-4500. Use §1.2: (67) 3341-4444. |
-| 3-vs-3.1-installments | §3 table says up to 12x with a R$ 100,00 minimum installment; §3.1 sets 1–3x with no minimum, 4–6x with R$ 80,00, 7–12x with R$ 100,00. §3.1 wins. |
+| 3-vs-3.1-installments | §3 table says up to 12x with a R$ 100,00 minimum installment; §3.1 sets up to 3x without a minimum installment (except below R$ 50,00), 4–6x with a R$ 80,00 minimum and 7–12x with R$ 100,00. §3.1 wins. |
 
 ## Load summary
 

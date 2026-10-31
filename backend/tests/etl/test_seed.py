@@ -2,6 +2,7 @@ import hashlib
 import shutil
 from pathlib import Path
 
+import psycopg
 import pytest
 
 from app.db import connect
@@ -75,7 +76,7 @@ async def test_seeded_facts(local_database_url, tmp_path):
     ) == [(96, "out_of_stock"), (113, "discontinued"), (130, "coming_soon"), (136, "discontinued")]
 
 
-async def test_validation_error_leaves_database_unchanged(local_database_url, tmp_path):
+async def test_validation_error_stops_before_touching_the_database(local_database_url, tmp_path):
     await seed(local_database_url, report_path=tmp_path / "report.md")
     before = await _stats(local_database_url)
     broken = tmp_path / "data"
@@ -88,6 +89,25 @@ async def test_validation_error_leaves_database_unchanged(local_database_url, tm
 
     assert await _stats(local_database_url) == before
     assert not (tmp_path / "broken.md").exists()
+
+
+async def test_failed_reload_rolls_back_and_spares_foreign_tables(local_database_url, tmp_path):
+    await seed(local_database_url, report_path=tmp_path / "report.md")
+    before = await _stats(local_database_url)
+    async with await connect(local_database_url) as conn:
+        await conn.execute("CREATE TABLE other_feature (product_id int REFERENCES products)")
+        await conn.execute("INSERT INTO other_feature VALUES (81)")
+        await conn.commit()
+    try:
+        with pytest.raises(psycopg.errors.DependentObjectsStillExist):
+            await seed(local_database_url, report_path=tmp_path / "report.md")
+
+        assert await _stats(local_database_url) == before
+        assert await _fetch(local_database_url, "SELECT product_id FROM other_feature") == [(81,)]
+    finally:
+        async with await connect(local_database_url) as conn:
+            await conn.execute("DROP TABLE IF EXISTS other_feature")
+            await conn.commit()
 
 
 async def test_reseed_restores_the_declared_schema(local_database_url, tmp_path):

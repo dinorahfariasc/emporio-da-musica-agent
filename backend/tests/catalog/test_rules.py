@@ -3,7 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from app.catalog.rules import availability, effective_promotion, is_sellable, promo_price
+from app.catalog.rules import (
+    availability,
+    display_description,
+    effective_promotion,
+    is_sellable,
+    promo_price,
+)
 from etl.models import PromotionRow
 from etl.sources import read_csv
 
@@ -52,3 +58,8 @@ def test_promo_price_rounds_half_up():
     assert promo_price(Decimal("599.90"), 18) == Decimal("491.92")
     assert promo_price(Decimal("2399.00"), 18) == Decimal("1967.18")
     assert promo_price(Decimal("599.90"), 0) == Decimal("599.90")
+
+
+def test_untrusted_description_is_never_displayed():
+    assert display_description({"description": "ok", "description_trusted": True}) == "ok"
+    assert display_description({"description": "Fender", "description_trusted": False}) is None
