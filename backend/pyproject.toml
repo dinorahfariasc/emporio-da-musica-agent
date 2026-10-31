@@ -7,6 +7,7 @@ dependencies = [
     "fastapi>=0.120",
     "pydantic-settings>=2.6",
     "psycopg[binary]>=3.2",
+    "pydantic>=2.9",
 ]
 
 [dependency-groups]
@@ -29,6 +30,10 @@ pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-m 'not gemini' --import-mode=importlib"
+markers = [
+    "gemini: calls the real Gemini API (opt-in: uv run pytest -m gemini)",
+]
 
 [tool.ruff]
 line-length = 100

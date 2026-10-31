@@ -1,0 +1,6 @@
+promotion_id,product_id,discount_percent,description,is_active
+1,90,10,Oferta Especial,1
+2,90,25,Black Friday,1
+3,90,40,Queima de Estoque,0
+4,94,15,Desconto Exclusivo,1
+5,94,15,Semana do Músico,1

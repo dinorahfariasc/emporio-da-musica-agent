@@ -144,6 +144,39 @@ instead of the removed `dynamic` segment config.
 
 ---
 
+## DL-005 — Data foundation spec, plan and tasks (2026-10-31, #5)
+
+**Context.** Spec Kit artifacts for epic 001 (`specs/001-data-foundation/`), written against
+the #3 scaffolding (flat `backend/app/`, ETL in `backend/etl/`).
+
+**Correction to DL-001.** Both "Ponta Porã" values are already NFC; there are not two Unicode
+encodings. The CSVs use CRLF line endings and the last row has no trailing newline, so the
+`cut`-based profiling saw "Ponta Porã\r" (5 rows) and "Ponta Porã" (1 row) as different values.
+NFC normalization stays (it is tested with a decomposed fixture), CSV parsing must handle CRLF and
+a missing final newline (tested with a CRLF fixture), and the report shows the real NFC count (0).
+
+**New finding.** Categories 6, 7 and 8 (woodwinds, brass, orchestral strings) have no products,
+although the manual says the store sells them. This is reported as an informational anomaly.
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Seed reloads only the tables it owns, in one transaction, with `TRUNCATE` **without** `CASCADE` | Drop/recreate schema; upsert by ID | Re-seeding production must never touch other epics' tables (users, history, usage). |
+| Seed-time embedding failure: retry, then abort (store unchanged) | Load without vectors; fall back to the fake | No half-built vector index in production; query-time full-text fallback covers runtime outages. |
+| One persistent `embedding_cache` table for query and document embeddings | In-memory LRU | Survives serverless cold starts; re-seeding makes no provider calls. |
+| Provider: `gemini-embedding-001` at 768 dims (normalized after truncation), direct REST via httpx (see DL-007) | SDK; 3072 dims | Free tier is ample for about 90 documents plus cached queries; fewer dependencies. |
+| Fake embedder = hashed character n-grams | Random vector per text | Makes the CI retrieval check (§4.1 in top 3) meaningful instead of chance. |
+| Hybrid ranking with Reciprocal Rank Fusion (k=60), exact scan, `pt_unaccent` full-text | Weighted score sum; HNSW index | No score calibration; the corpus is tiny; accent-less queries work. |
+| Policy chunks per subsection, validated against a hard-coded table of contents | Free-form splitting | Citable "§4.1"; extraction errors fail loudly. |
+| Purchase channel missing on orders is reported as an anomaly | Ignore | The 7-day withdrawal right (§4.1) depends on it; the agent must ask the customer. |
+
+**Role of AI.** Claude Code ran the Spec Kit commands (specify, clarify, plan, tasks, analyze),
+profiled the data and the PDF, and proposed the options. I answered the four clarification
+questions and approved the remediation. The cross-artifact analysis caught a `CASCADE` truncation
+that could have emptied other features' tables, and a DL-001 conflict missing from the anomaly
+catalogue.
+
+---
+
 ## DL-006 — Chat stream contract (2026-10-31, #4)
 
 | Decision | Alternatives | Rationale |
@@ -180,7 +213,34 @@ I chose Gemini.
 
 ---
 
-## DL-008 — Chat web spec (2026-10-31, #9)
+## DL-008 — Store data, quality report and safe seed (2026-10-31, #5, PR A)
+
+**What was built.**
+- `python -m etl` validates the CSVs (Pydantic, per-category specs, referential integrity;
+  `''` → NULL for optional fields) and applies the DL-002 rules.
+- It reloads the store tables in one transaction under an advisory lock (drop and recreate, no
+  `CASCADE`).
+- It writes `docs/data-quality-report.md`, with 14 anomaly types and a DL-001 traceability table.
+- Guards: the target host is printed first; non-local hosts need `--yes`; the fake embedder is
+  refused in production; the unpooled Neon URL is used when set.
+
+**Decision.** `not_on_sale_in_order` (column `order_items.product_not_on_sale`) flags products
+whose **status** is not `active`: coming soon (never on sale) or discontinued (no longer offered,
+so the order item cannot be exchanged for the same product). It does not flag products that are
+merely out of stock: `products.is_sellable` is the stock-aware flag, and the two names were made
+different on purpose. Order 4 contains
+product 96, which is out of stock today; that says nothing about the past order. Only orders 3
+and 14 (product 130) are flagged, matching DL-001.
+
+**Decision.** The report is rendered from the in-memory payload, so a CI test can compare it
+byte for byte with the committed file without a database.
+
+**Role of AI.** Claude Code implemented the tasks test-first from `tasks.md`. Running the
+pipeline on the real data surfaced the order-4 case, and I agreed with the refinement.
+
+---
+
+## DL-009 — Chat web spec (2026-10-31, #9)
 
 Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks → analyze).
 
@@ -195,8 +255,15 @@ Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks
 | Typed pt-BR catalog, no i18n framework yet | `next-intl` now | YAGNI until the PT/EN switch (#13); the catalog's type is what `en` must satisfy. |
 | Component tests drive the real `useChat` with a stub `fetch` serving the fixture files (jsdom + Testing Library) | MSW; Playwright | No network or keys; fixtures stay the single source. Playwright is #16. |
 
-**Open item for #10.** `/api/chat` defaults to `CHAT_MODE=mock` when unset; production must set
-`backend`.
+**Spec review (PR #32, QA + senior).** Approved with changes. Applied before implementation:
+- Streamdown hardened: its 2.7.1 defaults allow any link/image prefix and `data:` images, so the
+  model could exfiltrate PII through an image URL. Images are now blocked, links are
+  allow-listed and raw HTML is off.
+- `/api/chat` fails closed to `backend` in production when `CHAT_MODE` is unset.
+- A dropped stream ends as `ready` in ai@7, so it is detected in `onFinish`.
+- Error text from SDK errors is never shown.
+- Rapid double-send is guarded.
+- Scope cut to 3 implementation PRs.
 
 **Role of AI.** Claude Code drafted the artifacts, asked the clarification questions (decisions
 were mine), checked `ai@7`, `@ai-sdk/react@4` and Next 16 behaviour in `node_modules`, and ran

@@ -7,6 +7,8 @@ def test_defaults_use_fake_providers_so_ci_needs_no_keys():
     assert settings.llm_provider is LLMProvider.FAKE
     assert settings.router_provider is RouterProvider.FAKE
     assert settings.embeddings_provider is EmbeddingsProvider.FAKE
+    assert settings.embeddings_model == "gemini-embedding-001"
+    assert settings.database_url_unpooled is None
 
 
 def test_providers_are_selected_from_environment(monkeypatch):
