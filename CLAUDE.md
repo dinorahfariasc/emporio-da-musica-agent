@@ -3,6 +3,9 @@
 Artefact AI Engineer technical challenge. Customer-service agent ("Melody") for a fictional
 music store. Source material lives in `challenge/` (brief, CSVs, policies PDF).
 
+## Start here
+**Read `docs/HANDOFF.md` first** (current status, environment, gotchas). Update it at the end of every session.
+
 ## Where things are
 - `challenge/` — original brief and data (read-only inputs)
 - `.specify/memory/constitution.md` — project principles; every spec/plan must comply
@@ -22,3 +25,6 @@ music store. Source material lives in `challenge/` (brief, CSVs, policies PDF).
 - Prices, stock, discounts and eligibility are computed deterministically in Python — never by
   the LLM.
 - Python: `uv`, `ruff`, `pytest`. Frontend: `pnpm`.
+- **Keep `docs/HANDOFF.md` alive:** after every meaningful action (PR opened/merged, feature done,
+  bug fixed, decision, review received, deploy), update its Status and add a short Session log
+  entry (Done / Fixed / Next). No secrets. Personal skill `living-handoff` describes the routine.
