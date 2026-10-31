@@ -19,17 +19,6 @@ BEGIN
 END
 $$;
 
--- Persists across seeds: never dropped.
-CREATE TABLE IF NOT EXISTS embedding_cache (
-    provider    text NOT NULL,
-    model       text NOT NULL,
-    input_type  text NOT NULL CHECK (input_type IN ('document', 'query')),
-    text_key    text NOT NULL,
-    embedding   vector(768) NOT NULL,
-    created_at  timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (provider, model, input_type, text_key)
-);
-
 CREATE TABLE categories (
     category_id  int PRIMARY KEY,
     name         text NOT NULL,
@@ -102,3 +91,34 @@ CREATE TABLE order_items (
     product_not_on_sale  boolean NOT NULL,
     PRIMARY KEY (order_id, product_id)
 );
+
+CREATE TABLE policy_chunks (
+    chunk_id       int PRIMARY KEY,
+    section        text NOT NULL,
+    title          text NOT NULL,
+    parent_section text,
+    parent_title   text,
+    breadcrumb     text NOT NULL,
+    body           text NOT NULL,
+    search_text    text NOT NULL,
+    tsv            tsvector GENERATED ALWAYS AS (to_tsvector('pt_unaccent', search_text)) STORED,
+    embedding      vector(768) NOT NULL
+);
+CREATE INDEX policy_chunks_tsv_idx ON policy_chunks USING gin (tsv);
+
+-- Which provider/model built the vectors; a query-time mismatch degrades to full-text.
+CREATE TABLE index_metadata (
+    id        boolean PRIMARY KEY DEFAULT true CHECK (id),
+    provider  text NOT NULL,
+    model     text NOT NULL,
+    dim       int NOT NULL,
+    built_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE product_search_docs (
+    product_id   int PRIMARY KEY REFERENCES products,
+    search_text  text NOT NULL,
+    tsv          tsvector GENERATED ALWAYS AS (to_tsvector('pt_unaccent', search_text)) STORED,
+    embedding    vector(768) NOT NULL
+);
+CREATE INDEX product_search_docs_tsv_idx ON product_search_docs USING gin (tsv);

@@ -43,16 +43,23 @@ def test_remote_target_needs_yes(no_seed, capsys):
 
 
 def test_remote_target_with_yes_passes_the_guard(no_seed, capsys):
-    assert cli.main(["--yes"], _settings(database_url=REMOTE)) == 0
+    assert cli.main(["--yes"], _settings(database_url=REMOTE, embeddings_provider="gemini")) == 0
     assert no_seed == [REMOTE]
 
 
 def test_unpooled_url_is_preferred(no_seed):
     unpooled = REMOTE.replace("neondb", "direct")
-    settings = _settings(database_url=REMOTE, database_url_unpooled=unpooled)
+    settings = _settings(
+        database_url=REMOTE, database_url_unpooled=unpooled, embeddings_provider="gemini"
+    )
 
     assert cli.main(["--yes"], settings) == 0
     assert no_seed == [unpooled]
+
+
+def test_fake_embedder_is_refused_for_a_remote_target_even_when_environment_is_local(no_seed):
+    assert cli.main(["--yes"], _settings(database_url=REMOTE)) == 1
+    assert no_seed == []
 
 
 def test_fake_embedder_is_refused_in_production(no_seed):
@@ -104,7 +111,7 @@ def test_connection_errors_do_not_echo_the_url(monkeypatch, caplog):
 
     monkeypatch.setattr(cli, "seed", failing_seed)
 
-    assert cli.main(["--yes"], _settings(database_url=REMOTE)) == 1
+    assert cli.main(["--yes"], _settings(database_url=REMOTE, embeddings_provider="gemini")) == 1
     assert "OperationalError connecting to ep-example.neon.tech/neondb (remote)" in caplog.text
     assert "s3cret" not in caplog.text
     assert "user" not in caplog.text

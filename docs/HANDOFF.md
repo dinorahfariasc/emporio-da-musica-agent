@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-10-31 (end of day 1)._
+_Last updated: 2026-10-31._
 
 ## 1. What this is
 
@@ -38,8 +38,9 @@ contract · embeddings switch to Gemini · #5 spec + first implementation PR (st
 report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
 
 **In flight (check `gh pr list` and the board for the truth):**
-- **#5 PR B** (retrieval: Gemini embeddings, hybrid search, Neon seed): next for the data worktree;
-  tasks in `specs/001-data-foundation/tasks.md`.
+- **#5 PR B** (retrieval): T021–T031 implemented on branch `feat/5-retrieval` (97 tests pass
+  locally); PR to open and review. Remaining: T032 (manual: seed Neon with Gemini, user holds the
+  keys) and T033 polish (README/DL-010 done; tick the issue #5 criteria after the Neon seed).
 - **#9 chat web:** spec merged (#32). **Next: implementation PR 1 — Foundation + US1, tasks
   T001–T028** in `specs/003-chat-web/tasks.md` (worktree `chat-web`, new branch from `main`).
   Read first: `spec.md` (FR-001…FR-019), `research.md` R2 (error mapping + dropped stream), R4
@@ -116,6 +117,15 @@ all P0 is in production.
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-10-31 — Retrieval (#5 PR B)
+- Done: embeddings (fake, Gemini over httpx, cache), policy PDF chunking, product docs, hybrid
+  RRF search (`search_policies`, `search_products`, `similar_to_product`), connection pool, seed
+  wired to the index, tests, README Data section, DL-010.
+- Fixed: stemmer gap (devolver/devolução) via 5-char prefix match; fake guard now keyed on remote
+  target.
+- Next: open the PR (two-reviewer gate); T032 seed Neon with Gemini (needs the user's keys), then
+  #6 agent core plan/tasks.
 
 ### 2026-10-31 — #9 spec review applied
 - Done: merged main into `dinorahfariasc/chat-web`; applied the PR #32 review to

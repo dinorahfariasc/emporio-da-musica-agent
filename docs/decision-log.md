@@ -12,7 +12,7 @@ summarizes it and links here.
 
 **Context.** Artefact technical challenge (AI Engineer): a customer-service agent for the
 fictional store Empório da Música, backed by operational CSVs and a policies manual (PDF).
-Deadline: P0 done by 2026-11-01 evening; 2026-11-02 reserved for improvements.
+Deadline: P0 done by 2026-10-31 evening; 2026-11-02 reserved for improvements.
 
 **What was done.** Full read of the brief, the manual (8 pages) and profiling of the 6 CSVs.
 Several inconsistencies were found; handling them became data requirements:
@@ -268,3 +268,21 @@ Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks
 **Role of AI.** Claude Code drafted the artifacts, asked the clarification questions (decisions
 were mine), checked `ai@7`, `@ai-sdk/react@4` and Next 16 behaviour in `node_modules`, and ran
 the cross-artifact analysis whose 9 findings (3 medium) were fixed before review.
+
+## DL-010 — Retrieval and search index (2026-10-31, #5, PR B)
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Hybrid search = any-term full-text (`pt_unaccent`) + cosine vector, fused with RRF k=60 in one SQL query | AND-semantics `plainto_tsquery`; weighted score sum | OR-ing lexemes keeps recall for natural-language questions; RRF needs no tuning. |
+| Long lexemes (6+ chars) match by their first 5 characters (`devol:*`) | Plain stems; hand-written synonyms | The Portuguese stemmer maps *devolver* to `devolv` and *devolução* to `devoluc`, so "posso devolver meu pedido?" never matched §4.1 by full-text. A prefix fixes it without curated keywords. Found by the reference-query test. |
+| Fake embedder: hashed 3-5-grams, whole word counted, first line (title) weighted 3x | Plain n-grams | With plain n-grams a long product description diluted the model name ("Yamaha C40" ranked 8th by vector). Title weighting mimics what real models do and keeps the CI criteria meaningful. |
+| `embedding_cache` DDL lives in `etl/cache.sql`, run before the embedding step and again inside the seed | Keep it only in `schema.sql` | On a fresh database the cache table must exist before embeddings are computed, and paid vectors are committed separately from the reload. |
+| Fake embedder refused for any remote target, not only `ENVIRONMENT=production` | Environment check only | A laptop `.env` says `local` while pointing at Neon (#31 review). |
+| Index tables (`policy_chunks`, `product_search_docs`, `index_metadata`) are owned by the seed but excluded from the store-table checksums | Include them | Vectors depend on the provider, so only the store tables are comparable between local and Neon. |
+
+Query-time safety: `search_*` never raises on provider failure; it degrades to full-text with one
+warning, and `index_metadata` (provider/model of the index) is read at most every 5 minutes.
+
+**Role of AI.** Claude Code implemented the tasks from the spec; the stemmer gap and the fake
+embedder weighting were found by the reference-query tests, not predicted.
+

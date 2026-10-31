@@ -2,7 +2,7 @@
 
 import psycopg
 
-from etl.load import OWNED_TABLES
+from etl.load import STORE_TABLES
 
 PRIMARY_KEYS = {
     "categories": "category_id",
@@ -16,7 +16,7 @@ PRIMARY_KEYS = {
 
 async def table_stats(conn: psycopg.AsyncConnection) -> list[tuple[str, int, str]]:
     stats = []
-    for table in OWNED_TABLES:
+    for table in STORE_TABLES:
         cur = await conn.execute(
             f"SELECT count(*), coalesce(md5(string_agg(row_to_json(t)::text, E'\\n' "
             f"ORDER BY {PRIMARY_KEYS[table]})), '') FROM {table} t"
