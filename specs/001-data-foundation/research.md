@@ -1,165 +1,189 @@
 # Research: Data Foundation
 
 All Technical Context unknowns are resolved below. Each entry: Decision / Rationale / Alternatives.
+Revised after the PR #27 QA + senior review (scope cut to about 3–4 h in 2 PRs).
 
 ## R1. Embeddings model
 
 - **Decision**: Voyage `voyage-4`, `output_dimension=1024`, `input_type="document"` for indexing and
-  `"query"` for searches. Model name is configurable (`EMBEDDINGS_MODEL`, default `voyage-4`);
+  `"query"` for searches. The model name is configurable (`EMBEDDINGS_MODEL`, default `voyage-4`);
   the dimension is a code constant (`EMBEDDING_DIM = 1024`) shared by the fake embedder and the
   `vector(1024)` columns.
 - **Rationale**: multilingual (PT/EN/ES needed for the cross-language criterion), current
-  general-purpose model, Matryoshka dimensions. 1024 is a good balance: the corpus is under 100
-  documents, so storage and scan cost don't matter.
-- **Alternatives**: `voyage-4-large` (better quality, twice the price; not needed for about 100
-  docs); `voyage-multilingual-2` (older); 2048 dims (no benefit at this size).
+  general-purpose model. The corpus is under 100 documents, so size does not matter.
+- **Alternatives**: `voyage-4-large` (twice the price, not needed); 2048 dims (no benefit).
 
-## R2. Voyage client
+## R2. Voyage client and rate limits
 
-- **Decision**: call `POST https://api.voyageai.com/v1/embeddings` directly with `httpx.AsyncClient`
-  (httpx moves from dev to runtime deps). Batches of up to 128 inputs.
-  - Seeding: up to 4 attempts with exponential backoff (1, 2, 4 s), retrying on 429/5xx/timeouts;
-    then raise `EmbeddingsUnavailable` and the seed aborts (FR-023).
-  - Query time: 1 attempt, 3 s timeout; any failure raises `EmbeddingsUnavailable` and search
-    falls back to full-text (FR-018).
-- **Rationale**: one endpoint, no SDK needed (constitution VI, YAGNI); explicit control of
-  timeouts and retries.
-- **Alternatives**: the `voyageai` SDK (extra deps, hides retry behaviour); `tenacity` (a simple loop is enough).
+- **Decision**: call `POST https://api.voyageai.com/v1/embeddings` directly with `httpx.AsyncClient`.
+  - **Batching by token budget**: estimate tokens as `ceil(len(text) / 3)` (conservative for
+    Portuguese). Pack inputs into batches of at most 8,000 estimated tokens and 128 inputs, so a
+    single request stays under the free tier's 10K TPM.
+  - **Rate limits**: on 429, sleep for `Retry-After` seconds (default 20 s if the header is
+    missing) and retry the same batch. Give up after 5 attempts per batch, or after 180 s in total.
+    Batches are sent one after another, so the 3 RPM limit is respected once the budget is
+    exhausted.
+  - **Query time**: 1 attempt with a 3 s timeout; any failure raises `EmbeddingsUnavailable` and
+    search falls back to full-text.
+- **Free tier**: without a payment method Voyage allows 3 RPM / 10K TPM. That is fine for seeding
+  (the corpus is about 8–10K tokens, so 1–2 requests), but query traffic above 3/min would mostly
+  fall back to full-text. The README states that production needs a payment method on the Voyage
+  account; the free token allowance still applies.
+- **Alternatives**: the `voyageai` SDK (extra deps, opaque retries); fixed-size batches (would
+  429 on the free tier).
 
 ## R3. Deterministic fake embedder
 
 - **Decision**: feature hashing of character 3- to 5-grams of the normalized text (NFC, casefold,
-  accents stripped, word boundaries padded), bucketed into 1024 dims with a stable hash
-  (`blake2b`), signed, then L2-normalized. No network, same input gives the same vector, across
-  processes and platforms.
-- **Rationale**: plain hash-of-text vectors are random, so similarity would mean nothing and the
-  CI criterion ("posso devolver meu pedido?" → §4.1 in top 3) would hold only by luck.
-  Character n-grams give real lexical similarity: *devolver* and *devolução* share `dev`, `evo`,
-  `vol`, so the CI test is meaningful and stable. Cross-language similarity is out of scope for
-  the fake; it is covered by the opt-in `-m voyage` tests.
-- **Alternatives**: a random vector seeded by hash (meaningless); a local model such as
-  fastembed (heavy, not deterministic across versions, rejected in DL-002).
+  accents stripped, word boundaries padded), bucketed into 1024 dims with `blake2b`, signed, then
+  L2-normalized. No network; same input → same vector (`blake2b` is not salted per process,
+  unlike `hash()`).
+- **Rationale**: lexical similarity (*devolver* ~ *devolução*) makes the CI retrieval criterion
+  meaningful. The test asserts §4.1 is in the top 3 of the **vector ranking alone**, so the fake
+  is actually exercised.
+- **Alternatives**: random vector per text (meaningless); a local model (heavy, rejected in DL-002).
 
 ## R4. Hybrid ranking
 
-- **Decision**: Reciprocal Rank Fusion (RRF, k = 60) of two candidate lists (top 20 each):
-  1. Full-text: `websearch_to_tsquery('pt_unaccent', q)` ranked by `ts_rank_cd`.
-  2. Vector: cosine distance `embedding <=> query_vec`.
+- **Decision**: Reciprocal Rank Fusion (k = 60) of two top-20 candidate lists, in one SQL query:
+  1. Full-text, matching **any** query term:
+     `q := (SELECT string_agg(quote_literal(l), ' | ') FROM unnest(tsvector_to_array(to_tsvector('pt_unaccent', :query))) l)::tsquery`,
+     ranked by `ts_rank_cd(tsv, q)`. If the query has no lexemes (only stopwords), the list is empty.
+  2. Vector: cosine distance `embedding <=> :vec`.
 
-  All of it runs in one SQL query with two CTEs. Exact scan, no ANN index (under 100 rows per table).
-- **Rationale**: RRF needs no score calibration between BM25-like ranks and cosine values;
-  standard and well understood.
-- **Alternatives**: a weighted sum of normalized scores (needs tuning); vector only (loses exact
-  keywords such as "PIX", "boleto", product codes); HNSW index (not needed at this size; easy to
-  add later).
+  Exact scan, no ANN index. Filters (product search) apply to both lists before ranking.
+- **Rationale**: `websearch_to_tsquery`/`plainto_tsquery` AND all terms, so "posso devolver meu
+  pedido?" could match nothing. OR-ing the stemmed lexemes keeps recall and lets `ts_rank_cd`
+  order by how many terms match. Building the tsquery from `to_tsvector` lexemes avoids
+  stemming them twice.
+- **Alternatives**: `plainto_tsquery` (AND semantics); weighted score sum (needs tuning).
 
 ## R5. Portuguese full-text with accents
 
-- **Decision**: `CREATE EXTENSION unaccent`, plus a text search configuration `pt_unaccent`
-  copied from `portuguese` with `unaccent, portuguese_stem` mapped for word tokens. Each indexed
-  table has a stored generated column `tsv tsvector GENERATED ALWAYS AS
-  (to_tsvector('pt_unaccent', search_text)) STORED` and a GIN index.
-- **Rationale**: customers type without accents ("devolucao", "Ponta Pora"). Both extensions are
-  available on Neon and in `pgvector/pgvector:pg16`.
-- **Alternatives**: the plain `portuguese` config (misses unaccented queries); `pg_trgm` (adds
-  little next to the vector side).
+- **Decision**: `CREATE EXTENSION IF NOT EXISTS unaccent` and `vector`. The text search config
+  `pt_unaccent` is created inside a `DO` block that checks `pg_ts_config`, because there is no
+  `CREATE TEXT SEARCH CONFIGURATION IF NOT EXISTS`. It is a copy of `portuguese` with word token
+  types mapped to `unaccent, portuguese_stem`. Indexed tables have a stored generated column
+  `tsv = to_tsvector('pt_unaccent', search_text)` with a GIN index.
+- **Rationale**: customers type without accents ("devolucao"). Both extensions are available on
+  Neon and in `pgvector/pgvector:pg16`.
 
 ## R6. PDF extraction and chunking
 
-- **Decision**: `pypdf` text extraction in the ETL only (dependency group `etl`, not shipped in
-  the Vercel function). Clean-up: drop the cover page and the repeated page header
-  ("Empório da Música Manual de Políticas e Procedimentos"), remove `•` + U+200B bullet artifacts,
-  join wrapped lines, and NFC-normalize.
+- **Decision**: `pypdf` (ETL dependency group only).
+  - **Clean-up**: drop the cover page and the repeated page header, remove `•` + U+200B bullet
+    artifacts, join wrapped lines, NFC.
+  - **Chunking**: split on heading lines `^(\d{1,2})(?:\.(\d))?\.?\s+\S`, validated against a
+    hard-coded expected table of contents (10 sections, 18 subsections). If they don't match,
+    the ETL fails.
+  - **Chunks**: one per subsection; one for a top-level section's own intro text when it is
+    non-empty; top-level sections without subsections (2, 9, 10) are one chunk.
+  - **Search text**: prefixed with the breadcrumb (`4 Política de Trocas e Devoluções > 4.1
+    Direito de Arrependimento (Compras Online)`). `parent_title` is stored for citations.
+- **Policy conflicts**: the three known conflicts (WhatsApp number §1.2 vs §7, accented email in
+  §1.2 vs cover, installment table vs §3.1) are **static anomaly records** in `etl/rules.py`. They
+  are not detected from the PDF text; a regex detector would cost more than it is worth for three
+  fixed facts.
 
-  Chunking: split on heading lines matching `^(\d{1,2})(?:\.(\d))?\.?\s+\S`. The detected
-  heading list is then **validated against a hard-coded expected table of contents** (10
-  sections, 18 subsections). If they don't match, the ETL fails loudly instead of indexing
-  garbage.
+## R7. Seed transaction, schema evolution, concurrency
 
-  Chunk rules:
-  - one chunk per subsection (e.g. 4.1);
-  - a chunk for a top-level section's own intro text when it is non-empty (e.g. §4 intro, §3
-    payment table);
-  - top-level sections without subsections (2, 9, 10) are one chunk.
-
-  Each chunk's `search_text` is prefixed with its breadcrumb (`4 Política de Trocas e
-  Devoluções > 4.1 Direito de Arrependimento (Compras Online)`).
-- **Rationale**: section-level citation ("§4.1") is required by the agent. The ToC check makes
-  the extraction deterministic and testable. Tables come out flattened (label/value lines), which
-  is fine because numbers are never computed from RAG (constitution I).
-- **Alternatives**: `pdfplumber` (better tables, heavier; not needed); a hand-written markdown
-  copy of the manual (drifts from the source PDF, which is read-only input).
-
-## R7. Seed transaction, ownership and idempotency
-
-- **Decision**: one async psycopg connection (`prepare_threshold=None`, as in `app/db.py`, for
-  Neon's PgBouncer):
-  1. Read and validate all inputs, apply rules, and build chunks/docs in memory (no DB writes).
-  2. Compute all needed embeddings *before* opening the write transaction, reading from and
-     writing to `embedding_cache`. Cache writes are committed on their own so paid work is never
-     lost.
-  3. In one transaction: run idempotent DDL (`CREATE ... IF NOT EXISTS`), `TRUNCATE` the owned
-     tables (except `embedding_cache`) in one statement with `RESTART IDENTITY` and **without**
-     `CASCADE` (a foreign key from another feature's table must fail the seed, not silently empty
-     that table), `COPY`/insert everything, and
-     write `index_metadata`.
-  4. Commit, compute checksums, and write the report.
-
-  The owned tables are an explicit list in `etl/load.py`; nothing else is touched.
-- **Idempotency check**: per-table checksum
-  `md5(string_agg(row_to_json(t)::text, '\n' ORDER BY <pk>))`. Embeddings are identical across
-  runs because they come from `embedding_cache` (FR-019).
-- **Rationale**: matches clarifications 2 and 3; the report is written only after a successful commit.
-- **Alternatives**: Alembic migrations (overkill for a rebuild-from-source dataset; revisit when
-  other epics add mutable tables); `DROP SCHEMA` (would hit other epics' tables).
+- **Decision**: one connection to `DATABASE_URL_UNPOOLED` when set (Neon's direct endpoint),
+  else `DATABASE_URL`; `prepare_threshold=None` in both cases.
+  1. Read, validate, apply rules, and build chunks/docs and anomalies in memory (no DB writes).
+  2. Compute document embeddings through `embedding_cache` (committed on its own, so paid work
+     is kept) **before** the write transaction.
+  3. In one transaction:
+     - `SELECT pg_advisory_xact_lock(hashtext('emporio:seed'))`;
+     - create the extensions, `pt_unaccent` (DO block) and `embedding_cache` if missing;
+     - `DROP TABLE IF EXISTS` the owned tables in reverse dependency order (**no `CASCADE`**);
+     - `CREATE TABLE` them from `etl/schema.sql`, then insert everything in PK order and write
+       `index_metadata`.
+  4. Commit, compute checksums, write the report.
+- **Rationale**: drop and recreate means column changes always apply (`CREATE TABLE IF NOT
+  EXISTS` would silently keep an old shape on Neon). No `CASCADE`: if another feature's table has
+  a foreign key to an owned table, the seed fails instead of touching it. The advisory lock
+  serializes concurrent seeds. The unpooled URL avoids PgBouncer for a long DDL transaction.
+- **Idempotency check**: per owned table, row count and
+  `md5(string_agg(row_to_json(t)::text, E'\n' ORDER BY <pk>))`, excluding the generated `tsv`
+  column.
+- **Alternatives**: Alembic (overkill for a rebuild-from-source dataset); truncate (keeps stale
+  columns).
 
 ## R8. Derived business rules: where they live
 
-- **Decision**: pure functions in `app/catalog/rules.py`: `effective_promotion(promos)`,
-  `availability(status, stock)`, `is_sellable(...)`. The ETL stores their results in columns
-  (`products.availability`, `products.effective_discount_percent`, `products.effective_promotion_id`)
-  for cheap reads, and the agent tools (epic 002) reuse the same functions.
-  Data-quality detection rules (total mismatch, untrusted descriptions, shared email,
-  non-sellable items in orders, empty categories, NFC changes, policy conflicts) live in
-  `etl/rules.py`.
-- **Rationale**: one deterministic source of truth for availability and discount (constitution I).
-  ETL-only detection code stays out of the runtime bundle.
+- **Decision**: pure functions in `app/catalog/rules.py`:
+  - `availability(status, stock)` and `is_sellable(status, stock)`;
+  - `effective_promotion(promos)`;
+  - `promo_price(price, discount_percent) -> Decimal` (`ROUND_HALF_UP`, 2 places).
 
-## R9. Untrusted descriptions (IDs 135–144)
+  The ETL stores their results (`availability`, `is_sellable`, `effective_promotion_id`,
+  `effective_discount_percent`, `promo_price_brl`) and the #6 tools read the columns or call the
+  same functions. Payment-method pricing builds on `promo_price_brl` in #6.
 
-- **Decision**: an explicit, versioned rule `UNTRUSTED_DESCRIPTION_IDS = range(135, 145)` with the
-  reason per ID, kept next to a heuristic check. The heuristic flags descriptions that mention a
-  brand different from the product name's brand, or a string/key count that differs from specs.
-  It is used **only to verify** that the explicit list is complete. The test asserts heuristic ⊆
-  explicit list, so a new contradiction would fail CI instead of being silently trusted.
-- **Rationale**: DL-002 names the IDs; a pure heuristic would be fragile, and a pure list would
-  not be self-checking.
+  Data-quality detection lives in `etl/rules.py`.
+- **Untrusted descriptions**: an explicit `UNTRUSTED_DESCRIPTION_IDS = range(135, 145)` with a
+  reason per ID. No heuristic double-check (cut in review).
 
-## R10. Report determinism and PII
+## R9. Report
 
-- **Decision**: the report is rendered from the `data_anomalies` rows sorted by (type, record IDs).
-  It contains no timestamps, only the dataset fingerprint (sha256 of the input files). Emails are
-  masked (`b***@jmail.com`) and customers are referred to by ID.
-- **Rationale**: SC-003 (identical reports) and constitution V (mask personal data).
+- **Decision**: rendered from the in-memory anomaly list and the in-memory row counts, so no
+  database is needed. Fixed type order, records sorted by numeric ID, emails masked
+  (`b***@jmail.com`), no timestamps, no dataset fingerprint. The CLI writes it to
+  `docs/data-quality-report.md`; tests render it to `tmp_path`. A CI test renders it and
+  compares it with the committed file (drift check).
+- **Rationale**: SC-003, and the report doubles as reviewable evidence in git.
+- **Alternatives**: a `data_anomalies` table (dropped: nothing reads it yet; easy to add for the
+  P2 admin dashboard).
 
-## R11. Test layout and markers
+## R10. Embedding cache keys
+
+- **Decision**: one table, `embedding_cache(provider, model, input_type, text_key, embedding)`.
+  - Documents: `text_key = sha256(nfc(text))`, the exact text, so any change re-embeds.
+  - Queries: `text_key = sha256(normalize_for_cache(text))` (NFC, casefold, collapsed whitespace),
+    so trivially different queries share a vector.
+
+## R11. Connections at runtime (serverless)
+
+- **Decision**: `app/db.py` exposes a lazily opened, module-level
+  `psycopg_pool.AsyncConnectionPool(min_size=0, max_size=4, kwargs={"prepare_threshold": None})`
+  over `DATABASE_URL` (pooled endpoint). Warm invocations reuse connections.
+
+  `index_metadata` (provider/model the index was built with) is read once per process and cached
+  for 5 minutes, so a re-seed with a different provider is picked up without a redeploy.
+- **Rationale**: a fresh connection from `iad1` to Neon costs about 1.7 s warm (DL-004). Reuse
+  removes that from every warm request.
+- **Alternatives**: a connection per request (current skeleton; too slow).
+
+## R12. Production safety
 
 - **Decision**:
-  - Unit tests (no DB) for schemas, rules, chunking, the fake embedder and the report.
-  - Integration tests use the existing `database_url` fixture (they skip when `DATABASE_URL` is
-    unset; CI provides Postgres).
-  - Marker `voyage` for opt-in real-provider tests; `addopts = "-m 'not voyage'"` keeps them out
-    of default runs, and `uv run pytest -m voyage` runs them.
-  - A Neon smoke test is a manual quickstart step, not CI.
+  - The CLI prints `target: <host>/<db>`. Hosts other than `localhost`, `127.0.0.1` and `::1`
+    require `--yes`.
+  - `ENVIRONMENT=production` with `EMBEDDINGS_PROVIDER=fake` is refused.
+  - Exit codes are only 0 (success) and 1 (any failure, with a message).
+  - Destructive integration tests use a `local_database_url` fixture that skips on non-local
+    hosts unless `ALLOW_DESTRUCTIVE_TESTS=1`.
 
-## R12. Dependencies added
+## R13. Test layout and markers
+
+- **Decision**:
+  - Unit tests (no DB): schemas, rules, sources, chunking, fake embedder, report and its drift
+    check.
+  - Integration tests (local DB): seed, idempotency, retrieval, fallback, cache.
+  - Marker `voyage` is opt-in (`addopts = "-m 'not voyage'"`) and covers the EN/ES retrieval and
+    the real-API smoke test.
+  - One mocked-transport test covers the Voyage 429/`Retry-After` path.
+  - The Neon seed is a manual quickstart step.
+
+## R14. Dependencies added
 
 | Dependency | Group | Why |
 |---|---|---|
 | `httpx` | runtime (moved from dev) | Voyage client |
 | `pydantic` | runtime (already transitive) | row schemas, typed results |
+| `psycopg-pool` | runtime | serverless connection reuse (R11) |
 | `pypdf` | `etl` group | PDF text extraction |
 
-The `etl` group is in `[tool.uv] default-groups` for local/CI; the Vercel function excludes
-`etl/**` and the challenge files. No `pgvector` Python package: vectors are passed as text
-literals cast to `vector` (avoids pulling in numpy).
+The `etl` group is in `[tool.uv] default-groups` for local/CI. The root `vercel.json` backend
+service excludes `etl/**`. No `pgvector` Python package: vectors are passed as text literals
+cast to `vector` (avoids numpy).

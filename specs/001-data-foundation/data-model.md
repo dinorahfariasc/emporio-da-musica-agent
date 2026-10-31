@@ -1,11 +1,17 @@
 # Data Model: Data Foundation
 
 Postgres 16 + `vector` + `unaccent` extensions. All tables live in `public`. **Owned by this
-feature**: every table below. The seed truncates and reloads all of them except `embedding_cache`,
-which persists (clarifications 2 and 4). Truncation never uses `CASCADE`: if a table from another
-feature has a foreign key to an owned table, the seed fails instead of emptying it. All text is NFC.
+feature**: every table below.
 
-## Store tables
+- The seed **drops and recreates** all of them in one transaction, never with `CASCADE`, except
+  `embedding_cache`, which is created if missing and persists (research R7, R10). If a table
+  from another feature has a foreign key to an owned table, the seed fails instead of touching it.
+- All text is NFC. Empty CSV cells become NULL in nullable columns and are validation errors in
+  required ones.
+
+**PR A** creates the store tables. **PR B** adds the retrieval tables.
+
+## Store tables (PR A)
 
 ### categories
 | Column | Type | Notes |
@@ -30,6 +36,7 @@ feature has a foreign key to an owned table, the seed fails instead of emptying 
 | is_sellable | bool not null | derived: `availability = 'available'` |
 | effective_promotion_id | int null FK → promotions | derived (FR-008) |
 | effective_discount_percent | int not null default 0 | derived (FR-008) |
+| promo_price_brl | numeric(10,2) not null | derived: `promo_price(price_brl, effective_discount_percent)`, ROUND_HALF_UP; equals `price_brl` when there is no promotion |
 | created_at | date not null | |
 
 **Availability rule** (`app/catalog/rules.py::availability`):
@@ -41,14 +48,18 @@ feature has a foreign key to an owned table, the seed fails instead of emptying 
 **Effective promotion** (`effective_promotion`): among `is_active` promotions for the product,
 the largest `discount_percent`; ties are broken by the lowest `promotion_id`. None → null / 0.
 
-**Specs schemas** (validated per category, extra/missing keys are an error):
+On the real data, exactly 4 products have one: **90 → 18%, 94 → 8%, 121 → 20%, 127 → 10%**.
+"Max wins" is exercised only by the `promotions_multi_active.csv` fixture, because every
+duplicate in the real data is inactive.
+
+**Specs schemas** (validated per category; extra or missing keys are an error):
 | Categories | Keys |
 |---|---|
 | 1 Guitarras, 2 Baixos | body, neck, strings, color |
 | 3 Baterias | shells, pieces, hardware, color |
 | 4 Teclados | keys, type, polyphony, color |
 | 5 Violões, 9 Ukuleles | top, back_sides, neck, strings, scale, electronics, color |
-| 6, 7, 8 | no products in the data; a schema is defined only when a product appears (unknown category schema means validation fails) |
+| 6, 7, 8 | no products; no schema (a product there fails validation until one is defined) |
 
 ### promotions
 | Column | Type | Notes |
@@ -57,15 +68,15 @@ the largest `discount_percent`; ties are broken by the lowest `promotion_id`. No
 | product_id | int FK → products | several rows per product allowed |
 | discount_percent | int not null | 1–100 |
 | description | text not null | label, e.g. "Black Friday" |
-| is_active | bool not null | |
+| is_active | bool not null | the only validity signal (no dates in the source) |
 
 ### customers
 | Column | Type | Notes |
 |---|---|---|
 | customer_id | int PK | |
 | name | text not null | |
-| phone | text not null | as given, `(67) 9XXXX-XXXX` format validated |
-| phone_digits | text not null | digits only, for identity matching (epic 002) |
+| phone | text not null | as given; `^\(\d{2}\) \d{4,5}-\d{4}$` |
+| phone_digits | text not null | digits only, for identity matching (#6) |
 | email | text not null | stored lowercased; **not unique** (customers 11 and 43) |
 | email_shared | bool not null | FR-010 |
 | city | text not null | NFC |
@@ -78,12 +89,12 @@ the largest `discount_percent`; ties are broken by the lowest `promotion_id`. No
 | order_date | date not null | |
 | status | text not null | `pending` \| `confirmed` \| `shipped` \| `delivered` \| `cancelled` |
 | payment_method | text not null | `pix` \| `boleto` \| `debit` \| `credit_3x` \| `credit_6x` \| `credit_12x` |
-| total_brl | numeric(10,2) not null | **original amount, never corrected** (FR-005) |
-| items_total_brl | numeric(10,2) not null | Σ quantity × current product price |
+| total_brl | numeric(10,2) not null | **original amount paid, never corrected** (FR-005) |
+| items_total_brl | numeric(10,2) not null | Σ quantity × **current** `price_brl` (items carry no unit price); evidence for the mismatch flag only |
 | total_mismatch | bool not null | `total_brl <> items_total_brl` (orders 3, 20) |
-| tracking_code | text null | |
-| estimated_delivery | date null | |
-| notes | text null | |
+| tracking_code | text **null** | empty in orders 9–20 → NULL |
+| estimated_delivery | date **null** | empty in orders 9–20 → NULL |
+| notes | text **null** | empty except orders 17–20 → NULL |
 
 ### order_items
 | Column | Type | Notes |
@@ -93,17 +104,17 @@ the largest `discount_percent`; ties are broken by the lowest `promotion_id`. No
 | quantity | int not null | > 0 |
 | product_not_sellable | bool not null | product is not sellable now (130 in orders 3, 14) |
 
-## Retrieval tables
+## Retrieval tables (PR B)
 
 ### policy_chunks
 | Column | Type | Notes |
 |---|---|---|
 | section | text PK | `"4.1"`, `"4"` (intro), `"2"` |
 | parent_section | text null | `"4"` for `"4.1"` |
+| parent_title | text null | `"Política de Trocas e Devoluções"` |
 | title | text not null | `"Direito de Arrependimento (Compras Online)"` |
 | body | text not null | cleaned section text |
 | search_text | text not null | breadcrumb + body |
-| content_hash | text not null | sha256(search_text) |
 | tsv | tsvector generated | `to_tsvector('pt_unaccent', search_text)`, GIN |
 | embedding | vector(1024) not null | |
 | ordinal | int not null | document order |
@@ -112,26 +123,23 @@ the largest `discount_percent`; ties are broken by the lowest `promotion_id`. No
 | Column | Type | Notes |
 |---|---|---|
 | product_id | int PK FK → products | |
-| search_text | text not null | name + category + specs (`key: value`) + description **only if trusted** |
-| content_hash | text not null | |
+| search_text | text not null | name + category name + specs (`key: value`, sorted) + description **only if trusted** |
 | tsv | tsvector generated | GIN |
-| embedding | vector(1024) not null | |
+| embedding | vector(1024) not null | also used by `similar_to_product` (no provider call) |
 
-All products are indexed, including non-sellable ones. Availability filtering is the tool's job,
-so "we have it but it's discontinued" stays answerable.
+All 65 products are indexed. Availability and price filters join `products`, so "we have it but
+it's discontinued" stays answerable.
 
-### embedding_cache (persistent, not truncated)
+### embedding_cache (persistent, created if missing, never dropped by the seed)
 | Column | Type | Notes |
 |---|---|---|
 | provider | text | `voyage` \| `fake` |
 | model | text | `voyage-4` \| `fake-ngram-v1` |
 | input_type | text | `document` \| `query` |
-| text_hash | text | sha256 of normalized text |
+| text_key | text | documents: sha256 of exact NFC text; queries: sha256 of `normalize_for_cache` |
 | embedding | vector(1024) not null | |
-| created_at | timestamptz default now() | (excluded from checksums) |
-| | | **PK (provider, model, input_type, text_hash)** |
-
-Serves both FR-017 (query cache) and FR-019 (no re-embedding of unchanged documents).
+| created_at | timestamptz default now() | |
+| | | **PK (provider, model, input_type, text_key)** |
 
 ### index_metadata (single row)
 | Column | Type | Notes |
@@ -139,39 +147,54 @@ Serves both FR-017 (query cache) and FR-019 (no re-embedding of unchanged docume
 | id | bool PK default true, CHECK (id) | singleton |
 | provider | text not null | provider used to build the indexes |
 | model | text not null | |
-| dataset_fingerprint | text not null | sha256 of input files |
 
-Search compares the configured provider/model with this row. On a mismatch, vectors are not
-comparable, so search uses full-text only and logs a warning.
+Search compares the configured provider and model with this row (cached in-process for 5
+minutes). On a mismatch it runs full-text only and logs a warning.
 
-### data_anomalies
-| Column | Type | Notes |
-|---|---|---|
-| anomaly_id | serial PK | assigned in deterministic order |
-| type | text not null | see catalogue below |
-| entity | text not null | `product` \| `order` \| `customer` \| `promotion` \| `category` \| `policy` |
-| record_ids | text[] not null | sorted |
-| detail | text not null | human-readable, PII-masked |
-| rule | text not null | rule applied (DL-002 reference) |
+## Anomalies (in memory, rendered into the report)
 
-### Anomaly catalogue (expected counts on the current dataset)
+`Anomaly(type, entity, record_ids, detail, rule)`. **Count = number of affected records.**
 
-| type | entity | expected | rule |
-|---|---|---|---|
-| order_total_mismatch | order | 2 (3, 20) | keep original total; flag |
-| untrusted_description | product | 10 (135–144) | name/specs win; description hidden and not indexed |
-| out_of_stock_active | product | 1 (96) | unavailable; suggest alternatives |
-| discontinued | product | 2 (113, 136) | not sellable; 136 has stock 13 |
-| coming_soon | product | 1 (130) | not sellable; shown as coming soon |
-| non_sellable_in_order | order | 2 (3, 14 → product 130) | kept; flagged |
-| duplicate_promotions | promotion | 3 products (93, 96, 99) | only active apply; max wins |
-| shared_email | customer | 1 group (11, 43) | both kept; flagged |
-| missing_purchase_channel | order | 1 group (all 20 orders) | §4.1 withdrawal right applies only to online purchases and orders don't record the channel; eligibility tools (epic 002) must ask the customer |
-| nfc_normalized | customer/any | 0 | normalize to NFC (DL-001 corrected in DL-005: CRLF, not two encodings) |
-| empty_category | category | 3 (6, 7, 8) | informational; agent says not available |
-| policy_conflict | policy | 3 (WhatsApp 3341-4444 in §1.2 vs 3321-4500 in §7 intro; accented email in §1.2 vs cover; installment table vs §3.1) | §1.2 number; unaccented email; §3.1 wins |
+| type | entity | count | records | rule |
+|---|---|---|---|---|
+| order_total_mismatch | order | 2 | 3, 20 | keep original total; flag |
+| untrusted_description | product | 10 | 135–144 | name/specs win; description hidden and not indexed |
+| out_of_stock_active | product | 1 | 96 | unavailable; suggest alternatives |
+| discontinued | product | 2 | 113, 136 | not sellable; 136 has stock 13 |
+| coming_soon | product | 1 | 130 | not sellable; shown as coming soon |
+| non_sellable_in_order | order | 2 | 3, 14 (product 130) | kept; flagged |
+| duplicate_promotions | product | 3 | 93, 96, 99 | only active apply; max wins |
+| active_promotions | product | 4 | 90, 94, 121, 127 | informational: the only effective promotions |
+| no_promotion_validity_dates | promotion | 25 | all | `is_active` is the only source of truth; no date logic |
+| shared_email | customer | 2 | 11, 43 | both kept; flagged; identity checks use order number + email/phone |
+| missing_purchase_channel | order | 20 | all | §4.1 withdrawal right needs the channel; #6 asks the customer |
+| nfc_normalized | customer/any | 0 | none | normalize to NFC (DL-001 corrected in DL-005: CRLF, not two encodings) |
+| empty_category | category | 3 | 6, 7, 8 | informational; agent says not available |
+| policy_conflict | policy | 3 | `1.2-vs-7-whatsapp`, `1.2-email-accent`, `3-vs-3.1-installments` | static records: §1.2 number (67) 3341-4444; unaccented email; §3.1 wins |
 
-Every row type has at least one dedicated unit test. The count test fails if the dataset drifts.
+## DL-001 traceability
+
+| DL-001 finding | Handled by |
+|---|---|
+| 135–144 name contradicts description | `untrusted_description` |
+| 135–144 specs contradict description (5 vs 4 strings, 88 vs 61 keys) | `untrusted_description` (specs win) |
+| `specs` JSON schema varies by category | enforced by validation (per-category schema) |
+| 96 active with zero stock | `out_of_stock_active` |
+| 113 discontinued | `discontinued` |
+| 136 discontinued with 13 units | `discontinued` |
+| 130 coming_soon yet present in orders | `coming_soon` + `non_sellable_in_order` |
+| Duplicate promotions per product (96: 18% and 40%) | `duplicate_promotions` |
+| Only 4 promotions active | `active_promotions` |
+| Promotions have no validity dates | `no_promotion_validity_dates` |
+| Order totals differ from item sums (3, 20) | `order_total_mismatch` |
+| "Ponta Porã" in two encodings | `nfc_normalized` (0: CRLF artefact; CRLF parsing enforced by validation and tested) |
+| Customers 11 and 43 share an email | `shared_email` |
+| Two WhatsApp numbers (§1.2 vs §7) | `policy_conflict` |
+| Email with and without accent | `policy_conflict` |
+| Installment table contradicts §3.1 | `policy_conflict` |
+| 7-day withdrawal only online; orders lack the channel | `missing_purchase_channel` |
+| *(new)* Categories 6–8 have no products | `empty_category` |
+| *(new)* Empty optional order fields (9–20) | enforced by validation (`''` → NULL) |
 
 ## Relationships
 
@@ -179,5 +202,5 @@ Every row type has at least one dedicated unit test. The count test fails if the
 categories 1─* products 1─* promotions
 customers 1─* orders 1─* order_items *─1 products
 products 1─1 product_search_docs
-policy_chunks (standalone)   embedding_cache (standalone, keyed by text hash)
+policy_chunks (standalone)   embedding_cache (standalone)   index_metadata (singleton)
 ```

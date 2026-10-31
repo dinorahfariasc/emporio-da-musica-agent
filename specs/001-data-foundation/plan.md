@@ -1,6 +1,6 @@
 # Implementation Plan: Data Foundation
 
-**Branch**: `001-data-foundation` | **Date**: 2026-10-31 | **Spec**: [spec.md](spec.md) | **Epic**: #5
+**Branch**: `001-data-foundation` | **Date**: 2026-10-31 (revised after the PR #27 review) | **Spec**: [spec.md](spec.md) | **Epic**: #5
 
 **Input**: Feature specification from `specs/001-data-foundation/spec.md`
 
@@ -8,42 +8,53 @@
 
 A reproducible ETL (`uv run python -m etl`) reads the read-only challenge CSVs and policy PDF,
 validates them with Pydantic, applies the DL-002 correction rules, normalizes text to NFC and
-loads Postgres in one transaction. It also builds two hybrid search indexes (Portuguese
-full-text + pgvector, fused with RRF): one over policy sections and one over products. It writes
-a deterministic `docs/data-quality-report.md`.
+loads Postgres in one locked transaction that drops and recreates only the tables it owns. It
+renders a deterministic `docs/data-quality-report.md` from in-memory data, and CI checks it for
+drift.
 
-Embeddings go through an `Embedder` interface with a Voyage (`voyage-4`, 1024 dims) and a
-deterministic character-n-gram fake. A persistent `embedding_cache` table serves both the
-query-embedding cache and re-seed reuse. At query time, search degrades to full-text when the
-provider fails. Runtime pieces (embeddings, retrieval, catalog rules) live in `backend/app/`
-for the agent epic. ETL-only code lives in `backend/etl/`.
+Retrieval adds two hybrid indexes (policy sections, products):
+- Portuguese full-text matching any term, plus pgvector, fused with RRF;
+- an `Embedder` interface with Voyage (`voyage-4`, 1024 dims, token-budget batching with
+  `Retry-After`) and a deterministic n-gram fake;
+- a persistent `embedding_cache`, full-text fallback, filters, similar-product search from stored
+  vectors, and a module-level connection pool for serverless.
+
+**Delivery: 2 implementation PRs, about 3–4 h in total.**
+
+| PR | Scope | Stories | Estimate |
+|---|---|---|---|
+| **A** `feat: store data, quality report and safe seed` | schema (store tables), validation, rules, load, CLI safety, report + drift test | US1, US2, US5 (safety) | ~1h45 |
+| **B** `feat: hybrid retrieval and production seed` | embeddings (fake, Voyage, cache), PDF chunks, product docs, search/filters/similar, pool, Neon seed | US3, US4, US5 (production run) | ~2h |
 
 ## Technical Context
 
-**Language/Version**: Python 3.13 (from #3 scaffolding)
+**Language/Version**: Python 3.13 (from #3)
 
-**Primary Dependencies**: Pydantic v2 / pydantic-settings, psycopg 3 (async), httpx (Voyage
-REST), pypdf (ETL group only)
+**Primary Dependencies**: Pydantic v2 / pydantic-settings, psycopg 3 (async) + psycopg-pool,
+httpx (Voyage REST), pypdf (ETL group only)
 
-**Storage**: Postgres 16 with `vector` and `unaccent` (docker `pgvector/pgvector:pg16` locally
-and in CI; Neon in production)
+**Storage**: Postgres 16 with `vector` and `unaccent` (docker `pgvector/pgvector:pg16` locally and
+in CI; Neon in production, seeded through the unpooled URL)
 
-**Testing**: pytest (+ pytest-asyncio). Integration tests use the existing `database_url` fixture.
-Marker `voyage` is opt-in.
+**Testing**: pytest + pytest-asyncio. Destructive integration tests use a `local_database_url`
+fixture; marker `voyage` is opt-in.
 
-**Target Platform**: ETL runs on a developer machine or CI against any `DATABASE_URL`; retrieval
-code runs inside the FastAPI app on Vercel Python functions.
+**Target Platform**: ETL runs on a developer machine or CI; retrieval runs inside the FastAPI
+backend service on Vercel (Services, DL-004).
 
 **Project Type**: web service backend (data layer + CLI)
 
-**Performance Goals**: seed < 30 s with fake / < 2 min with Voyage (SC-001); policy search
-< 300 ms excluding the provider call (exact scan over < 100 rows)
+**Performance Goals**: seed < 30 s with the fake, < 3 min with Voyage on the free tier (SC-001);
+warm policy search without connection setup (pool)
 
-**Constraints**: no paid calls in CI; Neon PgBouncer (`prepare_threshold=None`); Voyage free tier
-(embed only changed content); Vercel bundle excludes `etl/` and `challenge/`
+**Constraints**:
+- no paid calls in CI;
+- Voyage free tier: 3 RPM / 10K TPM;
+- Neon PgBouncer (`prepare_threshold=None`);
+- the backend bundle excludes `etl/**`.
 
 **Scale/Scope**: 9 categories, 65 products, 25 promotions, 50 customers, 20 orders, 22 items,
-about 25 policy chunks (18 subsections + non-empty intros + leaf sections)
+about 25 policy chunks
 
 ## Constitution Check
 
@@ -51,16 +62,15 @@ about 25 policy chunks (18 subsections + non-empty intros + leaf sections)
 
 | Principle | How this plan complies | Status |
 |---|---|---|
-| I. Facts from the system | Availability, sellability and effective discount are computed by pure functions in `app/catalog/rules.py` and stored as columns; search returns IDs only, never prices or stock; order totals kept as paid; all SQL parameterized | ✅ |
-| II. LLM only where it adds value | No LLM in this feature; embeddings only | ✅ (n/a) |
-| III. Clean, traceable data | Inputs read-only; Pydantic validation; one explicit rule per anomaly, each tested; generated report + DL entry; NFC everywhere (`app/text.py`) | ✅ |
-| IV. Tested before done | Unit tests per rule, chunker, fake embedder, report; DB integration tests for idempotency, retrieval, fallback, cache; fake embedder in CI; Voyage tests opt-in | ✅ |
-| V. Safe and respectful | Emails masked in report; DB URL never logged; secrets only from env | ✅ |
-| VI. Simple, modular, replaceable | `Embedder` protocol selected by `EMBEDDINGS_PROVIDER`; no SDK, no ORM, no migrations framework, no ANN index, no numpy | ✅ |
+| I. Facts from the system | Availability, sellability, effective discount and promo price come from pure functions in `app/catalog/rules.py`, stored as columns; search returns IDs, category and availability, never prices or stock; order totals kept as paid; all SQL parameterized | ✅ |
+| II. LLM only where it adds value | No LLM in this feature | ✅ (n/a) |
+| III. Clean, traceable data | Inputs read-only and byte-stable (`.gitattributes`); Pydantic validation; one explicit rule per anomaly, each tested; DL-001 traceability table in the report; NFC everywhere | ✅ |
+| IV. Tested before done | Unit tests per rule, sources, chunker, fake embedder, report drift; integration tests for idempotency, retrieval (vector rank asserted), fallback, cache, filters; fake embedder in CI; Voyage opt-in | ✅ |
+| V. Safe and respectful | Emails masked in the report; DB URL never printed; `--yes` for remote targets; fake refused in production; destructive tests only on local hosts | ✅ |
+| VI. Simple, modular, replaceable | `Embedder` protocol selected by config; no SDK, ORM, migrations framework, ANN index or numpy; review cuts applied (no `--check`, fingerprint, heuristics, PDF conflict regex) | ✅ |
 | Tech constraints | uv, ruff, pytest; Postgres + pgvector; Voyage; `.env.example` updated | ✅ |
 
-Post-design re-check (after data-model and contracts): still passing. One deliberate addition is
-justified below.
+Post-design re-check: passing.
 
 ## Project Structure
 
@@ -68,85 +78,73 @@ justified below.
 
 ```text
 specs/001-data-foundation/
-├── spec.md
-├── plan.md               # this file
-├── research.md           # R1–R12 decisions
-├── data-model.md         # tables, rules, anomaly catalogue
-├── quickstart.md         # validation guide
-├── contracts/
-│   ├── seed-cli.md
-│   ├── retrieval-api.md
-│   └── data-quality-report.md
+├── spec.md · plan.md · research.md (R1–R14) · data-model.md · quickstart.md
+├── contracts/ seed-cli.md · retrieval-api.md · data-quality-report.md
 ├── checklists/requirements.md
-└── tasks.md              # /speckit-tasks
+└── tasks.md
 ```
 
 ### Source Code
 
 ```text
+.gitattributes                    # challenge/** -text ; backend/tests/fixtures/*.csv -text      (A)
+vercel.json                       # services.backend excludeFiles += etl/**                       (A)
 backend/
-├── app/                          # runtime (shipped to Vercel)
-│   ├── config.py                 # + embeddings_model setting
-│   ├── db.py                     # existing; + connect() helper reused by ETL and retrieval
-│   ├── text.py                   # nfc(), normalize_for_cache()
-│   ├── catalog/
-│   │   ├── __init__.py
-│   │   └── rules.py              # availability, is_sellable, effective_promotion
-│   ├── embeddings/
-│   │   ├── __init__.py           # Embedder protocol, EMBEDDING_DIM, EmbeddingsUnavailable, get_embedder
-│   │   ├── fake.py               # char n-gram feature hashing
-│   │   ├── voyage.py             # httpx client, seed/query profiles
-│   │   └── cache.py              # embed_cached() over embedding_cache
-│   └── retrieval/
-│       ├── __init__.py           # search_policies, search_products, result models
-│       └── hybrid.py             # RRF SQL, fallback logic
-├── etl/                          # ETL only (excluded from Vercel bundle)
-│   ├── __init__.py
-│   ├── __main__.py               # CLI (contracts/seed-cli.md)
-│   ├── schema.sql                # idempotent DDL: extensions, pt_unaccent, owned tables
-│   ├── sources.py                # read CSVs/PDF, dataset fingerprint
-│   ├── models.py                 # Pydantic row models + per-category specs schemas
-│   ├── rules.py                  # anomaly detection & corrections → Anomaly records
-│   ├── policies.py               # PDF clean-up, heading detection, ToC check, chunks
-│   ├── documents.py              # product search_text builder
-│   ├── load.py                   # OWNED_TABLES, transaction: DDL, truncate, load, metadata
-│   ├── checksums.py              # per-table row count + md5
-│   └── report.py                 # deterministic markdown renderer
-├── tests/
-│   ├── fixtures/                 # nfd_customers.csv, promotions_multi_active.csv, tiny dataset
-│   ├── etl/                      # test_models, test_rules (one per rule), test_policies,
-│   │                             # test_documents, test_report, test_seed (DB: counts, idempotency,
-│   │                             # owned-tables-only, rollback)
-│   ├── catalog/test_rules.py
-│   ├── embeddings/               # test_fake, test_cache (DB), test_voyage (marker voyage)
-│   └── retrieval/                # test_search (DB: §4.1 top 3, product name top 1, fallback,
-│                                 # provider mismatch, cache hit), test_search_voyage (EN/ES)
-├── pyproject.toml                # deps, etl group, default-groups, voyage marker
-docs/data-quality-report.md       # generated, committed
-vercel.json                       # services.backend excludeFiles += etl/**
+├── app/
+│   ├── config.py                 # + embeddings_model, database_url_unpooled                    (A)
+│   ├── db.py                     # + connect(), get_pool()                                       (A connect, B pool)
+│   ├── text.py                   # nfc(), normalize_for_cache()                                  (A)
+│   ├── catalog/rules.py          # availability, is_sellable, effective_promotion, promo_price  (A)
+│   ├── embeddings/               # __init__ (protocol, factory), fake.py, voyage.py, cache.py   (B)
+│   └── retrieval/                # __init__ (models, search_*, similar_to_product), hybrid.py   (B)
+├── etl/
+│   ├── __main__.py               # CLI: target print, --yes, refusals, exit 0/1                  (A, B wires index)
+│   ├── schema.sql                # extensions, pt_unaccent DO block, embedding_cache IF NOT EXISTS,
+│   │                             # owned tables CREATE (store: A; retrieval: B)
+│   ├── sources.py                # CSV read (newline="", NFC, '' handling), PDF path             (A)
+│   ├── models.py                 # Pydantic rows + per-category specs                            (A)
+│   ├── rules.py                  # anomaly detection, derivations, static policy conflicts       (A)
+│   ├── pipeline.py               # build_payload(data_dir) → rows + anomalies (pure, no DB)      (A)
+│   ├── load.py                   # OWNED_TABLES, reload(): lock, drop/create, insert             (A)
+│   ├── checksums.py              # per-table count + md5                                         (A)
+│   ├── report.py                 # render(payload) -> str                                        (A)
+│   ├── policies.py               # PDF → chunks with ToC check                                   (B)
+│   └── documents.py              # product search_text                                           (B)
+└── tests/
+    ├── conftest.py               # + local_database_url fixture (destructive guard)              (A)
+    ├── fixtures/                 # nfd_customers.csv, crlf_customers.csv, promotions_multi_active.csv,
+    │                             # policy_reference_queries.json (B)
+    ├── test_text.py, catalog/test_rules.py
+    ├── etl/                      # test_sources, test_models, test_rules, test_report (incl. drift),
+    │                             # test_seed (DB), test_cli, test_policies (B), test_documents (B)
+    ├── embeddings/               # test_fake, test_cache (DB), test_voyage (mock 429 + marker voyage)
+    └── retrieval/                # test_search_policies, test_search_products (DB), *_voyage (marker)
+docs/data-quality-report.md       # generated, committed                                          (A)
+README.md                         # "Data" section incl. Voyage payment-method note               (A, B)
 ```
 
-**Structure Decision**: follow the flat `app/` package from #3 (DL-004). Code the agent needs
-at runtime goes in `app/`; ETL-only code (PDF parsing, validation, reporting) goes in `etl/`, so
-`pypdf` and the challenge files stay out of the serverless bundle. `etl` imports from `app`
-(`text`, `catalog.rules`, `embeddings`), never the reverse.
+**Structure Decision**: follow the flat `app/` package from #3 (DL-004). Code the agent needs at
+runtime goes in `app/`; ETL-only code goes in `etl/` (excluded from the bundle). `etl` imports
+from `app`, never the reverse. `etl/pipeline.py` keeps the payload build pure, so the report and
+its drift test run without a database.
 
 ## Key Design Points
 
-1. **Pipeline order** (research R7): read → validate → normalize → detect anomalies/derive →
-   build chunks and docs → embed through the cache (outside the write transaction) → one
-   transaction (DDL, truncate owned tables, load, metadata) → checksums → report.
-2. **Failure semantics**: validation, ToC or config errors exit before touching the DB; an
-   embeddings failure after retries exits 3 before the write transaction; a DB error rolls back.
-3. **Retrieval**: one SQL query, two CTEs (full-text and vector), RRF k=60. If the index was built
-   with another provider/model (`index_metadata`) or the embedder fails, the query runs
-   full-text only and returns `mode="fulltext"`.
-4. **Determinism**: the fake embedder is stable across processes. Rows are inserted in PK order,
-   anomalies are sorted, the report has no timestamps, and embeddings are reused by hash.
+1. **Pipeline** (R7): `build_payload` (read → validate → rules → derive → chunks/docs) → embed
+   through the cache (B, outside the transaction) → `reload` (advisory lock, drop/create owned
+   tables without `CASCADE`, insert, metadata) → checksums → report.
+2. **Safety** (R12): print the target, `--yes` for remote, refuse fake in production, unpooled
+   URL, destructive tests local-only, exit 0/1.
+3. **Retrieval** (R4, R11): any-term full-text + vector, RRF k=60, filters joined from
+   `products`, `similar_to_product` from stored vectors, pooled connections, `index_metadata`
+   cached for 5 min.
+4. **Determinism**: rows inserted in PK order; anomalies sorted; report with no timestamps;
+   document embeddings reused by exact text.
 
 ## Complexity Tracking
 
 | Addition | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
-| Character n-gram fake embedder (instead of a trivial hash) | Makes the CI retrieval criterion (§4.1 top 3) meaningful and stable | A random-by-hash fake would pass or fail by chance and test nothing |
-| `index_metadata` provider check | Prevents comparing fake vectors with Voyage query vectors (or the reverse) after an env mix-up | Without it, a misconfigured prod would return wrong policy sections silently |
+| Character n-gram fake embedder | Makes the CI retrieval criterion meaningful; the test asserts the vector rank | A random-by-hash fake tests nothing |
+| `index_metadata` provider check (cached) | Prevents comparing fake and Voyage vectors after an env mix-up | Wrong policy sections would be returned silently |
+| `psycopg-pool` | About 1.7 s per new connection from Vercel to Neon (DL-004) | A connection per request makes every warm query slow |
