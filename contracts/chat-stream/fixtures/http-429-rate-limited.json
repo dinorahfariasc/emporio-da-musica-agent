@@ -1,0 +1,13 @@
+{
+  "status": 429,
+  "headers": {
+    "Retry-After": "30"
+  },
+  "body": {
+    "error": {
+      "code": "rate_limited",
+      "message": "Muitas mensagens em pouco tempo. Aguarde alguns segundos e tente de novo.",
+      "retryAfterSeconds": 30
+    }
+  }
+}

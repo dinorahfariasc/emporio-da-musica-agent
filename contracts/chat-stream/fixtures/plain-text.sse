@@ -1,0 +1,22 @@
+data: {"type":"start","messageId":"msg_plain_1"}
+
+data: {"type":"start-step"}
+
+data: {"type":"text-start","id":"txt_1"}
+
+data: {"type":"text-delta","id":"txt_1","delta":"Oi! Eu sou a Melody, "}
+
+data: {"type":"text-delta","id":"txt_1","delta":"da Empório da Música. 🎶 "}
+
+data: {"type":"text-delta","id":"txt_1","delta":"Como posso te ajudar hoje?"}
+
+data: {"type":"text-end","id":"txt_1"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"message-metadata","messageMetadata":{"route":{"intent":"greeting","confidence":0.97,"router":"jev"},"model":"claude-haiku-4-5","usage":{"inputTokens":412,"outputTokens":38}}}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+
