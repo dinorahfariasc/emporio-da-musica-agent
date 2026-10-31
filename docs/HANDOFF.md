@@ -35,15 +35,18 @@ The repo is private now; the user makes it public at delivery.
 
 **Merged to `main`:** #2 bootstrap · #3 scaffolding + production walking skeleton · #4 chat stream
 contract · embeddings switch to Gemini · #5 spec + first implementation PR (store ETL, data-quality
-report, safe seed).
+report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
 
 **In flight (check `gh pr list` and the board for the truth):**
 - **#5 PR B** (retrieval: Gemini embeddings, hybrid search, Neon seed): next for the data worktree;
   tasks in `specs/001-data-foundation/tasks.md`.
-- **#9 chat web:** spec PR #32 updated with the full QA + senior review (blocker fixed:
-  hardened Streamdown with no images, allow-listed links and no raw HTML; prod fails closed to
-  `backend`; dropped-stream detection; 3 implementation PRs). Waiting for the user to merge. Then
-  implement PR 1 (Foundation + US1) per `specs/003-chat-web/tasks.md`.
+- **#9 chat web:** spec merged (#32). **Next: implementation PR 1 — Foundation + US1, tasks
+  T001–T028** in `specs/003-chat-web/tasks.md` (worktree `chat-web`, new branch from `main`).
+  Read first: `spec.md` (FR-001…FR-019), `research.md` R2 (error mapping + dropped stream), R4
+  (**hardened Streamdown — mandatory**), R10 (Cache Components), R11 (fail-closed `chatMode()`),
+  R12 (double-send guard). Tests first; `pnpm lint && pnpm typecheck && pnpm test && pnpm build`
+  green; PR body `Part of #9`; QA + senior review before merge. Then PR 2 (US2+US3, T029–T041)
+  and PR 3 (US4+polish, T042–T047, `Closes #9`).
 - **#6 agent core:** spec written on branch `docs/6-agent-core-spec` (not merged, no PR yet).
   Next: `/speckit-plan`, `/speckit-tasks`, `/speckit-analyze`, then PR + review. Depends on the
   retrieval API in `specs/001-data-foundation/contracts/retrieval-api.md`.
@@ -93,6 +96,11 @@ all P0 is in production.
 - Vercel Services: the backend is **private**; reach it from Next.js route handlers via
   `BACKEND_URL` (binding). `/mcp` will need its own public rewrite (issue #8).
 - Voyage was rejected (needs a card); embeddings are Gemini `gemini-embedding-001`, 768 dims.
+- Streamdown 2.7.1 defaults allow any image/link prefix, `data:` images and raw HTML; never use
+  them as-is (see `specs/003-chat-web/research.md` R4).
+- ai@7 `useChat`: a stream that closes without `finish` ends as `ready` with no error; detect it
+  in `onFinish` (`!isAbort && !isError && finishReason == null`). HTTP errors arrive as
+  `APICallError` (`statusCode`, `responseBody`); response headers are dropped.
 - The data has deliberate anomalies (listed in the decision log DL-001 and the report); name
   beats description for products 135–144; only 4 promotions are active (90, 94, 121, 127).
 
@@ -114,7 +122,8 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
   `specs/003-chat-web/*`; decision log entry renumbered to DL-009; contract doc now says cards in #9.
 - Fixed: Streamdown 2.7.1 defaults allow any image/link (`*`), so they are overridden. ai@7 ends a dropped
   stream as `ready` with no error, so it is detected in `onFinish`.
-- Next: user merges #32 → implement PR 1 (T001–T028).
+- #32 merged; handoff points the next session at PR 1 (T001–T028).
+- Next: implement #9 PR 1 in the `chat-web` worktree.
 
 ### 2026-10-31 — Day 1 wrap-up
 - Done: scaffolding + production skeleton (#3), chat stream contract (#4), Gemini embeddings
