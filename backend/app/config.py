@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     typesafe_api_key: str | None = None
     gemini_api_key: str | None = None
 
+    # specs/004-auth-limits-deploy
+    service_jwt_secret: str | None = None
+    rate_limit_per_minute: int = 20
+    daily_token_budget: int = 200_000
+    budget_timezone: str = "America/Campo_Grande"
+
 
 @lru_cache
 def get_settings() -> Settings:
