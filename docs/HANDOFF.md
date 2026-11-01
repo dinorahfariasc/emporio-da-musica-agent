@@ -4,7 +4,8 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-11-01 (#6 agent core merged as #40; #7 actions re-opened against main)._
+_Last updated: 2026-11-01 (#6 agent core merged as #40; #7 actions re-opened against main; #10
+auth/limits/deploy MVP implemented, PR open)._
 
 ## 1. What this is
 
@@ -50,8 +51,14 @@ agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, str
   runs the redeploy.
 - **#5 T032:** manual seed of Neon with Gemini (user holds the keys) is still pending; local seeds use
   the fake embedder, and the seed and the query must use the same provider.
-- **Not started:** #8 MCP (PR 3 of 002, T034–T036), #10 auth/limits/deploy, #11 README + example
-  conversations. Open nits from the #40 review are in DL-012 (stream close on error, body size cap).
+- **#10 auth/limits/deploy (spec 004):** spec/plan/tasks done (DL-DOCS-001); MVP implemented on
+  `dinorahfariasc/track-a-spec-004-auth-deploy` (Auth.js login, create-user CLI, service JWT,
+  per-account rate limit + daily budget, the DL-012 conversation-scoping fix, fail-closed startup
+  check — DL-BE-001, DL-FE-001). 317 backend + 106 frontend tests green. PR open, awaiting review;
+  the production deploy steps in `specs/004-auth-limits-deploy/quickstart.md` still need the user's
+  keys/env vars.
+- **Not started:** #8 MCP (PR 3 of 002, T034–T036), #11 README + example conversations. Open nits
+  from the #40 review are in DL-012 (stream close on error, body size cap).
 
 **Remaining P0 order:** merge #7 → #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
 all P0 is in production.
@@ -122,6 +129,21 @@ all P0 is in production.
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-11-01 — #10 auth/limits/deploy: spec + MVP implementation
+- **Done:** spec/plan/tasks for 004 (merged in the DL-012 conversation-scoping fix and a sign-in
+  lockout from a parallel draft). Implemented Phases 1–7: Auth.js credentials login, create-user
+  CLI, service JWT (BFF → backend), per-account rate limit (20/min) + daily budget (200k
+  tokens/day) with the existing `#4` error contract, `conversation_state` now scoped to
+  `(user_id, conversation_id)`, and the fail-closed production startup check. DL-DOCS-001,
+  DL-BE-001, DL-FE-001.
+- **Fixed:** a real bug in the fail-closed startup check (the fake LLM provider was wrongly
+  flagged as missing config) — caught by the new tests before merge. Also: Next.js 16 renamed
+  "middleware" to "proxy", and with a `src/` layout the file must live at `src/proxy.ts`, not the
+  project root, or it is silently never loaded.
+- **Next:** user review and merge; then the production deploy runbook in
+  `specs/004-auth-limits-deploy/quickstart.md` (env vars, `create-user` against prod, OpenRouter
+  spend cap, redeploy, end-to-end check) — needs the user's keys. #8 MCP and #11 README remain.
 
 ### 2026-11-01 — #40 merged; #7 re-opened against main
 - **Done:** #40 merged. #41 had been merged into the stale `feat/6-agent-core` branch, so the actions commit was cherry-picked onto `main` as `feat/7-actions-main` and re-opened; HANDOFF status refreshed.
