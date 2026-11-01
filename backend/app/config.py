@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     embeddings_provider: EmbeddingsProvider = EmbeddingsProvider.FAKE
     embeddings_model: str = "gemini-embedding-001"
 
+    specialist_model: str = "claude-haiku-4-5-20251001"
+    general_model: str = "claude-sonnet-5-5"
+    router_confidence_threshold: float = 0.75
+    router_timeout_ms: int = 2500  # whole router budget: primary + fallback
+    agent_max_steps: int = 8
+    llm_max_tokens: int = 1024
+    llm_timeout_s: float = 30
+    turn_timeout_s: float = 60
+    history_max_messages: int = 12
+    input_max_chars: int = 2000
+
     anthropic_api_key: str | None = None
     typesafe_api_key: str | None = None
     gemini_api_key: str | None = None
