@@ -36,12 +36,19 @@
 
 ## Production deploy (user-run; agent prepares, never executes against prod per working agreements)
 
-1. Add `SERVICE_JWT_SECRET` (new, shared, random) and `AUTH_SECRET` (new, Auth.js) to the Vercel
-   project's environment variables, for both the `frontend` and `backend` Services as applicable
-   (`SERVICE_JWT_SECRET` on both; `AUTH_SECRET` on `frontend` only).
+1. Set `ENVIRONMENT=production` on the backend Service explicitly (belt-and-suspenders: Vercel's
+   own `VERCEL_ENV=production`, set automatically, is also checked, so forgetting this does not
+   fail open — but it is still the documented, intended value). Add `SERVICE_JWT_SECRET` (new,
+   shared, **at least 32 random characters** — a shorter value is rejected at request time in
+   production) and `AUTH_SECRET` (new, Auth.js) to the Vercel project's environment variables, for
+   both the `frontend` and `backend` Services as applicable (`SERVICE_JWT_SECRET` on both;
+   `AUTH_SECRET` on `frontend` only; `ENVIRONMENT` on `backend` only).
 2. The new/changed tables apply themselves idempotently on first request against production too
    (same advisory-locked DDL pattern as the existing agent tables, DL-012); no manual DDL step is
-   required, but the first production request after deploy will pay that one-time cost.
+   required, but the first production request after deploy will pay that one-time cost. A
+   `conversation_state` table from before this feature (no `user_id` column) is detected and
+   migrated in place automatically (dropped and recreated under the same advisory lock — it only
+   ever held ephemeral per-turn verification state, nothing a customer would notice missing).
 3. Run the `create-user` CLI against production (`DATABASE_URL_UNPOOLED` from Vercel's env, not
    committed anywhere) to provision the evaluator account(s); record the username(s) somewhere the
    user will share out of band with the evaluator — never in the repo.

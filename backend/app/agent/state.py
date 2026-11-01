@@ -17,11 +17,33 @@ _ensured = False
 _DDL_LOCK = 0x656D706F  # arbitrary app-wide key for the schema advisory lock
 
 
+async def _migrate_old_shape_conversation_state(conn: psycopg.AsyncConnection) -> None:
+    """`CREATE TABLE IF NOT EXISTS` is a no-op against a `conversation_state` table that already
+    exists from before specs/004-auth-limits-deploy (no `user_id` column) — exactly the shape a
+    production database redeployed before this change would have. Detect that shape and migrate
+    it in place. The table holds only ephemeral per-turn verification state (data-model.md), never
+    anything a customer would notice missing, so dropping and recreating it under the same
+    advisory lock used for the rest of this DDL is an acceptable migration at this scale."""
+    cur = await conn.execute(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name = 'conversation_state' AND column_name = 'user_id'"
+    )
+    if await cur.fetchone() is not None:
+        return  # already the new shape (or the table doesn't exist yet)
+    cur = await conn.execute(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = 'conversation_state'"
+    )
+    if await cur.fetchone() is None:
+        return  # table doesn't exist yet; the CREATE TABLE below creates the new shape directly
+    await conn.execute("DROP TABLE conversation_state")
+
+
 async def ensure_agent_tables(conn: psycopg.AsyncConnection) -> None:
     """Idempotent DDL; runs at the end of the seed and once per process on first use."""
     global _ensured
     # Concurrent first requests would otherwise collide on the catalog.
     await conn.execute("SELECT pg_advisory_xact_lock(%s)", (_DDL_LOCK,))
+    await _migrate_old_shape_conversation_state(conn)
     await conn.execute(SCHEMA.read_text())
     await conn.commit()
     _ensured = True

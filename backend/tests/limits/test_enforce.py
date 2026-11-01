@@ -90,12 +90,19 @@ async def test_two_accounts_have_independent_budgets(conn):
     assert (await enforce.check_budget(conn, user_b, budget=200_000, tz_name=TZ, now=now)).allowed
 
 
-async def test_a_refused_request_consumes_no_budget(conn):
+async def test_checking_the_budget_never_mutates_usage(conn):
+    """check_budget is a pure read (data-model.md): only record_usage, called by the handler
+    after a turn actually runs, may increment tokens_used. A rate-limit refusal in particular
+    happens before record_usage is ever reached, so repeatedly checking (or being refused
+    elsewhere) must never move usage on its own."""
+    from app.limits.store import get_daily_usage
+
     user_id = _uid()
     now = datetime(2026, 11, 1, 12, 0, 0, tzinfo=UTC)
-    # record_usage is only ever called by the handler after a turn actually runs; a refusal
-    # (checked before the agent runs) never calls it, so nothing to assert beyond: a check alone
-    # does not mutate usage.
-    before = await enforce.check_budget(conn, user_id, budget=200_000, tz_name=TZ, now=now)
-    after = await enforce.check_budget(conn, user_id, budget=200_000, tz_name=TZ, now=now)
-    assert before.allowed and after.allowed
+    usage_date = enforce.current_local_date(TZ, now)
+
+    for _ in range(5):
+        result = await enforce.check_budget(conn, user_id, budget=200_000, tz_name=TZ, now=now)
+        assert result.allowed
+
+    assert await get_daily_usage(conn, user_id, usage_date) == 0

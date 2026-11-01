@@ -11,11 +11,11 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from app.auth.service_jwt import AccountClaims, InvalidServiceToken, verify_service_jwt
-from app.config import Settings, get_settings
+from app.config import Settings, check_fail_closed_config, get_settings
 
 
 class ServiceAuthMisconfigured(Exception):
-    """SERVICE_JWT_SECRET is missing; a deploy mistake, never "accept any token"."""
+    """A required production secret is missing/weak; a deploy mistake, never "accept any token"."""
 
 
 class ServiceAuthUnauthorized(Exception):
@@ -25,6 +25,12 @@ class ServiceAuthUnauthorized(Exception):
 async def require_service_account(
     request: Request, settings: Annotated[Settings, Depends(get_settings)]
 ) -> AccountClaims:
+    # Re-checked on every request, not only at startup: a FastAPI lifespan is not guaranteed to
+    # run the same way on every Vercel Services deployment target (research.md R7).
+    try:
+        check_fail_closed_config(settings)
+    except RuntimeError as exc:
+        raise ServiceAuthMisconfigured(str(exc)) from exc
     if not settings.service_jwt_secret:
         raise ServiceAuthMisconfigured("SERVICE_JWT_SECRET is not configured")
 
