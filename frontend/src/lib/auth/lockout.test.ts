@@ -31,7 +31,13 @@ class FakePool {
       this.rows.delete(username);
       return { rows: [] };
     }
+    if (["BEGIN", "COMMIT", "ROLLBACK"].includes(text)) return { rows: [] };
+    if (text.startsWith("SELECT pg_advisory_xact_lock")) return { rows: [] };
     throw new Error(`unexpected query: ${text}`);
+  }
+
+  async connect() {
+    return { query: this.query.bind(this), release: () => {} };
   }
 }
 

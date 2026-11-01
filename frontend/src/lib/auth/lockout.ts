@@ -8,25 +8,26 @@
 // read "not locked yet" and all slip through before any of them observes the 5th failure.
 import type { Pool } from "pg";
 
+import { ensureTableOnce } from "@/lib/auth/schema";
+
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 15;
+const LOGIN_ATTEMPTS_TABLE_LOCK_KEY = 0x6c6f676e; // 'logn' — distinct from the users table's
 
 export type Clock = () => Date;
 
 const systemClock: Clock = () => new Date();
 
-let tableEnsured = false;
-
 async function ensureTable(pool: Pool): Promise<void> {
-  if (tableEnsured) return;
-  await pool.query(
+  await ensureTableOnce(
+    pool,
+    LOGIN_ATTEMPTS_TABLE_LOCK_KEY,
     `CREATE TABLE IF NOT EXISTS login_attempts (
        username text PRIMARY KEY,
        failed_count int NOT NULL DEFAULT 0,
        window_start timestamptz NOT NULL DEFAULT now()
      )`,
   );
-  tableEnsured = true;
 }
 
 export type Reservation = { allowed: boolean };

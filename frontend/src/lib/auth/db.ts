@@ -2,6 +2,10 @@
 // spirit as the backend's direct psycopg use. One lazy process-wide pool over DATABASE_URL.
 import { Pool } from "pg";
 
+import { ensureTableOnce } from "@/lib/auth/schema";
+
+const USERS_TABLE_LOCK_KEY = 0x75736572; // 'user' — arbitrary, distinct from the lockout table's
+
 let pool: Pool | null = null;
 
 export function getPool(): Pool {
@@ -23,11 +27,10 @@ export type UserRecord = {
   disabledAt: Date | null;
 };
 
-let tableEnsured = false;
-
 async function ensureUsersTable(pool: Pool): Promise<void> {
-  if (tableEnsured) return;
-  await pool.query(
+  await ensureTableOnce(
+    pool,
+    USERS_TABLE_LOCK_KEY,
     `CREATE TABLE IF NOT EXISTS users (
        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
        username text UNIQUE NOT NULL,
@@ -36,7 +39,6 @@ async function ensureUsersTable(pool: Pool): Promise<void> {
        disabled_at timestamptz
      )`,
   );
-  tableEnsured = true;
 }
 
 function toUserRecord(row: {
