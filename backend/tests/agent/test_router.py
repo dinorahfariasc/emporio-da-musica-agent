@@ -59,7 +59,7 @@ async def test_jev_sends_the_message_and_every_intent():
 
     await _jev(handler).classify("oi")
     assert "oi" in seen["state"]
-    assert len(seen["questions"]["intent"]["choices"]) == 12
+    assert len(seen["questions"]["intent"]["criteria"]) == 12
 
 
 async def test_jev_error_falls_back_to_the_second_router():

@@ -85,10 +85,13 @@ class FakeRouter:
 
 
 class JevRouter:
-    """TypeSafe AI `systemone` classifier. One attempt: a failure goes straight to the fallback."""
+    """System One (decisions API) classifier: TypeSafe's Jev, or a decider via OpenRouter.
 
-    name = "jev"
+    One attempt: a failure goes straight to the fallback.
+    """
+
     URL = "https://api.typesafe.ai/v1/systemone"
+    OPENROUTER_URL = "https://openrouter.ai/api/alpha/decisions"
 
     def __init__(
         self,
@@ -96,34 +99,40 @@ class JevRouter:
         *,
         timeout_s: float = 2.5,
         transport: httpx.AsyncBaseTransport | None = None,
+        url: str = URL,
+        model: str = "jev-latest",
+        name: Literal["jev", "openrouter"] = "jev",
     ) -> None:
         self._api_key = api_key
         self._timeout = timeout_s
         self._transport = transport
+        self._url = url
+        self._model = model
+        self.name = name
 
     async def classify(self, text: str, context: str = "") -> Route:
         state = f"{context}\n{text}".strip()
         body = {
-            "model": "jev-latest",
+            "model": self._model,
             "state": state,
             "questions": {
                 "intent": {
                     "type": "choice",
-                    "criteria": "\n".join(f"- {k}: {v}" for k, v in INTENT_CRITERIA.items()),
-                    "choices": list(INTENTS),
+                    "instructions": "Which intent is the customer's latest message?",
+                    "criteria": INTENT_CRITERIA,
                 }
             },
         }
         async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
             response = await client.post(
-                self.URL, json=body, headers={"Authorization": f"Bearer {self._api_key}"}
+                self._url, json=body, headers={"Authorization": f"Bearer {self._api_key}"}
             )
         response.raise_for_status()
         answer = response.json()["answers"]["intent"]
         intent = answer["choice"]
         if intent not in INTENTS:
-            return UNCLEAR.model_copy(update={"router": "jev"})
-        return Route(intent=intent, confidence=float(answer["confidence"]), router="jev")
+            return UNCLEAR.model_copy(update={"router": self.name})
+        return Route(intent=intent, confidence=float(answer["confidence"]), router=self.name)
 
 
 class HaikuRouter:
@@ -184,6 +193,20 @@ class OpenRouterRouter(HaikuRouter):
         )
 
 
+def openrouter_router(settings: Settings, model: str | None = None) -> Router:
+    """Decider models (decisions API) and chat models take different OpenRouter endpoints."""
+    model = model or settings.router_model or settings.specialist_model
+    if "decider" in model or model.startswith("typesafe/"):
+        return JevRouter(
+            settings.openrouter_api_key or "",
+            timeout_s=settings.router_timeout_ms / 1000,
+            url=JevRouter.OPENROUTER_URL,
+            model=model,
+            name="openrouter",
+        )
+    return OpenRouterRouter(settings.model_copy(update={"router_model": model}))
+
+
 def build_routers(settings: Settings) -> tuple[Router, Router | None]:
     """(primary, fallback) for the configured provider."""
     match settings.router_provider:
@@ -192,7 +215,7 @@ def build_routers(settings: Settings) -> tuple[Router, Router | None]:
         case RouterProvider.HAIKU:
             return HaikuRouter(settings), None
         case RouterProvider.OPENROUTER:
-            return OpenRouterRouter(settings), None
+            return openrouter_router(settings), None
         case RouterProvider.JEV:
             primary: Router = JevRouter(
                 settings.typesafe_api_key or "", timeout_s=settings.router_timeout_ms / 1000

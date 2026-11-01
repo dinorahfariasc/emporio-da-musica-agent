@@ -11,7 +11,7 @@ import sys
 import time
 from collections import Counter
 
-from app.agent.router import HaikuRouter, JevRouter, OpenRouterRouter, Router
+from app.agent.router import HaikuRouter, JevRouter, Router, openrouter_router
 from app.config import Settings
 from evals.runner import load_scenarios
 
@@ -66,8 +66,7 @@ async def main() -> None:
         print("openrouter: OPENROUTER_API_KEY not set")
         return
     for model in models:
-        candidate = settings.model_copy(update={"router_model": model})
-        await _measure(OpenRouterRouter(candidate), samples, f"openrouter {model}")
+        await _measure(openrouter_router(settings, model), samples, f"openrouter {model}")
 
 
 if __name__ == "__main__":
