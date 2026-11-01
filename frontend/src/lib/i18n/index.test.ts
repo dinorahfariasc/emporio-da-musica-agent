@@ -11,6 +11,7 @@ const CONTRACT_TOOLS = [
   "get_order_status",
   "search_policies",
   "get_store_info",
+  "check_return_eligibility",
   "request_return",
   "register_complaint",
   "handoff_to_human",

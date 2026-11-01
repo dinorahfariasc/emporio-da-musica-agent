@@ -29,6 +29,10 @@ CONTRACT_TOOL_NAMES: tuple[str, ...] = (
     "search_policies",
     "get_store_info",
     "get_order_status",
+    "check_return_eligibility",  # not in the #4 contract table; the UI labels it (T033)
+    "request_return",
+    "register_complaint",
+    "handoff_to_human",
 )
 
 # Narrower tool sets cut cost and attack surface; conversation_state is the security boundary.
@@ -40,7 +44,14 @@ TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "order_status": ("get_order_status",),
     "policy_question": ("search_policies",),
     "store_info": ("get_store_info", "search_policies"),
-    "service_request": ("get_order_status",),  # extended by #7
+    "service_request": (
+        "get_order_status",
+        "check_return_eligibility",
+        "request_return",
+        "register_complaint",
+        "handoff_to_human",
+        "search_policies",
+    ),
     "greeting": (),
     "out_of_scope": (),
 }

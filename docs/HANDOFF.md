@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-10-31 (#9 PR 1 reviewed; #5 PR B merged as #35)._
+_Last updated: 2026-11-01 (#6 agent core merged as #40; #7 actions re-opened against main)._
 
 ## 1. What this is
 
@@ -33,22 +33,27 @@ The repo is private now; the user makes it public at delivery.
 
 ## 3. Status (update me)
 
-**Merged to `main`:** #2 bootstrap · #3 scaffolding + production walking skeleton · #4 chat stream
-contract · embeddings switch to Gemini · #5 spec + first implementation PR (store ETL, data-quality
-report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
+**Merged to `main`:** #2 bootstrap · #3 scaffolding + walking skeleton · #4 chat stream contract ·
+embeddings switch to Gemini · #5 store ETL, retrieval (#35) · #36/#38 chat web (US1, mobile) · #39
+agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, stream adapter,
+`POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012).
 
 **In flight (check `gh pr list` and the board for the truth):**
-- **#6 agent core PR 1** (branch `feat/6-agent-core`): router, agent, stream adapter, `POST /api/chat`,
-  8 read tools, eval scenarios; all tests green locally. Needs review (QA + senior), then merge.
-  The agent tables (`conversation_state`, ...) are created on first use and at the end of the seed.
-  Production needs `CHAT_MODE=backend`, `LLM_PROVIDER=anthropic`, `ROUTER_PROVIDER`,
-  `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` (`LLM_PROVIDER`/`ROUTER_PROVIDER=openrouter`, model ids in `SPECIALIST_MODEL`/`GENERAL_MODEL`/`ROUTER_MODEL`), `TYPESAFE_API_KEY`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the
-  user runs the redeploy.
-- **#5 T032:** manual seed of Neon with Gemini (user holds the keys) is still pending.
-- **Not started:** #7 actions (PR 2 of 002), #8 MCP (PR 3), #10 auth/limits/deploy, #11 README +
-  example conversations.
+- **#7 actions (PR 2 of 002)**: return eligibility, `check_return_eligibility`, `request_return`,
+  `register_complaint`, `handoff_to_human`, US6 scenarios, UI label (DL-013). #41 was merged into
+  the stale `feat/6-agent-core` branch after #40 was squashed, so it never reached `main`; the same
+  commit is re-opened from `feat/7-actions-main`. Needs the user's merge.
+- **Models (DL-012):** router `perplexity/pplx-decider-v1.2`, specialist `openai/gpt-6-luna`, general
+  `deepseek/deepseek-v4.1-flash`, all through OpenRouter. Production env: `CHAT_MODE=backend`,
+  `LLM_PROVIDER=openrouter`, `ROUTER_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, `ROUTER_MODEL`,
+  `SPECIALIST_MODEL`, `GENERAL_MODEL`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the user
+  runs the redeploy.
+- **#5 T032:** manual seed of Neon with Gemini (user holds the keys) is still pending; local seeds use
+  the fake embedder, and the seed and the query must use the same provider.
+- **Not started:** #8 MCP (PR 3 of 002, T034–T036), #10 auth/limits/deploy, #11 README + example
+  conversations. Open nits from the #40 review are in DL-012 (stream close on error, body size cap).
 
-**Remaining P0 order:** finish #5 PR B → #6 (+#7, #8) → #9 UI → #10 → #11. Do P1/P2 only after
+**Remaining P0 order:** merge #7 → #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
 all P0 is in production.
 
 ## 4. Working agreements (from the user)
@@ -63,7 +68,7 @@ all P0 is in production.
   trailers** — even if a tool's default asks for it. AI usage is documented in the decision log
   and README instead. The **user merges** PRs; agents open them.
 - **Language:** everything English except the agent persona and the website copy (pt-BR first).
-- **Decision log numbering:** next free is DL-009 (check the file; parallel branches collide).
+- **Decision log numbering:** next free is DL-014 (check the file; parallel branches collide).
 - **Facts from the system:** prices, stock, promos, eligibility are computed in Python, never by
   the LLM (constitution I).
 - Update the board status and this file as you go.
@@ -73,7 +78,7 @@ all P0 is in production.
 | Item | Notes |
 |---|---|
 | Local DB | `docker compose up -d --wait` → Postgres 16 + pgvector on **localhost:5433** (override with `POSTGRES_PORT`; another project may hold 5432/5433) |
-| Backend | `cd backend && cp .env.example .env && uv sync && uv run pytest` — no keys needed (fake providers by default) |
+| Backend | `cd backend && cp .env.example .env && uv sync && uv run pytest` — no keys needed (fake providers by default). Real models: set the `*_PROVIDER=openrouter` vars and `OPENROUTER_API_KEY`; `uv run python -m evals --live` and `uv run python -m evals.router_spike <model ids>` |
 | Frontend | `cd frontend && cp .env.example .env.local && pnpm install && pnpm dev` (`CHAT_MODE=mock` replays fixtures; **production must use `backend`**) |
 | Secrets (never commit) | `GEMINI_API_KEY` (embeddings, free tier), `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY` (Jev router). Production values live in Vercel env vars; the user holds the keys. |
 | Neon (prod DB) | Vercel Marketplace integration; vars `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (use for seed/DDL). Region São Paulo; Vercel functions run in `iad1` (latency follow-up: move to `gru1`). |
@@ -87,6 +92,8 @@ all P0 is in production.
   `node_modules/next/dist/docs` before using an API.
 - `.env*` ignore rules hide `.env.example`; keep the explicit `!.env.example`.
 - CSV files use CRLF line endings; never rewrite them (`challenge/** -text`).
+- A PR whose base is another PR's branch merges into that branch, not into `main` (#41 did). Retarget to `main` before merging, or cherry-pick onto `main` afterwards.
+- Live evals: one event loop (`evals/runner.py::_live_client`); decider models are not chat models (`/api/alpha/decisions`); DeepSeek needs reasoning off for the router.
 - Squash-merged stacked PRs conflict: retarget with
   `git rebase --onto origin/main <old-base> <branch>` then `git push --force-with-lease`.
 - Vercel Services: the backend is **private**; reach it from Next.js route handlers via
@@ -116,18 +123,13 @@ all P0 is in production.
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
-### 2026-10-31 — #9 PR 3 (mobile + polish)
-- Done: viewport-fit cover + safe-area padding (bottom and sides), catalog-only copy, audits
-  clean, prod fail-closed checked by hand. Review (QA + senior) approved; side insets applied.
-- Gotcha: a PR stacked on another merges into the base branch; it only reached main because it
-  merged before the base was squashed. Retarget stacked PRs to main before merging.
-- Next: user does T046 (375 px screenshot) and merges; then #6 agent core.
+### 2026-11-01 — #40 merged; #7 re-opened against main
+- **Done:** #40 merged. #41 had been merged into the stale `feat/6-agent-core` branch, so the actions commit was cherry-picked onto `main` as `feat/7-actions-main` and re-opened; HANDOFF status refreshed.
+- **Next:** user merges the #7 PR; then #8 MCP, #10, #11.
 
-### 2026-10-31 — #9 PR 2 (tools, cards, errors)
-- Done: tool status, product cards, 401/429/budget/retry states, `/login` placeholder; 90 tests.
-- Review: QA approve, senior approve with minors (countdown remount key, rate-limit flag reset,
-  announced tool state) — applied.
-- Next: user merges #36 then PR 2 (retarget to main after #36 squash: `rebase --onto`); PR 3.
+### 2026-11-01 — #7 actions (PR 2 of 002)
+- **Done:** returns eligibility (`app/policies/returns.py`), `check_return_eligibility`, `request_return`, `register_complaint`, `handoff_to_human`, `service_request` prompt block, US6 scenarios (fake-only with a scripted clock, plus a live-only one), UI label and contract row; 285 tests; live evals pass; DL-013. Branch `feat/7-actions` is based on `feat/6-agent-core` (#40 not merged yet).
+- **Next:** user merges #40, then this PR (retarget to main); then #8 MCP (T034–T036), #10, #11.
 
 ### 2026-11-01 — Review of #40 applied
 - **Done:** QA + senior review, no blockers; fixes listed in DL-012 (router fallback budget, chat id validation, history window, aclosing, DDL lock, pool timeout, store date in the prompt, PII phone, stricter live assertions). Live evals 29/29 on two runs; 248 tests.
@@ -178,3 +180,16 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - Fixed: Vercel env vars only apply to new deployments; stacked squash-merge conflicts resolved
   with `rebase --onto`.
 - Next: #5 PR B (retrieval + Neon seed); apply review to #32 and merge; 002 plan/tasks/review.
+
+### 2026-10-31 — #9 PR 3 (mobile + polish)
+- Done: viewport-fit cover + safe-area padding (bottom and sides), catalog-only copy, audits
+  clean, prod fail-closed checked by hand. Review (QA + senior) approved; side insets applied.
+- Gotcha: a PR stacked on another merges into the base branch; it only reached main because it
+  merged before the base was squashed. Retarget stacked PRs to main before merging.
+- Next: user does T046 (375 px screenshot) and merges; then #6 agent core.
+
+### 2026-10-31 — #9 PR 2 (tools, cards, errors)
+- Done: tool status, product cards, 401/429/budget/retry states, `/login` placeholder; 90 tests.
+- Review: QA approve, senior approve with minors (countdown remount key, rate-limit flag reset,
+  announced tool state) — applied.
+- Next: user merges #36 then PR 2 (retarget to main after #36 squash: `rebase --onto`); PR 3.
