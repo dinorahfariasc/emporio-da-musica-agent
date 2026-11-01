@@ -37,6 +37,8 @@ class FakeToolModel(BaseChatModel):
             raise AssertionError("FakeToolModel script exhausted")
         item = self.script[self.cursor[0]]
         self.cursor[0] += 1
+        if callable(item):  # built from the conversation so far, e.g. quoting tool outputs
+            item = item(messages)
         return AIMessage(content=item) if isinstance(item, str) else item
 
     def _generate(
