@@ -1,9 +1,19 @@
 import pytest
 
 from app.config import Settings
+from app.db import connect
 from evals.runner import load_scenarios, run_scenario
 
 SCENARIOS = [s for s in load_scenarios() if not s.get("live_only")]
+
+
+@pytest.fixture(autouse=True)
+async def _fresh_lockouts(seeded_db):
+    """Order lockouts are global per order, so each scenario starts from a clean slate."""
+    async with await connect(seeded_db) as conn:
+        await conn.execute("DELETE FROM order_verification_failures")
+        await conn.execute("DELETE FROM conversation_state WHERE conversation_id LIKE 'eval-%'")
+        await conn.commit()
 
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=[s["id"] for s in SCENARIOS])

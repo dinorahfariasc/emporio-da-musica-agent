@@ -350,3 +350,14 @@ as 3 PRs: core (#6, P0), actions (#7, P2), MCP (#8, P2).
 - **Senior** verified three LangGraph API pitfalls in a throwaway venv, plus the lockout bypass. All are applied above.
 
 **Role of AI.** Claude Code drafted the artifacts and ran the research and the two reviews with subagents. The research covered PyPI versions and an offline fake-model loop. The decisions and the 3-PR split were mine.
+
+**Implementation outcome (PR 1, #6).**
+- Built as planned: pinned versions as above, no outer graph, per-request `create_agent`, the 8 read tools, `POST /api/chat`, 20 fake-mode scenarios plus 9 `live_only` ones.
+- Deviations:
+  - `get_order_status` takes an optional `contact` (a verified order needs none), and `reserve_attempt`/`confirm_success` commit on their own, because the pool rolls back a connection when the tool raises right after a failed check (found by the lockout test).
+  - Long text-search lexemes were already matched by a 5-character prefix (DL-010), which US1-7 relies on.
+  - The US1-7 test searches by words that only exist in the untrusted description: a "Fender Jazz Bass" query legitimately ranks the bass named "Bass" first.
+  - The Jev request body (`state` plus a `choice` question) follows the research notes and is unverified until the router spike runs.
+- **Residual risk:** until #10 binds the chat id to a user, anyone who knows a chat id sees the orders verified in it. The per-order lock (5 failures, 30 min) still stops guessing across chat ids.
+- **Not done here (needs the user's keys):** the router spike (`python -m evals.router_spike`), `python -m evals --live` and the manual end-to-end through the UI.
+

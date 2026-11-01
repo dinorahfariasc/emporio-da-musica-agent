@@ -2,9 +2,23 @@
 
 import argparse
 import sys
+from urllib.parse import urlsplit
+
+import psycopg
 
 from app.config import Settings
 from evals.runner import load_scenarios, run_scenario
+
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
+def _reset_lockouts(settings: Settings) -> None:
+    """Lockouts are global per order; a local run starts clean (never on a remote database)."""
+    if not settings.database_url or urlsplit(settings.database_url).hostname not in LOCAL_HOSTS:
+        return
+    with psycopg.connect(settings.database_url) as conn:
+        conn.execute("DELETE FROM order_verification_failures")
+        conn.execute("DELETE FROM conversation_state WHERE conversation_id LIKE 'eval-%'")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -20,6 +34,7 @@ def main(argv: list[str] | None = None) -> int:
         if scenario.get("live_only") and not args.live:
             print(f"SKIP  {scenario['id']} (live only)")
             continue
+        _reset_lockouts(settings)
         failures = run_scenario(scenario, settings, live=args.live)
         print(f"{'FAIL' if failures else 'PASS'}  {scenario['id']}")
         for failure in failures:
