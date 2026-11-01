@@ -443,3 +443,24 @@ Human-in-the-loop confirmation for the write tools over MCP is #14, not this PR.
 
 **Role of AI.** Claude Code implemented the wrapper, the auth middleware, the Vercel rewrite and
 the tests; the tool list and the "no business logic" boundary follow the spec and constitution.
+
+## DL-FE-001 — Chat Melody branding tokens without a live Figma read (#18, 2026-11-01)
+
+**Decision.** Restyle the existing 003 chat by swapping design tokens and presentational classes.
+Behaviour stays in `specs/003-chat-web` and `docs/contracts/chat-stream.md`. The branding epic is
+`specs/008-figma-branding` (004–007 are reserved).
+
+| Choice | Why |
+|---|---|
+| Fallback palette: warm paper, espresso ink, rosewood primary, brass accent; Fraunces + Figtree; SVG store mark | The Figma MCP hit the Starter plan tool-call limit after `create_session`. `docs/design/figma-brief.md` still defines screens and states. Re-align tokens if a later Figma read diverges. |
+| Tokens in `globals.css`, mark in `public/`, no new runtime dependency | FR-015 in 003 already expected a token swap; constitution VI. |
+| Do not invent i18n keys or `en.ts`; do not add Sign out / PT-EN / login form on `main` | Those files are owned by #13 and #44. Restyle the placeholder login and the current header only. |
+| Category colour block on product cards, no photo | The contract has no image field (#20 / FR-005). A tint from `categoryId` is presentation, not a computed price or stock fact. |
+| Two PRs: docs first, then surfaces | Spec-driven workflow; review gate on the spec PR. |
+
+**Limits.** Pixel-perfect match to Figma is blocked until the file can be read. Dark tokens ship
+for AA contrast even if the Figma file has no dark frames.
+
+**Role of AI.** Cursor Grok drafted the 008 spec/plan/tasks and the restyle; the screen list and
+non-negotiable constraints come from the Figma brief, the UI-agent prompt and constitution I.
+
