@@ -1,30 +1,33 @@
 import type { Pool } from "pg";
 import { describe, expect, it } from "vitest";
 
-import { clearAttempts, isLockedOut, recordFailedAttempt } from "./lockout";
+import { clearAttempts, reserveLoginAttempt } from "./lockout";
 
 // A minimal in-memory stand-in for `pg.Pool` so lockout logic is tested without a real database.
+// The real atomicity guarantee comes from Postgres's single-statement upsert (tested against the
+// real SQL in lockout.postgres.test.ts); this fake only has to reproduce its observable behavior
+// for sequential calls.
 class FakePool {
   rows = new Map<string, { failed_count: number; window_start: Date }>();
 
   async query(sql: string, params: unknown[] = []) {
     const text = sql.trim();
     if (text.startsWith("CREATE TABLE")) return { rows: [] };
-    const username = params[0] as string;
-    if (text.startsWith("SELECT")) {
-      const row = this.rows.get(username);
-      return { rows: row ? [row] : [] };
-    }
     if (text.startsWith("INSERT")) {
-      this.rows.set(username, { failed_count: 1, window_start: params[1] as Date });
-      return { rows: [] };
-    }
-    if (text.startsWith("UPDATE")) {
-      const row = this.rows.get(username);
-      if (row) row.failed_count += 1;
-      return { rows: [] };
+      const [username, moment, windowMinutes] = params as [string, Date, number];
+      const existing = this.rows.get(username);
+      const windowMs = windowMinutes * 60_000;
+      const expired = existing && moment.getTime() - existing.window_start.getTime() >= windowMs;
+      if (!existing || expired) {
+        const row = { failed_count: 1, window_start: moment };
+        this.rows.set(username, row);
+        return { rows: [{ failed_count: 1 }] };
+      }
+      existing.failed_count += 1;
+      return { rows: [{ failed_count: existing.failed_count }] };
     }
     if (text.startsWith("DELETE")) {
+      const [username] = params as [string];
       this.rows.delete(username);
       return { rows: [] };
     }
@@ -37,40 +40,39 @@ function fakeClock(ms: number) {
 }
 
 describe("sign-in lockout", () => {
-  it("locks out after 5 failures within 15 minutes", async () => {
+  it("allows the first 5 attempts and locks out the 6th", async () => {
     const pool = new FakePool() as unknown as Pool;
     const now = fakeClock(0);
     for (let i = 0; i < 5; i++) {
-      expect(await isLockedOut(pool, "demo", now)).toBe(false);
-      await recordFailedAttempt(pool, "demo", now);
+      expect((await reserveLoginAttempt(pool, "demo", now)).allowed).toBe(true);
     }
-    expect(await isLockedOut(pool, "demo", now)).toBe(true);
+    expect((await reserveLoginAttempt(pool, "demo", now)).allowed).toBe(false);
   });
 
   it("clears the lock after a successful login", async () => {
     const pool = new FakePool() as unknown as Pool;
     const now = fakeClock(0);
-    for (let i = 0; i < 5; i++) await recordFailedAttempt(pool, "demo", now);
-    expect(await isLockedOut(pool, "demo", now)).toBe(true);
+    for (let i = 0; i < 5; i++) await reserveLoginAttempt(pool, "demo", now);
+    expect((await reserveLoginAttempt(pool, "demo", now)).allowed).toBe(false);
 
     await clearAttempts(pool, "demo");
-    expect(await isLockedOut(pool, "demo", now)).toBe(false);
+    expect((await reserveLoginAttempt(pool, "demo", now)).allowed).toBe(true);
   });
 
   it("resets the window after 15 minutes", async () => {
     const pool = new FakePool() as unknown as Pool;
     const start = fakeClock(0);
-    for (let i = 0; i < 5; i++) await recordFailedAttempt(pool, "demo", start);
-    expect(await isLockedOut(pool, "demo", start)).toBe(true);
+    for (let i = 0; i < 5; i++) await reserveLoginAttempt(pool, "demo", start);
+    expect((await reserveLoginAttempt(pool, "demo", start)).allowed).toBe(false);
 
     const later = fakeClock(16 * 60 * 1000);
-    expect(await isLockedOut(pool, "demo", later)).toBe(false);
+    expect((await reserveLoginAttempt(pool, "demo", later)).allowed).toBe(true);
   });
 
   it("username lookup is case-insensitive", async () => {
     const pool = new FakePool() as unknown as Pool;
     const now = fakeClock(0);
-    for (let i = 0; i < 5; i++) await recordFailedAttempt(pool, "Demo", now);
-    expect(await isLockedOut(pool, "demo", now)).toBe(true);
+    for (let i = 0; i < 5; i++) await reserveLoginAttempt(pool, "Demo", now);
+    expect((await reserveLoginAttempt(pool, "demo", now)).allowed).toBe(false);
   });
 });
