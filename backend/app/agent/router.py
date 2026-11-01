@@ -50,7 +50,7 @@ INTENT_CRITERIA: dict[str, str] = {
 class Route(BaseModel):
     intent: Intent
     confidence: float = Field(ge=0, le=1)
-    router: Literal["jev", "haiku", "fake"] = "fake"
+    router: Literal["jev", "haiku", "openrouter", "fake"] = "fake"
     path: Literal["specialist", "general"] = "general"
     model: str = ""
 
@@ -67,7 +67,7 @@ class RouterUsage:
 
 
 class Router(Protocol):
-    name: Literal["jev", "haiku", "fake"]
+    name: Literal["jev", "haiku", "openrouter", "fake"]
 
     async def classify(self, text: str, context: str = "") -> Route: ...
 
@@ -127,22 +127,27 @@ class JevRouter:
 
 
 class HaikuRouter:
-    name = "haiku"
+    """Structured-output classifier on a chat model; subclasses pick the provider."""
+
+    name: Literal["jev", "haiku", "openrouter", "fake"] = "haiku"
 
     def __init__(self, settings: Settings, usage: RouterUsage | None = None) -> None:
         self._settings = settings
         self.usage = usage or RouterUsage()
 
-    async def classify(self, text: str, context: str = "") -> Route:
+    def _chat_model(self):
         from langchain_anthropic import ChatAnthropic
 
-        model = ChatAnthropic(
+        return ChatAnthropic(
             model=self._settings.specialist_model,
             temperature=0,
             max_tokens=200,
             max_retries=0,
             default_request_timeout=self._settings.router_timeout_ms / 1000,
-        ).with_structured_output(Route, include_raw=True)
+        )
+
+    async def classify(self, text: str, context: str = "") -> Route:
+        model = self._chat_model().with_structured_output(Route, include_raw=True)
         criteria = "\n".join(f"- {k}: {v}" for k, v in INTENT_CRITERIA.items())
         result = await model.ainvoke(
             [
@@ -160,8 +165,23 @@ class HaikuRouter:
         self.usage.output_tokens += usage.get("output_tokens", 0)
         parsed = result.get("parsed")
         if not isinstance(parsed, Route):
-            return UNCLEAR.model_copy(update={"router": "haiku"})
-        return parsed.model_copy(update={"router": "haiku"})
+            return UNCLEAR.model_copy(update={"router": self.name})
+        return parsed.model_copy(update={"router": self.name})
+
+
+class OpenRouterRouter(HaikuRouter):
+    name = "openrouter"
+
+    def _chat_model(self):
+        from app.agent.models import openrouter_chat
+
+        return openrouter_chat(
+            self._settings,
+            self._settings.router_model or self._settings.specialist_model,
+            max_tokens=200,
+            timeout_s=self._settings.router_timeout_ms / 1000,
+            temperature=0,
+        )
 
 
 def build_routers(settings: Settings) -> tuple[Router, Router | None]:
@@ -171,6 +191,8 @@ def build_routers(settings: Settings) -> tuple[Router, Router | None]:
             return FakeRouter(), None
         case RouterProvider.HAIKU:
             return HaikuRouter(settings), None
+        case RouterProvider.OPENROUTER:
+            return OpenRouterRouter(settings), None
         case RouterProvider.JEV:
             primary: Router = JevRouter(
                 settings.typesafe_api_key or "", timeout_s=settings.router_timeout_ms / 1000

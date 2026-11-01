@@ -95,7 +95,7 @@ class DataProducts(_Model):
 class Route(_Model):
     intent: str
     confidence: float
-    router: Literal["jev", "haiku", "fake"]
+    router: Literal["jev", "haiku", "openrouter", "fake"]
 
 
 class Usage(_Model):

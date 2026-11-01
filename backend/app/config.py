@@ -12,12 +12,14 @@ class Environment(StrEnum):
 
 class LLMProvider(StrEnum):
     ANTHROPIC = "anthropic"
+    OPENROUTER = "openrouter"
     FAKE = "fake"
 
 
 class RouterProvider(StrEnum):
     JEV = "jev"
     HAIKU = "haiku"
+    OPENROUTER = "openrouter"
     FAKE = "fake"
 
 
@@ -41,6 +43,9 @@ class Settings(BaseSettings):
 
     specialist_model: str = "claude-haiku-4-5-20251001"
     general_model: str = "claude-sonnet-5-5"
+    # Router model for the openrouter provider; empty means specialist_model.
+    router_model: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
     router_confidence_threshold: float = 0.75
     router_timeout_ms: int = 2500  # whole router budget: primary + fallback
     agent_max_steps: int = 8
@@ -51,6 +56,7 @@ class Settings(BaseSettings):
     input_max_chars: int = 2000
 
     anthropic_api_key: str | None = None
+    openrouter_api_key: str | None = None
     typesafe_api_key: str | None = None
     gemini_api_key: str | None = None
 

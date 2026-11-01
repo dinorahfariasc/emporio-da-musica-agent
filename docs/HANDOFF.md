@@ -42,7 +42,7 @@ report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
   8 read tools, eval scenarios; all tests green locally. Needs review (QA + senior), then merge.
   The agent tables (`conversation_state`, ...) are created on first use and at the end of the seed.
   Production needs `CHAT_MODE=backend`, `LLM_PROVIDER=anthropic`, `ROUTER_PROVIDER`,
-  `ANTHROPIC_API_KEY`, `TYPESAFE_API_KEY`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the
+  `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` (`LLM_PROVIDER`/`ROUTER_PROVIDER=openrouter`, model ids in `SPECIALIST_MODEL`/`GENERAL_MODEL`/`ROUTER_MODEL`), `TYPESAFE_API_KEY`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the
   user runs the redeploy.
 - **#5 T032:** manual seed of Neon with Gemini (user holds the keys) is still pending.
 - **Not started:** #7 actions (PR 2 of 002), #8 MCP (PR 3), #10 auth/limits/deploy, #11 README +
@@ -75,7 +75,7 @@ all P0 is in production.
 | Local DB | `docker compose up -d --wait` → Postgres 16 + pgvector on **localhost:5433** (override with `POSTGRES_PORT`; another project may hold 5432/5433) |
 | Backend | `cd backend && cp .env.example .env && uv sync && uv run pytest` — no keys needed (fake providers by default) |
 | Frontend | `cd frontend && cp .env.example .env.local && pnpm install && pnpm dev` (`CHAT_MODE=mock` replays fixtures; **production must use `backend`**) |
-| Secrets (never commit) | `GEMINI_API_KEY` (embeddings, free tier), `ANTHROPIC_API_KEY`, `TYPESAFE_API_KEY` (Jev router). Production values live in Vercel env vars; the user holds the keys. |
+| Secrets (never commit) | `GEMINI_API_KEY` (embeddings, free tier), `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY` (Jev router). Production values live in Vercel env vars; the user holds the keys. |
 | Neon (prod DB) | Vercel Marketplace integration; vars `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (use for seed/DDL). Region São Paulo; Vercel functions run in `iad1` (latency follow-up: move to `gru1`). |
 | Vercel | Single project `emporio-da-musica-agent`; env changes only reach deployments created afterwards (redeploy). Production redeploys must be run by the user. |
 | CLI auth | `gh` is logged in as `dinorahfariasc` (scopes include `project`); `npx vercel login` done on the user's machine. |

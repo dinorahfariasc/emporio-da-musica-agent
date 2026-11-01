@@ -1,15 +1,17 @@
-"""Router spike (research R3): `uv run python -m evals.router_spike` with real keys.
+"""Router spike (research R3): `uv run python -m evals.router_spike [openrouter-model ...]`.
 
-Runs every scenario message through Jev and Haiku and prints accuracy against the scenario's
-intent, p50/p95 latency and a confidence histogram, to pick ROUTER_CONFIDENCE_THRESHOLD.
+Runs every scenario message through Jev, Haiku and each OpenRouter model given and prints
+accuracy against the scenario's intent, p50/p95 latency and a confidence histogram, to pick
+ROUTER_CONFIDENCE_THRESHOLD.
 """
 
 import asyncio
 import statistics
+import sys
 import time
 from collections import Counter
 
-from app.agent.router import HaikuRouter, JevRouter, Router
+from app.agent.router import HaikuRouter, JevRouter, OpenRouterRouter, Router
 from app.config import Settings
 from evals.runner import load_scenarios
 
@@ -23,7 +25,8 @@ def _messages() -> list[tuple[str, str]]:
     ]
 
 
-async def _measure(router: Router, samples: list[tuple[str, str]]) -> None:
+async def _measure(router: Router, samples: list[tuple[str, str]], label: str = "") -> None:
+    label = label or router.name
     hits, latencies, confidences = 0, [], []
     for text, expected in samples:
         started = time.monotonic()
@@ -36,12 +39,12 @@ async def _measure(router: Router, samples: list[tuple[str, str]]) -> None:
         confidences.append(route.confidence)
         hits += route.intent == expected
     if not latencies:
-        print(f"{router.name}: no successful calls")
+        print(f"{label}: no successful calls")
         return
     latencies.sort()
     p95 = latencies[max(0, int(len(latencies) * 0.95) - 1)]
     histogram = Counter(round(c, 1) for c in confidences)
-    print(f"{router.name}: accuracy {hits}/{len(samples)}")
+    print(f"{label}: accuracy {hits}/{len(samples)}")
     print(f"  latency p50 {statistics.median(latencies):.0f} ms, p95 {p95:.0f} ms")
     print("  confidence", dict(sorted(histogram.items())))
 
@@ -58,6 +61,13 @@ async def main() -> None:
         await _measure(HaikuRouter(settings), samples)
     else:
         print("haiku: ANTHROPIC_API_KEY not set")
+    models = sys.argv[1:]
+    if models and not settings.openrouter_api_key:
+        print("openrouter: OPENROUTER_API_KEY not set")
+        return
+    for model in models:
+        candidate = settings.model_copy(update={"router_model": model})
+        await _measure(OpenRouterRouter(candidate), samples, f"openrouter {model}")
 
 
 if __name__ == "__main__":

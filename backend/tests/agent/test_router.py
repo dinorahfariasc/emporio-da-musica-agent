@@ -105,3 +105,9 @@ def test_provider_selection():
     assert (primary.name, fallback.name) == ("jev", "haiku")
     primary, fallback = build_routers(Settings(_env_file=None))
     assert (primary.name, fallback) == ("fake", None)
+
+
+def test_build_routers_openrouter_has_no_fallback():
+    settings = Settings(_env_file=None, router_provider=RouterProvider.OPENROUTER)
+    primary, fallback = build_routers(settings)
+    assert (primary.name, fallback) == ("openrouter", None)
