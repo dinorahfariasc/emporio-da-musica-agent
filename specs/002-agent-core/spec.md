@@ -1,6 +1,6 @@
 # Feature Specification: Agent Core — Melody, the customer service agent
 
-**Feature Branch**: `docs/6-agent-core-spec`
+**Feature Branch**: `docs/6-agent-core-plan`
 
 **Created**: 2026-10-31
 
@@ -108,16 +108,18 @@ wrong factor, wrong order, repeated failures) and check exactly what is disclose
 1. **Given** order 8 belongs to customer 2, **When** the customer gives "pedido 8" and customer 2's
    email (any letter case, surrounding spaces), **Then** Melody gives the status, tracking code and
    estimated delivery.
-2. **Given** the phone is written in a different format ("67998123456" vs "(67) 99812-3456"),
-   **When** used as the second factor, **Then** verification still succeeds.
+2. **Given** order 4 belongs to customer 1, whose phone is "(67) 99812-3456", **When** the phone is
+   written as "67998123456", **Then** verification still succeeds.
 3. **Given** a wrong email or phone, **When** verification fails, **Then** Melody says the data
    did not match without revealing which factor was wrong or whether the order exists.
 4. **Given** 3 failed verification attempts in the same conversation, **When** a fourth attempt is
    made, **Then** Melody stops verifying in that conversation and offers human support.
 5. **Given** order 10 was verified, **When** the customer then asks about order 11, **Then** Melody
    asks for verification again.
-6. **Given** customers 11 and 43 share an email, **When** that email is used with an order of
-   customer 43, **Then** verification is checked against the order's own customer only.
+6. **Given** customers 11 and 43 share an email and order 10 belongs to customer 11, **When**
+   order 10 is verified with that email, **Then** it succeeds; **and when** it is verified with
+   customer 43's phone (67) 99456-3456, **Then** it fails. Verification uses the order's own
+   customer only.
 7. **Given** order 8 is "shipped" with an estimated delivery months in the past, **When** reported,
    **Then** Melody does not invent a new date and offers human support.
 8. **Given** a cancelled order (17–20), **When** reported, **Then** Melody gives the status and the
@@ -273,7 +275,8 @@ repeat without the key.
 
 - **FR-001**: Every customer message MUST first be classified into one of: product search, product
   price/details, promotions, payment options, order status, policy question, store information,
-  return/complaint/handoff request, greeting/small talk, out of scope, or unclear — with a
+  return/complaint/handoff request, greeting/small talk, out of scope, multiple intents, or
+  unclear — with a
   confidence value.
 - **FR-002**: High-confidence single-intent messages MUST be handled by a path specialized for that
   intent using the least expensive capable language model; low-confidence, multi-intent or unclear

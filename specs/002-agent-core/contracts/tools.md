@@ -6,8 +6,9 @@ All tools are `async def` functions in `backend/app/tools/`. The rules below app
   first argument. The context is not visible to the model or to MCP.
 - **Facts**: they are computed only in Python (constitution I). The model never receives raw
   rows with personal data.
-- **Errors**: a tool raises `ToolError(code)` with a stable code. The adapter maps it to
-  `tool-output-error`.
+- **Errors**: a tool raises `ToolError(code)` with one of these stable codes: `not_found`,
+  `verification_failed`, `locked`, `not_verified`, `not_eligible`, `unavailable`, `invalid_input`.
+  The adapter maps it to `tool-output-error`.
 - **Products**: tools that return products also write one `data-products` part (`ProductCard[]`),
   at most 6 cards.
 

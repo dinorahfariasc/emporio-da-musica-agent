@@ -5,9 +5,12 @@ venv, not training data. A fake-model ReAct loop was run offline to prove the te
 
 ## R1 — Orchestration: LangGraph outer graph, `create_agent` for the general path
 
-- **Decision**:
-  - LangGraph builds the outer graph: `route → specialized node | general agent`, chosen by a
-    conditional edge.
+- **Decision (revised after review)**:
+  - Routing is plain Python (R3). There is **no outer LangGraph graph**: inside a node, the
+    nested agent's `custom` and `updates` events only surface with `subgraphs=True`, and the
+    router is not streamed anyway.
+  - The chosen `create_agent` is built per request (about 5 ms, binding that request's
+    `ToolContext`) and streamed directly.
   - The general path uses `langchain.agents.create_agent(model, tools, system_prompt=…)`, which
     returns a compiled graph with nodes `model` and `tools`.
   - Each specialized node is also a `create_agent` with a small tool list and Haiku.
@@ -15,8 +18,7 @@ venv, not training data. A fake-model ReAct loop was run offline to prove the te
     `langchain-core==1.7.3`; `anthropic` 2.3.0 comes in transitively.
 - **Rationale**:
   - The architecture is already decided (DL-002).
-  - LangGraph gives the typed routing graph, `recursion_limit` and `get_stream_writer`, which
-    match the plan directly.
+  - LangGraph (through `create_agent`) gives the tool loop, `recursion_limit` and stream modes.
   - The stack is about 46 MB; a warm import takes about 1.1 s.
 - **Findings / gotchas**:
   - `langgraph.prebuilt.create_react_agent` is deprecated in favour of
@@ -33,7 +35,7 @@ venv, not training data. A fake-model ReAct loop was run offline to prove the te
 ## R2 — Streaming adapter: LangGraph → AI SDK v1 UI message stream
 
 - **Decision**: one adapter, `app/agent/stream.py`, consumes
-  `graph.astream(inputs, stream_mode=["messages", "updates", "custom"],
+  `agent.astream(inputs, stream_mode=["messages", "updates", "custom"],
   config={"recursion_limit": N})` and emits the contract chunks from `app/chat/protocol.py`:
 
   | LangGraph event | Contract chunk |
@@ -41,7 +43,7 @@ venv, not training data. A fake-model ReAct loop was run offline to prove the te
   | first event | `start` (new `messageId` per answer) |
   | `updates` from `model` with complete `tool_calls` | `start-step`, then `tool-input-available` per call |
   | `messages`: `ToolMessage` | `tool-output-available`, or `tool-output-error` with a stable error code when `status == "error"` |
-  | `custom`: `{"type": "data-products", …}` | `data-products` |
+  | `custom`: `{"type": "data-products", …}` | `data-products`, buffered and emitted after that step's tool outputs (#4 order) |
   | `messages`: text chunks from the answering model | `text-start` / `text-delta` / `text-end`, opened on the first chunk of a message id |
   | end of each model step | `finish-step` |
   | end of the run | `message-metadata` (route, model, usage), then `finish` with `finishReason` |
@@ -86,7 +88,9 @@ venv, not training data. A fake-model ReAct loop was run offline to prove the te
   The default method is `function_calling` (a forced tool call). A parse failure gives
   `intent="unclear", confidence=0`, which goes to the general path.
 - **Provider order**: `ROUTER_PROVIDER` picks the primary (`jev` | `haiku` | `fake`). On error or
-  timeout (`ROUTER_TIMEOUT_MS`, default 1500), Haiku takes over (FR-004). The metadata `router`
+  error, Haiku takes over (FR-004). Primary and fallback share **one** budget,
+  `ROUTER_TIMEOUT_MS` (default 2500), enforced with `asyncio.timeout`; on expiry the route is
+  `unclear` and the turn goes to the general path. Jev gets no retry. The metadata `router`
   field records which one answered.
 - **Context**: the router sees only the latest customer message plus the previous assistant
   turn, which keeps it cheap. Multi-intent detection is part of the label set.
@@ -115,10 +119,13 @@ venv, not training data. A fake-model ReAct loop was run offline to prove the te
     clock), so no globals are needed.
   - They return Pydantic models. Facts are computed only here, from `app/catalog/rules.py` and a
     new `app/policies/rules.py` (constitution I).
-  - The agent wraps them with `StructuredTool.from_function(coroutine=…)`, binding the context
-    with `functools.partial`. MCP registers the same functions in #8.
-- **Products data part**: tools that return products call `get_stream_writer()` with a
-  `data-products` payload built by one mapper. The mapper follows the 001 contract for
+  - The agent wraps each tool in a real `async def` closure with an explicit `args_schema`
+    without `ctx`. `functools.partial` breaks schema inference. The wrapper turns `ToolError`
+    into `ToolException` with `handle_tool_error=True`, because LangGraph's tool node re-raises
+    any other exception. MCP reuses the same schema in #8.
+- **Products data part**: tools that return products call `ctx.emit()` with a `data-products`
+  payload. The agent sets `emit` to LangGraph's stream writer; MCP leaves it as a no-op.
+  The payload is built by one mapper. The mapper follows the 001 contract for
   `ProductCard`.
 - **Untrusted descriptions**: products 135–144 hide their contradictory descriptions through
   `display_description()` (DL-002 rule).
@@ -129,7 +136,10 @@ venv, not training data. A fake-model ReAct loop was run offline to prove the te
 
 - **Finding**: Vercel Fluid compute runs many instances and recycles them, so in-memory state
   would lose or bypass the lockout.
-- **Decision**: a Postgres table `conversation_state` (see data-model).
+- **Decision**: Postgres tables `conversation_state` and `order_verification_failures` (see
+  data-model). An attempt is **reserved** atomically before the contact is compared, so
+  concurrent requests cannot exceed the limit. The per-order counter means a new chat id does
+  not reset the lockout.
   - The verification tool reads the row and changes it in one atomic statement: `UPDATE …
     RETURNING`, or `INSERT … ON CONFLICT`.
   - The tool never trusts a "verified" flag in the client's message history (FR-016).

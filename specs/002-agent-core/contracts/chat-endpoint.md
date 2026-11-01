@@ -24,7 +24,7 @@ Chunk order for one turn:
 
 ```
 start
-  [start-step  tool-input-available*  (data-products)*  tool-output-available|tool-output-error*  finish-step]*
+  [start-step  (tool-input-available  tool-output-available|tool-output-error)*  data-products?  finish-step]*
   start-step  text-start  text-delta+  text-end  finish-step
 message-metadata {route:{intent,confidence,router}, model, usage:{inputTokens,outputTokens}}
 finish {finishReason: "stop" | "length" | "tool-calls"}
@@ -33,13 +33,16 @@ finish {finishReason: "stop" | "length" | "tool-calls"}
 
 The router's own model call is never streamed.
 
+`data-products` comes **after** the tool outputs of its step, as in the #4 contract. The adapter
+buffers the `custom` event a tool writes until that step's tool messages have been emitted.
+
 ## Errors
 
 | Situation | Behaviour |
 |---|---|
 | Invalid body | HTTP 400 `invalid_request`, an `ErrorResponse` (#4) |
 | LLM provider error, timeout, recursion limit (`AGENT_MAX_STEPS`), turn timeout | Mid-stream `error` chunk with a pt-BR or EN catalog message (in the customer's language when known), then `[DONE]`. Never the exception text. |
-| Tool failure | `tool-output-error` with a stable code (`verification_failed`, `not_found`, `locked`, `unavailable`). The model then explains the situation in words. |
+| Tool failure | `tool-output-error` with a stable code: `not_found`, `verification_failed`, `locked`, `not_verified`, `not_eligible`, `unavailable` or `invalid_input`. The model then explains the situation in words. |
 | Router failure | Fallback router; if both fail, `intent=unclear, confidence=0`, then the general path |
 
 401 and 429 responses (auth, rate limit, budget) are produced upstream by #10, not here.

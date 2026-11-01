@@ -91,7 +91,7 @@ backend/
 │   ├── api/chat.py              # POST /api/chat → StreamingResponse (lazy-imports the agent)
 │   ├── agent/
 │   │   ├── schema.sql           # conversation_state, service_requests
-│   │   ├── graph.py             # router node → conditional edge → specialist | general
+│   │   ├── agent.py             # build_agent(route): specialist | general create_agent (per request)
 │   │   ├── router.py            # Router protocol; JevRouter, HaikuRouter, FakeRouter; fallback chain
 │   │   ├── models.py            # chat model factory (Anthropic | Fake) from settings
 │   │   ├── prompts.py           # Melody persona (§7.1/§7.2), safety rules, per-intent instructions
@@ -135,7 +135,8 @@ backend/
    - the Jev spike report.
 
    Production switch: Vercel `CHAT_MODE=backend` plus the API keys, done by the user.
-2. **PR 2 — #7 actions (P2)**: returns rules, `service_requests`, the 4 action tools,
+2. **PR 2 — #7 actions (P2)**: returns rules, the 4 action tools (using `service_requests`,
+   created in PR 1),
    Story 6 scenarios, and the frontend label for `check_return_eligibility`.
 3. **PR 3 — #8 MCP (P2)**: FastMCP mount, bearer auth, tests, Vercel rewrite for `/mcp`, and the
    README section.

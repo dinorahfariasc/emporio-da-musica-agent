@@ -3,9 +3,9 @@
 Store data (`products`, `promotions`, `customers`, `orders`, `order_items`, `policy_chunks`) is
 owned by 001 and read-only here. This feature adds the tables and in-memory types below.
 
-## New tables (`backend/app/agent/schema.sql`)
+## New tables (`backend/app/agent/schema.sql`, created idempotently on first use and by the seed)
 
-Both tables use `CREATE TABLE IF NOT EXISTS`, so they persist across reseeds. They are applied by
+All three tables use `CREATE TABLE IF NOT EXISTS`, so they persist across reseeds. They are applied by
 `python -m etl` after the reload, and by the test fixtures. They have **no foreign keys to store
 tables**: the 001 seed drops those tables, and fails by design if another table references them
 (`etl/load.py`). Referential checks happen in the tools instead.
@@ -22,14 +22,29 @@ The server-side security state for one conversation (FR-015, FR-016, R6).
 | `locked` | boolean NOT NULL DEFAULT false | set when `failed_attempts` reaches 3; no more verification in this conversation |
 | `updated_at` | timestamptz NOT NULL DEFAULT now() | rows older than 7 days may be purged |
 
-**State transitions**
+**State transitions** (one transaction per attempt; the attempt is reserved **before** the contact
+is compared, so concurrent requests cannot exceed the limit)
 
 | From | Event | To |
 |---|---|---|
-| no row | first verification attempt | row inserted (`INSERT … ON CONFLICT DO NOTHING`) |
-| unlocked | success | `verified_order_ids += order_id` |
-| unlocked | failure | `failed_attempts += 1`; at 3, `locked = true` (one `UPDATE … RETURNING`) |
+| no row | first verification attempt | row inserted (`INSERT … ON CONFLICT`) |
+| unlocked | attempt | `failed_attempts += 1` with `UPDATE … WHERE NOT locked RETURNING`; at 3, `locked = true` |
+| reserved | contact matches | the reservation is rolled back (`failed_attempts -= 1`); `verified_order_ids += order_id` |
 | locked | any attempt | refused without checking data; human support offered |
+
+### `order_verification_failures`
+
+A per-order counter that survives a new chat id (review H1).
+
+| Column | Type | Rules |
+|---|---|---|
+| `order_id` | int PK (no FK) | |
+| `failed_attempts` | int NOT NULL DEFAULT 0 | reserved together with the conversation counter |
+| `locked_until` | timestamptz NULL | set to `now() + 30 min` at 5 failures; attempts for this order are refused while it is in the future |
+| `updated_at` | timestamptz NOT NULL DEFAULT now() | |
+
+**Residual risk until #10:** anyone who knows a chat id sees the orders verified in it. #10 binds
+the chat id to the authenticated user.
 
 ### `service_requests` (P2, #7)
 
@@ -39,7 +54,7 @@ Records created only after an explicit customer request (FR-020).
 |---|---|---|
 | `request_id` | bigint identity PK | |
 | `conversation_id` | text NOT NULL | |
-| `type` | text | `return` \| `exchange_defect` \| `exchange_preference` \| `complaint` \| `handoff` |
+| `type` | text NOT NULL CHECK | `return` \| `exchange_defect` \| `exchange_preference` \| `complaint` \| `handoff` |
 | `order_id` | int NULL (no FK, see above) | required for return/exchange; the order must be verified in this conversation |
 | `reason` | text NOT NULL | the customer's words, truncated to 1000 chars; personal data masked |
 | `eligibility` | jsonb NULL | the decision record for return/exchange (rule, window, dates) |
