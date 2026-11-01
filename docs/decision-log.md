@@ -441,7 +441,7 @@ the already-shipped `#4` contract (`unauthorized`/`rate_limited`/`budget_exhaust
 themselves; the merge decisions (which story to add, which numbers to keep) were made against the
 existing decision log and contract, not invented.
 
-## DL-BE-001 — Service JWT, conversation scoping, rate limit and budget (#10, 2026-11-01)
+## DL-BE-002 — Service JWT, conversation scoping, rate limit and budget (#10, 2026-11-01)
 
 **Decision.** `app/auth` (service JWT verify + the `require_service_account` FastAPI dependency)
 and `app/limits` (rate limit + daily budget, Postgres-backed) gate `POST /api/chat`. The dependency
@@ -477,6 +477,13 @@ cap is a dashboard setting, documented in `quickstart.md`, not enforced in code 
 **Role of AI.** Claude Code implemented the dependency, the schema changes, the limiter, the tests,
 and found/fixed the startup-check bug the tests surfaced.
 
+**Integration fix on merge with #43 (MCP, 2026-11-01).** `ToolContext.user_id` is now required by
+every tool, but `app/mcp.py`'s `_tool_context` (added in #43/DL-BE-001 above) only built
+`conversation_id`. Fixed by reusing the same `mcp:{client_id}` value for both fields — MCP clients
+authenticate with `MCP_API_KEY`, not a login, so the client id is the only identity available, and
+`/mcp` stays protected only by that key (never by a user's service JWT; `require_service_account`
+is not on the `/mcp` mount at all).
+
 ## DL-FE-001 — Auth.js login and create-user CLI (#10, 2026-11-01)
 
 **Decision.** Auth.js v5 (Credentials provider, JWT sessions, 30-day max age) replaces the
@@ -497,3 +504,28 @@ log, not just a 200 status).
 **Role of AI.** Claude Code implemented the login flow, the CLI, the proxy, and diagnosed the
 Next.js 16 proxy/middleware rename that was silently breaking redirects in manual testing.
 
+## DL-BE-001 — MCP server for external AI clients (#8, 2026-11-01)
+
+**Decision.** `backend/app/mcp.py` exposes all 12 contract tools (`CONTRACT_TOOL_NAMES`) over
+[MCP](https://modelcontextprotocol.io) streamable HTTP, mounted at `/mcp` in `app/main.py` with
+a combined lifespan (FastMCP's session manager needs its own lifespan to run).
+
+| Choice | Why |
+|---|---|
+| Each MCP tool is the exact `REGISTRY` function, wrapped only to build a `ToolContext` | Constitution VI: the MCP layer holds no business logic. |
+| The wrapper is built by generating a real function signature (`exec` + `__annotations__`), not `functools.partial` or `**kwargs` | FastMCP (like LangChain, see `registry.py`) inspects `inspect.signature`/`__annotations__` to build the client-facing schema; a `Context`-typed parameter is auto-injected and dropped from that schema, which is how `ctx` stays invisible to clients (US7-1) while the wrapper still gets per-call MCP context. |
+| `conversation_id=f"mcp:{ctx.client_id}"` | Reuses the same verification/lockout state (`app/agent/state.py`) an MCP client would need before a write tool (`request_return`, etc.) succeeds — no separate state machine for MCP. |
+| Auth is a single bearer key (`MCP_API_KEY`) checked with `hmac.compare_digest`, as plain ASGI middleware around the FastMCP app, not FastMCP's own `AuthProvider` | Simplest thing that satisfies "an access key" (FR-028); avoids pulling in OAuth/JWT machinery for one static key. |
+| `/mcp` is not mounted at all when `MCP_API_KEY` is unset | Fail closed by default (dev/CI need not run it); matches "MCP disabled when unset". |
+| `vercel.json` rewrites `/mcp` and `/mcp/*` straight to the private `backend` service | The backend is otherwise private (DL-010/HANDOFF gotcha); only this path needs to be public. |
+
+**Tests** (`tests/test_mcp.py`): `tools/list` returns all 12 tools with descriptions and no `ctx`
+parameter (fastmcp in-memory `Client`); `get_product` via MCP matches the direct tool; missing or
+wrong bearer token gets 401 at the real HTTP layer; building the app without `MCP_API_KEY` raises.
+
+**Not covered.** Full MCP JSON-RPC protocol compliance (session negotiation, SSE framing) is left
+to the `mcp`/`fastmcp` SDKs; tests check the auth boundary and tool parity, not the wire protocol.
+Human-in-the-loop confirmation for the write tools over MCP is #14, not this PR.
+
+**Role of AI.** Claude Code implemented the wrapper, the auth middleware, the Vercel rewrite and
+the tests; the tool list and the "no business logic" boundary follow the spec and constitution.

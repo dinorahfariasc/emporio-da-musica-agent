@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     typesafe_api_key: str | None = None
     gemini_api_key: str | None = None
+    # /mcp is mounted only when this is set (#8).
+    mcp_api_key: str | None = None
 
     # specs/004-auth-limits-deploy
     service_jwt_secret: str | None = None

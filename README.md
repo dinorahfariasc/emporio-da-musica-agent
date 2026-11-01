@@ -8,7 +8,7 @@ Grande/MS (Artefact AI Engineer challenge). Work in progress — see the
 
 | Path | What |
 |---|---|
-| `backend/` | Python API (FastAPI; LangGraph agent and MCP server to come) |
+| `backend/` | Python API (FastAPI, LangGraph agent, MCP server at `/mcp`) |
 | `frontend/` | Next.js chat UI |
 | `challenge/` | Original brief and store data (read-only inputs) |
 | `specs/` | Spec Kit artifacts per epic |
@@ -68,4 +68,29 @@ uv run python -m etl --yes      # required for any non-local host (e.g. Neon)
 One Vercel project using [Services](https://vercel.com/docs/services) (`vercel.json` at the repo
 root): the Next.js `frontend` is the only public service; the FastAPI `backend` is private and
 reached by the frontend through a service binding (`BACKEND_URL`). Postgres is Neon, connected
-through the Vercel Marketplace.
+through the Vercel Marketplace. The `/mcp` path is the one exception: `vercel.json` rewrites it
+straight to the private `backend` service so it is reachable from outside the project (see below).
+
+## Use the store tools from Claude Desktop
+
+The same tools Melody uses are exposed over [MCP](https://modelcontextprotocol.io) at `/mcp`,
+behind a bearer key (`MCP_API_KEY`; the server is disabled when it is unset). No business logic
+lives in the MCP layer (`backend/app/mcp.py`) — it is the exact functions in
+`backend/app/tools/`, wrapped only to build a per-client `ToolContext`.
+
+Add this to Claude Desktop's `claude_desktop_config.json` (or any MCP client that supports
+streamable HTTP with a bearer header):
+
+```json
+{
+  "mcpServers": {
+    "emporio-da-musica": {
+      "url": "https://emporio-da-musica-agent.vercel.app/mcp",
+      "headers": { "Authorization": "Bearer <MCP_API_KEY>" }
+    }
+  }
+}
+```
+
+Locally: `MCP_API_KEY=dev-key uv run uvicorn app.main:app --reload`, then point a client at
+`http://localhost:8000/mcp`.
