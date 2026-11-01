@@ -2,8 +2,8 @@
 
 import { signOut } from "next-auth/react";
 
-import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/ui/brand-mark";
+import { Button } from "@/components/ui/button";
 import { useMessages } from "@/lib/i18n/context";
 
 export function ChatHeader() {
