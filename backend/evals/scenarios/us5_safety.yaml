@@ -58,6 +58,7 @@
       intent: store_info
       expect: {}
     - say: "¿Y los domingos?"
+      context: "Abrimos aos sábados das 09:00 às 13:00."
       intent: store_info
       expect:
         answer_contains: ["domingo"]

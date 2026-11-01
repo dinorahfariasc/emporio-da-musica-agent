@@ -27,18 +27,21 @@
         errors: [verification_failed]
         forbidden_facts: ["BRQM7890123BR"]
     - say: "Tenta b@x.com"
+      context: "O e-mail informado não confere com o do pedido. Confira e tente novamente."
       intent: order_status
       calls:
         - {name: get_order_status, args: {order_id: 4, contact: b@x.com}}
       expect:
         errors: [verification_failed]
     - say: "Tenta c@x.com"
+      context: "O e-mail informado não confere com o do pedido. Confira e tente novamente."
       intent: order_status
       calls:
         - {name: get_order_status, args: {order_id: 4, contact: c@x.com}}
       expect:
         errors: [verification_failed]
     - say: "Agora o certo: lucas.mendes@jmail.com"
+      context: "O e-mail informado não confere com o do pedido. Confira e tente novamente."
       intent: order_status
       calls:
         - {name: get_order_status, args: {order_id: 4, contact: lucas.mendes@jmail.com}}
@@ -55,6 +58,7 @@
       expect:
         required_facts: ['"status":"confirmed"']
     - say: "E o pedido 11?"
+      context: "Pedido 10 verificado: o status é entregue. Posso ajudar com mais alguma coisa?"
       intent: order_status
       calls:
         - {name: get_order_status, args: {order_id: 11}}

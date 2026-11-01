@@ -16,23 +16,24 @@ from app.config import Settings
 from evals.runner import load_scenarios
 
 
-def _messages() -> list[tuple[str, str]]:
+def _messages() -> list[tuple[str, str, str]]:
+    """(message, expected intent, previous assistant reply as the chat endpoint sends it)."""
     return [
-        (turn["say"], turn["intent"])
+        (turn["say"], turn["intent"], turn.get("context", ""))
         for scenario in load_scenarios()
         for turn in scenario["turns"]
         if "intent" in turn
     ]
 
 
-async def _measure(router: Router, samples: list[tuple[str, str]], label: str = "") -> None:
+async def _measure(router: Router, samples: list[tuple[str, str, str]], label: str = "") -> None:
     label = label or router.name
     print(f"{label}: measuring {len(samples)} messages...", flush=True)
     hits, latencies, confidences = 0, [], []
-    for text, expected in samples:
+    for text, expected, context in samples:
         started = time.monotonic()
         try:
-            route = await router.classify(text)
+            route = await router.classify(text, context)
         except Exception as exc:  # noqa: BLE001 - the spike reports failures, it does not raise
             print(f"  error {type(exc).__name__} on {text!r}")
             continue
