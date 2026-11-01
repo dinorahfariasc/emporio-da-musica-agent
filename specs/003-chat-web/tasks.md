@@ -326,3 +326,6 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
 3. **PR 3** adds mobile, a11y and audits, and closes #9.
 
 Each PR keeps lint, typecheck, test and build green. Implementation starts only after the spec PR (#32) is merged.
+
+**Branding follow-up:** do not reopen T001–T0xx. Visual tokens and surface restyle are
+`specs/008-figma-branding` (epic #18).

@@ -51,7 +51,7 @@ def _clean(text: str) -> str:
 
 
 async def _verified(conn: psycopg.AsyncConnection, ctx: ToolContext, order_id: int) -> None:
-    current = await state.get(conn, ctx.conversation_id)
+    current = await state.get(conn, ctx.user_id, ctx.conversation_id)
     if order_id not in current.verified_order_ids:
         raise ToolError("not_verified")
 

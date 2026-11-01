@@ -22,8 +22,11 @@ from pydantic import ValidationError
 from app.agent.logging import mask_pii
 from app.agent.prompts import error_message
 from app.agent.state import CONVERSATION_ID
+from app.auth.dependency import require_service_account
+from app.auth.service_jwt import AccountClaims
 from app.chat import protocol as p
 from app.config import Settings, get_settings
+from app.limits import enforce as limits
 
 logger = logging.getLogger("app.turn")
 router = APIRouter()
@@ -42,10 +45,12 @@ class Runtime:
     primary: Any
     fallback: Any
     model_factory: Callable[[str], Any] | None
-    make_ctx: Callable[[Settings, str, Callable[[dict], None]], Any]
+    make_ctx: Callable[[Settings, str, str, Callable[[dict], None]], Any]
 
 
-async def _default_ctx(settings: Settings, conversation_id: str, emit: Callable[[dict], None]):
+async def _default_ctx(
+    settings: Settings, user_id: str, conversation_id: str, emit: Callable[[dict], None]
+):
     from app.db import get_pool
     from app.embeddings import get_embedder
     from app.tools.context import ToolContext
@@ -54,6 +59,7 @@ async def _default_ctx(settings: Settings, conversation_id: str, emit: Callable[
         pool=await get_pool(settings),
         embedder=get_embedder(settings, purpose="query"),
         conversation_id=conversation_id,
+        user_id=user_id,
         emit=emit,
     )
 
@@ -127,11 +133,47 @@ def _invalid(message: str) -> JSONResponse:
     )
 
 
+def _limited(code: str, message: str, retry_after_seconds: int) -> JSONResponse:
+    # contracts/rate-limit-and-budget.md: rate_limited/budget_exhausted, both 429.
+    body = p.ErrorResponse(
+        error=p.ErrorBody(code=code, message=message, retry_after_seconds=retry_after_seconds)
+    )
+    return JSONResponse(
+        body.model_dump(mode="json", by_alias=True, exclude_none=True),
+        status_code=429,
+        headers={"Retry-After": str(retry_after_seconds)},
+    )
+
+
+RATE_LIMITED_MESSAGE = "Muitas mensagens em pouco tempo. Aguarde alguns segundos e tente de novo."
+BUDGET_EXHAUSTED_MESSAGE = "Você atingiu o limite diário de uso. Volta a funcionar à meia-noite."
+
+
+async def _check_limits(settings: Settings, account: AccountClaims) -> JSONResponse | None:
+    """Rate limit first (cheaper, catches the common runaway-client case), then budget."""
+    from app.db import get_pool
+
+    pool = await get_pool(settings)
+    async with pool.connection() as conn:
+        rate = await limits.check_rate_limit(conn, account.user_id, settings.rate_limit_per_minute)
+        if not rate.allowed:
+            return _limited("rate_limited", RATE_LIMITED_MESSAGE, rate.retry_after_seconds or 1)
+        budget = await limits.check_budget(
+            conn, account.user_id, settings.daily_token_budget, settings.budget_timezone
+        )
+        if not budget.allowed:
+            return _limited(
+                "budget_exhausted", BUDGET_EXHAUSTED_MESSAGE, budget.retry_after_seconds or 1
+            )
+    return None
+
+
 @router.post("/api/chat")
 async def chat(
     payload: dict,
     settings: Annotated[Settings, Depends(get_settings)],
     runtime: Annotated[Runtime, Depends(get_runtime)],
+    account: Annotated[AccountClaims, Depends(require_service_account)],
 ):
     try:
         request = p.ChatRequest.model_validate(payload)
@@ -139,6 +181,9 @@ async def chat(
         return _invalid("Invalid chat request.")
     if not CONVERSATION_ID.fullmatch(request.id):
         return _invalid("Invalid chat request.")
+    limited = await _check_limits(settings, account)
+    if limited is not None:
+        return limited
     text = _latest_user_text(request, settings)
     lang = _language(text)
     if not text.strip():
@@ -146,14 +191,19 @@ async def chat(
             _canned(EMPTY_REPLY[lang]), media_type="text/event-stream", headers=p.STREAM_HEADERS
         )
     return StreamingResponse(
-        _turn(request, text, lang, settings, runtime),
+        _turn(request, text, lang, settings, runtime, account),
         media_type="text/event-stream",
         headers=p.STREAM_HEADERS,
     )
 
 
 async def _turn(
-    request: p.ChatRequest, text: str, lang: str, settings: Settings, runtime: Runtime
+    request: p.ChatRequest,
+    text: str,
+    lang: str,
+    settings: Settings,
+    runtime: Runtime,
+    account: AccountClaims,
 ) -> AsyncIterator[str]:
     from app.agent.agent import build_agent
     from app.agent.router import route as classify
@@ -181,7 +231,7 @@ async def _turn(
 
                 get_stream_writer()(event)
 
-            ctx = await runtime.make_ctx(settings, request.id, emit)
+            ctx = await runtime.make_ctx(settings, account.user_id, request.id, emit)
             agent, routed = build_agent(settings, ctx, routed, model_factory=runtime.model_factory)
             log.update(
                 intent=routed.intent,
@@ -223,9 +273,35 @@ async def _turn(
         yield p.encode(p.Error(error_text=error_message("internal", lang)))
         yield p.DONE
     finally:
-        # Also runs on client disconnect (CancelledError); it only logs, nothing is written.
+        # Also runs on client disconnect (GeneratorExit from the ASGI server closing the stream);
+        # logs and records whatever usage the provider already reports, even for a partial/dropped
+        # stream (contracts/rate-limit-and-budget.md: "After the turn finishes"). Recording usage
+        # is fired as a detached task (QA review #44): it must not be torn down along with the
+        # response generator it is cleaning up after, and a failure to record it must never mask
+        # whatever the turn itself raised or block the stream from closing.
         log["latency_ms"] = int((time.monotonic() - started) * 1000)
         logger.info(mask_pii(json.dumps(log, ensure_ascii=False)))
+        if log["input_tokens"] or log["output_tokens"]:
+            asyncio.create_task(
+                _record_usage_safely(
+                    settings, account.user_id, log["input_tokens"], log["output_tokens"]
+                )
+            )
+
+
+async def _record_usage_safely(
+    settings: Settings, user_id: str, input_tokens: int, output_tokens: int
+) -> None:
+    try:
+        from app.db import get_pool
+
+        pool = await get_pool(settings)
+        async with pool.connection() as conn:
+            await limits.record_usage(
+                conn, user_id, input_tokens, output_tokens, settings.budget_timezone
+            )
+    except Exception:  # noqa: BLE001 - never let a usage-recording failure surface anywhere else
+        logger.warning("failed to record usage for a finished turn", exc_info=True)
 
 
 def _observe(line: str, log: dict[str, Any], started: float) -> None:

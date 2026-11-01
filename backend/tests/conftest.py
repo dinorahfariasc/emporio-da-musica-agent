@@ -86,6 +86,7 @@ async def tool_ctx(seeded_db, tool_events):
             pool=pool,
             embedder=FakeEmbedder(),
             conversation_id=f"test-{uuid.uuid4().hex[:12]}",
+            user_id=str(uuid.uuid4()),
             clock=FixedClock(datetime(2026, 11, 3, 10, 0, tzinfo=STORE_TZ)),
             emit=tool_events.append,
         )

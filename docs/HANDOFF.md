@@ -4,8 +4,8 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
+_Last updated: 2026-11-01 (#18 branding: spec 008 written; current-surface restyle follows)._
 _Last updated: 2026-11-01 (#42 actions merged; final deadline 2026-11-02 18:00)._
-_Last updated: 2026-11-01 (#8 MCP server implemented, not yet opened as a PR)._
 
 ## 1. What this is
 
@@ -37,7 +37,9 @@ The repo is private now; the user makes it public at delivery.
 **Merged to `main`:** #2 bootstrap · #3 scaffolding + walking skeleton · #4 chat stream contract ·
 embeddings switch to Gemini · #5 store ETL, retrieval (#35) · #36/#38 chat web (US1, mobile) · #39
 agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, stream adapter,
-`POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012).
+`POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012) ·
+**#43 MCP server**: `backend/app/mcp.py` (FastMCP, bearer auth, `/mcp` mount), `vercel.json` `/mcp`
+rewrite, README section (DL-BE-001).
 
 **Merged:** #7 actions (PR 2 of 002) landed on `main` as #42 (return eligibility, action tools,
 US6 scenarios, DL-013).
@@ -50,17 +52,18 @@ US6 scenarios, DL-013).
   runs the redeploy.
 - **#5 T032 done (2026-11-01):** Neon seeded with Gemini in 7.24 s; the six store-table row counts and checksums match local. Re-seed only if the data or the embedding provider changes.
 - **#8 MCP merged as #43.** Production needs `MCP_API_KEY` (set in Vercel; takes effect on the next redeploy).
-- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0).
-- **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap).
+- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0), **#18 Figma branding** (`specs/008-figma-branding`, `DL-FE-001`).
+- **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap). #18 login-form / PT-EN / Sign out wait for #44 → #13 on `main`.
 
 **Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
 all P0 is in production.
 
 ## 3b. UI track (Figma ready) — read before touching `frontend/`
 
-The Figma file is ready and a separate agent applies it (#18, plus #16 Playwright and #12 history UI if time allows). The UI brief is `docs/design/figma-brief.md`. To avoid rework and merge conflicts:
+The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Brief: `docs/design/figma-brief.md`. Decision: `DL-FE-001`. Figma MCP was rate-limited; first slice uses the brief plus a documented fallback palette.
 
-- **Do not start from `main` alone.** Open PRs touch the same frontend files: #44 (auth, spec 004) edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; the PT/EN switch (#13, worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`. **Merge order: #44 → #13 (rebased) → UI branding.** Branch the UI work from `main` after those two are merged; until then work only on tokens/theme.
+- **#44 and #13 are not on `main` yet.** They still own login-form, Sign out, PT/EN, `en.ts`. **Merge order: #44 → #13 (rebased) → any leftover branding chrome.** Current-surface restyle (tokens, empty/conversation/tools/cards/input/errors, placeholder login, header without Sign out/PT-EN) proceeds on `main` in parallel; expect a rebase when those land.
+- Open PRs that still conflict if edited now: #44 edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; #13 (worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`.
 - **Safe to do now (no overlap):** design tokens in `src/app/globals.css`, Tailwind theme, fonts, logo asset in `public/`, new presentational components under `src/components/ui/`.
 - **Do not touch:** `frontend/auth.ts`, `src/lib/auth/*`, `src/proxy.ts`, `src/app/api/**`, `scripts/create-user.ts` (auth), and the chat-stream logic (`src/lib/chat/*`, tool labels). Restyle, never re-wire.
 - **Copy:** all strings go through the i18n catalog (pt-BR default, EN via `en.ts` after #13). No hard-coded text in components.
@@ -135,9 +138,14 @@ The Figma file is ready and a separate agent applies it (#18, plus #16 Playwrigh
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
-### 2026-11-01 — README draft (#11, track F)
-- **Done:** README rewrite (architecture, run, decisions, limitations, AI-assistant workflow), `docs/conversations/` template with placeholders, `docs/delivery-checklist.md`; DL-DOCS-001. Gap noted: `--export` for the eval runner (done on the evals branch).
-- **Next:** replace the placeholder conversations with live ones after the final deploy.
+### 2026-11-01 — EDA notebook (#22, track D)
+- **Done:** `analysis/` (notebook, HTML export, generator, README) and `specs/007-eda-notebook/`; no anomalies beyond the data quality report; DL-DATA-001.
+- **Next:** review and merge.
+
+### 2026-11-01 — #18 Figma branding (spec 008)
+- **Done:** `specs/008-figma-branding` (spec/plan/tasks); `DL-FE-001`; 003 notes and backlog S13 pointed at 008. Current chat surfaces restyled on a follow-up PR (tokens, mark, empty/conversation/errors/placeholder login). Figma MCP rate-limited — fallback palette documented.
+- **Fixed:** none.
+- **Next:** rebase login form / Sign out / PT-EN after #44 → #13; re-read Figma when quota allows.
 
 ### 2026-11-01 — #42 merged; deadline confirmed
 - **Done:** #42 (actions) merged into `main`. User confirmed the final deadline: 2026-11-02 18:00 (America/Campo_Grande) with P0, P1 and P2 all done.
@@ -146,8 +154,8 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - **Done (cont.):** track status: #44 (spec 004 + code) open; track D (EDA, DL-DATA-001), E (router benchmark + judge, DL-BE) and F (README draft, delivery checklist) done locally, not pushed; #13 i18n implemented but uncommitted in its worktree. UI work moves to a separate agent (section 3b). `MCP_API_KEY` is set in Vercel; redeploy pending.
 - **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #16, #17, #19, then P2 (#22, #23, #21).
 ### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
-- **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean.
-- **Next:** user reviews and says go for opening the PR (`Closes #8`); then #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).
+- **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean. Merged to `main` as #43.
+- **Next:** #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).
 
 ### 2026-11-01 — #40 merged; #7 re-opened against main
 - **Done:** #40 merged. #41 had been merged into the stale `feat/6-agent-core` branch, so the actions commit was cherry-picked onto `main` as `feat/7-actions-main` and re-opened; HANDOFF status refreshed.

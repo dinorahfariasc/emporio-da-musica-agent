@@ -25,6 +25,7 @@ async def test_saturday_afternoon_is_closed_until_monday(tool_ctx):
         pool=tool_ctx.pool,
         embedder=tool_ctx.embedder,
         conversation_id=tool_ctx.conversation_id,
+        user_id=tool_ctx.user_id,
         clock=FixedClock(datetime(2026, 11, 7, 13, 1, tzinfo=STORE_TZ)),
     )
 
