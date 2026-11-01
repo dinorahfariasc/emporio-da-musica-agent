@@ -529,3 +529,44 @@ Human-in-the-loop confirmation for the write tools over MCP is #14, not this PR.
 
 **Role of AI.** Claude Code implemented the wrapper, the auth middleware, the Vercel rewrite and
 the tests; the tool list and the "no business logic" boundary follow the spec and constitution.
+
+## DL-FE-001 — Chat Melody branding tokens without a live Figma read (#18, 2026-11-01)
+
+**Decision.** Restyle the existing 003 chat by swapping design tokens and presentational classes.
+Behaviour stays in `specs/003-chat-web` and `docs/contracts/chat-stream.md`. The branding epic is
+`specs/008-figma-branding` (004–007 are reserved).
+
+| Choice | Why |
+|---|---|
+| Fallback palette: warm paper, espresso ink, rosewood primary, brass accent; Fraunces + Figtree; SVG store mark | The Figma MCP hit the Starter plan tool-call limit after `create_session`. `docs/design/figma-brief.md` still defines screens and states. Re-align tokens if a later Figma read diverges. |
+| Tokens in `globals.css`, mark in `public/`, no new runtime dependency | FR-015 in 003 already expected a token swap; constitution VI. |
+| Do not invent i18n keys or `en.ts`; do not add Sign out / PT-EN / login form on `main` | Those files are owned by #13 and #44. Restyle the placeholder login and the current header only. |
+| Category colour block on product cards, no photo | The contract has no image field (#20 / FR-005). A tint from `categoryId` is presentation, not a computed price or stock fact. |
+| Two PRs: docs first, then surfaces | Spec-driven workflow; review gate on the spec PR. |
+
+**Limits.** Pixel-perfect match to Figma is blocked until the file can be read. Dark tokens ship
+for AA contrast even if the Figma file has no dark frames.
+
+**Role of AI.** Cursor Grok drafted the 008 spec/plan/tasks and the restyle; the screen list and
+non-negotiable constraints come from the Figma brief, the UI-agent prompt and constitution I.
+---
+
+## DL-DATA-001 — EDA notebook as a standalone uv project (#22, 2026-11-01)
+
+**Decision.** Exploratory analysis lives in a new `analysis/` directory with its own
+`pyproject.toml` (pandas, matplotlib, jupyter, nbconvert, ipykernel), not inside `backend/`.
+
+| Choice | Why |
+|---|---|
+| Separate uv project instead of a `backend` dependency group | Keeps data-science packages (pandas, jupyter, matplotlib — tens of MB) out of the agent API's dependency graph and Vercel function size; the notebook is a one-off analysis artifact, not a runtime dependency. |
+| `eda.ipynb` built from `analysis/build_notebook.py` (a generator script) | Cell sources live as plain Python strings in one file, which diffs cleanly in review; the notebook's own JSON diff on every re-execution (cell ids, timing metadata) would otherwise dominate PRs. The script is the source of truth; the `.ipynb` output is regenerated, not hand-edited. |
+| No new anomaly beyond `docs/data-quality-report.md` | This pass is distributions and visual confirmation of the existing ETL-generated findings (DL-002), not a second source of truth; the notebook's summary section maps each chart back to that report's table by name. |
+| Executed headless and committed with outputs, plus a static `eda.html` export | FR-004: a reviewer should see results without running Jupyter; `nbconvert --execute` has no network or LLM calls, so the output is deterministic given the committed CSVs. |
+
+**Spec.** `specs/007-eda-notebook/` (007 is the next free number; 004–006 are reserved for other
+tracks per the user's instruction).
+
+**Role of AI.** Claude Code wrote the spec/plan/tasks, the notebook generator, and ran the
+headless execution and export; the anomaly catalogue it cross-references was already decided in
+DL-002 and is unchanged here.
+

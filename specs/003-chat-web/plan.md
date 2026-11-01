@@ -15,6 +15,9 @@ mapped by one pure function onto the contract's error-code table (401 → `/logi
 429 rate/budget → disabled input, 500/stream errors/dropped streams → retry). All copy lives in a
 typed pt-BR catalog read through `useMessages()`. Tests drive the real `useChat` with a stub `fetch` that serves the fixture files.
 
+**Visual (2026-11-01):** the 003 delivery used the shadcn default theme. Brand tokens and surface
+restyle live in `specs/008-figma-branding` (#18). Component structure in this plan is unchanged.
+
 ## Technical Context
 
 **Language/Version**: TypeScript 5, React 19.3, Node 24
