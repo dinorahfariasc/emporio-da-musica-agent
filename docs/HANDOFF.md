@@ -135,6 +135,10 @@ The Figma file is ready and a separate agent applies it (#18, plus #16 Playwrigh
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-01 — README draft (#11, track F)
+- **Done:** README rewrite (architecture, run, decisions, limitations, AI-assistant workflow), `docs/conversations/` template with placeholders, `docs/delivery-checklist.md`; DL-DOCS-001. Gap noted: `--export` for the eval runner (done on the evals branch).
+- **Next:** replace the placeholder conversations with live ones after the final deploy.
+
 ### 2026-11-01 — #42 merged; deadline confirmed
 - **Done:** #42 (actions) merged into `main`. User confirmed the final deadline: 2026-11-02 18:00 (America/Campo_Grande) with P0, P1 and P2 all done.
 - **Done (cont.):** DL numbering is now per area (BE/FE/DOCS/DATA). Three parallel worktrees started: track A (spec 004 / #10), track B (MCP #8, then HITL #14), track C (frontend #13, #18; checks #20 is covered by #37, which closed with PR 2 US2 cards).

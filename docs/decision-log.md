@@ -443,3 +443,21 @@ Human-in-the-loop confirmation for the write tools over MCP is #14, not this PR.
 
 **Role of AI.** Claude Code implemented the wrapper, the auth middleware, the Vercel rewrite and
 the tests; the tool list and the "no business logic" boundary follow the spec and constitution.
+## DL-DOCS-001 — README, conversations template and delivery checklist (#11, 2026-11-01)
+
+**Context.** Track F (docs, epic #11, P0): deliverables due before the deadline. `--export`
+doesn't exist yet in `backend/evals/__main__.py`, and #8 (MCP)/#10 (auth/limits/deploy) are not
+merged, so the final example conversations (live model, deployed agent) can't be produced yet.
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| README rewritten with a prominent "AI-assistant workflow" section (spec-driven, two-reviewer gate, parallel worktrees, no-AI-in-commits) alongside the brief's required sections | Fold AI usage into "Key decisions" as one bullet | The brief explicitly says "queremos entender o seu workflow" and treats thorough disclosure as a positive signal, not a deduction |
+| `docs/conversations/` ships now with a selection-criteria README mapping each of the 4 brief-suggested scenarios (+1 adversarial/language) to an existing `backend/evals/scenarios/*.yaml` id, plus 4 fake-mode transcripts reconstructed from those scripts and clearly marked as placeholders | Leave the folder empty until the live export exists | The brief wants the files in the repo now; a reproducible, clearly-labeled placeholder is honest about status and still shows the intended scenario coverage, including the one non-trivial policy-rule case (return eligibility) |
+| The 5th (adversarial/language) slot is left as a stub with no fake transcript | Fake-script a transcript for it too | Both candidate scenarios (`us5-3-extracao-de-prompt`, `us5-8-troca-de-idioma`) are `live_only` — the fake provider can't demonstrate real safety/language behaviour, so a fabricated transcript there would misrepresent what was actually tested |
+| `docs/delivery-checklist.md` cross-checks every brief requirement against repo state and lists gaps (missing `--export` flag, MCP README section, repo-public + tag as the user's pending action) | Fold gaps into the README's "Limitations" only | A reviewer (or the next agent) needs a single place to see brief-compliance status at a glance, separate from the user-facing README |
+| MCP section in the README is a placeholder marked `<!-- MCP-TRACK -->` | Write a provisional MCP section | #8 is unmerged and owned by a different track; a marked placeholder avoids both leaving a gap and having two tracks fight over the same README section |
+
+**Role of AI.** Claude Code read the brief PDF, the existing specs/decision log/eval scenarios, and
+drafted the README, checklist and conversations template; the scope (docs-only, no `--export`
+implementation) and the placeholder-vs-fake-transcript line were decided per the track brief.
+
