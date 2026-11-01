@@ -398,17 +398,17 @@ langchain or FastMCP API (research R1/R2/R10).
 
 # PR 3 — MCP (#8, US7, P2)
 
-- [ ] T034 [US7] `uv add fastmcp==4.1.4`. Write the tests in `backend/tests/test_mcp.py` (in-process `TestClient`, JSON responses). Cover:
+- [x] T034 [US7] `uv add fastmcp==4.1.4`. Write the tests in `backend/tests/test_mcp.py` (in-process `TestClient`, JSON responses). Cover:
   - `tools/list` with a valid key lists all 12 tools (11 contract tools + `check_return_eligibility`) with descriptions and input schemas, and no `ctx` parameter (US7-1);
   - `get_product` returns the same view as the direct tool (US7-2);
   - no key or a wrong key → 401 (US7-3).
-- [ ] T035 [US7] Implement `backend/app/mcp.py`:
+- [x] T035 [US7] Implement `backend/app/mcp.py`:
   - `FastMCP("Empório da Música tools")`, registering each tool through a wrapper that builds `ToolContext(conversation_id=f"mcp:{client}")`;
   - `http_app(path="/", stateless_http=True, json_response=True)`, mounted at `/mcp` in `backend/app/main.py` with combined lifespans;
   - bearer middleware with `hmac.compare_digest` against `MCP_API_KEY` (new setting; MCP disabled when unset).
 
   The MCP layer holds no business logic (constitution VI).
-- [ ] T036 [US7] Deploy wiring:
+- [x] T036 [US7] Deploy wiring:
   - a public `/mcp` rewrite in `vercel.json` (HANDOFF gotcha: the backend is private);
   - a README section "Use the store tools from Claude Desktop" with the config snippet;
   - a smoke test after deploy, run by the user.

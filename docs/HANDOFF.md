@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-11-01 (#6 agent core merged as #40; #7 actions re-opened against main)._
+_Last updated: 2026-11-01 (#8 MCP server implemented, not yet opened as a PR)._
 
 ## 1. What this is
 
@@ -50,10 +50,15 @@ agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, str
   runs the redeploy.
 - **#5 T032:** manual seed of Neon with Gemini (user holds the keys) is still pending; local seeds use
   the fake embedder, and the seed and the query must use the same provider.
-- **Not started:** #8 MCP (PR 3 of 002, T034–T036), #10 auth/limits/deploy, #11 README + example
-  conversations. Open nits from the #40 review are in DL-012 (stream close on error, body size cap).
+- **#8 MCP (PR 3 of 002, T034–T036): implemented on branch `dinorahfariasc/track-b-mcp-hitl`, not
+  yet opened as a PR.** `backend/app/mcp.py` (FastMCP, bearer auth, `/mcp` mount with a combined
+  lifespan), `backend/tests/test_mcp.py`, `vercel.json` `/mcp` rewrite, README section, DL-BE-001.
+  Needs the user's go-ahead to open the PR.
+- **Not started:** #10 auth/limits/deploy, #11 README + example conversations, #14 human-in-the-loop
+  confirmation for write actions (needs a short spec first). Open nits from the #40 review are in
+  DL-012 (stream close on error, body size cap).
 
-**Remaining P0 order:** merge #7 → #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
+**Remaining P0 order:** merge #7 → merge #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 (including #14) only after
 all P0 is in production.
 
 ## 4. Working agreements (from the user)
@@ -122,6 +127,10 @@ all P0 is in production.
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
+- **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean.
+- **Next:** user reviews and says go for opening the PR (`Closes #8`); then #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).
 
 ### 2026-11-01 — #40 merged; #7 re-opened against main
 - **Done:** #40 merged. #41 had been merged into the stale `feat/6-agent-core` branch, so the actions commit was cherry-picked onto `main` as `feat/7-actions-main` and re-opened; HANDOFF status refreshed.

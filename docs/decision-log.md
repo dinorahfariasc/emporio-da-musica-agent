@@ -417,3 +417,29 @@ Not applied, on purpose:
 
 **Role of AI.** Claude Code wrote the rule function, the tools, the scenarios and the tests; the windows and the write guards follow the spec and the manual.
 
+
+## DL-BE-001 — MCP server for external AI clients (#8, 2026-11-01)
+
+**Decision.** `backend/app/mcp.py` exposes all 12 contract tools (`CONTRACT_TOOL_NAMES`) over
+[MCP](https://modelcontextprotocol.io) streamable HTTP, mounted at `/mcp` in `app/main.py` with
+a combined lifespan (FastMCP's session manager needs its own lifespan to run).
+
+| Choice | Why |
+|---|---|
+| Each MCP tool is the exact `REGISTRY` function, wrapped only to build a `ToolContext` | Constitution VI: the MCP layer holds no business logic. |
+| The wrapper is built by generating a real function signature (`exec` + `__annotations__`), not `functools.partial` or `**kwargs` | FastMCP (like LangChain, see `registry.py`) inspects `inspect.signature`/`__annotations__` to build the client-facing schema; a `Context`-typed parameter is auto-injected and dropped from that schema, which is how `ctx` stays invisible to clients (US7-1) while the wrapper still gets per-call MCP context. |
+| `conversation_id=f"mcp:{ctx.client_id}"` | Reuses the same verification/lockout state (`app/agent/state.py`) an MCP client would need before a write tool (`request_return`, etc.) succeeds — no separate state machine for MCP. |
+| Auth is a single bearer key (`MCP_API_KEY`) checked with `hmac.compare_digest`, as plain ASGI middleware around the FastMCP app, not FastMCP's own `AuthProvider` | Simplest thing that satisfies "an access key" (FR-028); avoids pulling in OAuth/JWT machinery for one static key. |
+| `/mcp` is not mounted at all when `MCP_API_KEY` is unset | Fail closed by default (dev/CI need not run it); matches "MCP disabled when unset". |
+| `vercel.json` rewrites `/mcp` and `/mcp/*` straight to the private `backend` service | The backend is otherwise private (DL-010/HANDOFF gotcha); only this path needs to be public. |
+
+**Tests** (`tests/test_mcp.py`): `tools/list` returns all 12 tools with descriptions and no `ctx`
+parameter (fastmcp in-memory `Client`); `get_product` via MCP matches the direct tool; missing or
+wrong bearer token gets 401 at the real HTTP layer; building the app without `MCP_API_KEY` raises.
+
+**Not covered.** Full MCP JSON-RPC protocol compliance (session negotiation, SSE framing) is left
+to the `mcp`/`fastmcp` SDKs; tests check the auth boundary and tool parity, not the wire protocol.
+Human-in-the-loop confirmation for the write tools over MCP is #14, not this PR.
+
+**Role of AI.** Claude Code implemented the wrapper, the auth middleware, the Vercel rewrite and
+the tests; the tool list and the "no business logic" boundary follow the spec and constitution.
