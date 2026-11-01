@@ -286,14 +286,14 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
   - grep `frontend/src/components` and `frontend/src/app` for user-visible JSX string literals and move them into the catalog (SC-005);
   - grep for `#[0-9a-fA-F]{3,6}` and `rgb(`; only theme tokens are allowed (FR-015).
 - [x] T045 [P] Privacy audit: no `console.*` with message or part content in `frontend/src` (FR-017)
-- [ ] T046 Run [quickstart.md](quickstart.md) manually, covering:
+- [x] T046 Run [quickstart.md](quickstart.md) manually, covering:
   - all rows;
   - the image/no-request check;
   - the production fail-closed check;
   - 375 px.
 
   Attach a screenshot to the PR.
-- [ ] T047 Final gate:
+- [x] T047 Final gate:
   - lint, typecheck, test and build green;
   - update DL-009 in `docs/decision-log.md` with the implementation outcomes;
   - update `docs/HANDOFF.md`;
