@@ -51,3 +51,7 @@ Production fail-closed check: `pnpm build && NODE_ENV=production pnpm start` wit
 DevTools → device toolbar → 375 × 667. Replay every row above and confirm: no horizontal page
 scroll, input pinned at the bottom, product cards in one column, long URLs/tables wrap or scroll
 inside the bubble. Attach a 375 px screenshot to the final PR description.
+
+**Brand check (#18):** after `specs/008-figma-branding`, the same fixtures should look like the
+Chat Melody UI (paper/rosewood tokens, store mark, branded bubbles/cards/banners) at 375 px and
+desktop. Behaviour in the table above is unchanged.
