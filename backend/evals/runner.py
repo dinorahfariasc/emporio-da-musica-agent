@@ -2,6 +2,7 @@
 wiring and the stream contract (not routing or behaviour). `live_only` expectations are checked
 with --live, against the real models (review H2)."""
 
+import functools
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -30,6 +31,13 @@ class TurnResult:
     text: str = ""
     route: dict = field(default_factory=dict)
     stream_error: str | None = None
+
+
+@functools.cache
+def _live_client() -> TestClient:
+    """One client, so one event loop: provider HTTP clients are cached across requests, and a
+    fresh loop per request leaves them bound to a closed one."""
+    return TestClient(app).__enter__()
 
 
 def load_scenarios(path: Path = SCENARIO_DIR) -> list[dict]:
@@ -97,8 +105,9 @@ def _check_turn(turn: dict, result: TurnResult, *, live: bool) -> list[str]:
     for code in expect.get("errors", []):
         if code not in result.errors:
             failures.append(f"error code {code} missing (got {result.errors})")
-    # Facts are checked on tool outputs in fake mode and on the answer text with --live.
-    haystack = result.text if live else dumped
+    # Facts are checked on tool outputs (raw JSON, pre-formatting) and, with --live, also on the
+    # answer text: the model must have called the right tools, and may quote them formatted.
+    haystack = f"{dumped}\n{result.text}" if live else dumped
     for fact in expect.get("required_facts", []):
         if str(fact) not in haystack:
             failures.append(f"required fact {fact!r} missing")
@@ -122,7 +131,7 @@ def run_scenario(scenario: dict, settings: Settings, *, live: bool = False) -> l
     conversation = f"eval-{uuid.uuid4().hex[:12]}"
     history: list[dict] = []
     failures: list[str] = []
-    client = TestClient(app)
+    client = _live_client() if live else TestClient(app)
     app.dependency_overrides[get_settings] = lambda: settings
     try:
         for index, turn in enumerate(scenario["turns"]):

@@ -118,7 +118,12 @@ async def to_ui_stream(
                 yield p.encode(p.TextDelta(id=text_id, delta=text))
     except Exception as exc:  # noqa: BLE001 - every failure ends as one catalog error chunk
         kind = _classify(exc)
-        logger.warning("turn failed: %s (%s)", kind, type(exc).__name__)
+        logger.warning(
+            "turn failed: %s (%s)",
+            kind,
+            type(exc).__name__,
+            exc_info=logger.isEnabledFor(logging.DEBUG),  # full trace only when debugging
+        )
         yield p.encode(p.Error(error_text=error_message(kind, lang)))
         yield p.DONE
         return
