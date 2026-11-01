@@ -9,9 +9,11 @@ from app.auth.dependency import (
     ServiceAuthUnauthorized,
     require_service_account,
 )
+from app.auth.service_jwt import AUDIENCE, ISSUER
 from app.config import Settings
 
 SECRET = "test-secret-at-least-32-bytes-long!!"
+USER_ID = "4c9b1a2e-0a1b-4c3d-9e4f-5a6b7c8d9e0f"
 
 
 def _request(authorization: str | None) -> Request:
@@ -22,7 +24,14 @@ def _request(authorization: str | None) -> Request:
 
 def _token(secret=SECRET, exp_offset=120):
     now = int(time.time())
-    payload = {"sub": "user-1", "username": "demo", "iat": now, "exp": now + exp_offset}
+    payload = {
+        "sub": USER_ID,
+        "username": "demo",
+        "iat": now,
+        "exp": now + exp_offset,
+        "iss": ISSUER,
+        "aud": AUDIENCE,
+    }
     return jwt.encode(payload, secret, algorithm="HS256")
 
 
@@ -47,7 +56,7 @@ async def test_bad_bearer_format_is_unauthorized():
 async def test_valid_token_returns_claims():
     settings = Settings(_env_file=None, service_jwt_secret=SECRET)
     claims = await require_service_account(_request(f"Bearer {_token()}"), settings)
-    assert claims.user_id == "user-1"
+    assert claims.user_id == USER_ID
     assert claims.username == "demo"
 
 

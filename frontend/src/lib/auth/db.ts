@@ -10,7 +10,8 @@ export function getPool(): Pool {
     if (!connectionString) {
       throw new Error("DATABASE_URL is not configured");
     }
-    pool = new Pool({ connectionString });
+    // Serverless: each function instance should hold very few connections (senior review #44).
+    pool = new Pool({ connectionString, max: 2 });
   }
   return pool;
 }
@@ -38,6 +39,20 @@ async function ensureUsersTable(pool: Pool): Promise<void> {
   tableEnsured = true;
 }
 
+function toUserRecord(row: {
+  id: string;
+  username: string;
+  password_hash: string;
+  disabled_at: Date | null;
+}): UserRecord {
+  return {
+    id: row.id,
+    username: row.username,
+    passwordHash: row.password_hash,
+    disabledAt: row.disabled_at,
+  };
+}
+
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const pool = getPool();
   await ensureUsersTable(pool);
@@ -46,16 +61,28 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
     username: string;
     password_hash: string;
     disabled_at: Date | null;
-  }>(
-    "SELECT id, username, password_hash, disabled_at FROM users WHERE username = $1",
-    [username.toLowerCase()],
-  );
+  }>("SELECT id, username, password_hash, disabled_at FROM users WHERE username = $1", [
+    username.toLowerCase(),
+  ]);
   const row = result.rows[0];
-  if (!row) return null;
-  return {
-    id: row.id,
-    username: row.username,
-    passwordHash: row.password_hash,
-    disabledAt: row.disabled_at,
-  };
+  return row ? toUserRecord(row) : null;
+}
+
+export async function findUserById(id: string): Promise<UserRecord | null> {
+  const pool = getPool();
+  await ensureUsersTable(pool);
+  try {
+    const result = await pool.query<{
+      id: string;
+      username: string;
+      password_hash: string;
+      disabled_at: Date | null;
+    }>("SELECT id, username, password_hash, disabled_at FROM users WHERE id = $1", [id]);
+    const row = result.rows[0];
+    return row ? toUserRecord(row) : null;
+  } catch {
+    // A malformed uuid (should never happen for a value we minted ourselves) is "not found",
+    // not a 500 — same posture as the backend's service-JWT sub validation.
+    return null;
+  }
 }

@@ -48,9 +48,18 @@ async def _no_ctx(settings, user_id, cid, emit):
 
 
 def _token(user_id: str, *, secret: str = SECRET, exp_offset: int = 120) -> str:
+    from app.auth.service_jwt import AUDIENCE, ISSUER
+
     now = int(time.time())
     return pyjwt.encode(
-        {"sub": user_id, "username": "tester", "iat": now, "exp": now + exp_offset},
+        {
+            "sub": user_id,
+            "username": "tester",
+            "iat": now,
+            "exp": now + exp_offset,
+            "iss": ISSUER,
+            "aud": AUDIENCE,
+        },
         secret,
         algorithm="HS256",
     )
