@@ -21,8 +21,10 @@ export function MessageView({ message, streaming = false }: MessageViewProps) {
     >
       <div
         className={cn(
-          "flex max-w-[85%] min-w-0 flex-col gap-2 rounded-2xl px-3.5 py-2.5 text-sm sm:max-w-[75%]",
-          isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+          "flex max-w-[85%] min-w-0 flex-col gap-2 px-3.5 py-2.5 text-sm sm:max-w-[75%]",
+          isUser
+            ? "rounded-2xl rounded-br-md bg-bubble-user text-bubble-user-foreground shadow-sm"
+            : "rounded-2xl rounded-bl-md border border-border/70 bg-bubble-assistant text-bubble-assistant-foreground shadow-sm",
         )}
       >
         {message.parts.map((part, index) => {

@@ -19,8 +19,12 @@ export function ToolStatus({ toolName, state }: ToolStatusProps) {
       role="status"
       data-state={state}
       className={cn(
-        "flex items-center gap-1.5 text-xs",
-        state === "failed" ? "text-muted-foreground" : "text-foreground/80",
+        "flex items-center gap-1.5 rounded-full px-1.5 py-0.5 text-xs",
+        state === "failed"
+          ? "text-muted-foreground"
+          : state === "running"
+            ? "text-primary"
+            : "text-foreground/75",
       )}
     >
       {state === "running" && (

@@ -60,7 +60,7 @@ export function Markdown({ children, streaming = false }: MarkdownProps) {
   const messages = useMessages();
   return (
     <Streamdown
-      className="min-w-0 break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto"
+      className="min-w-0 break-words [&_a]:text-primary [&_h1]:font-heading [&_h2]:font-heading [&_h3]:font-heading [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto"
       mode={streaming ? "streaming" : "static"}
       parseIncompleteMarkdown={streaming}
       isAnimating={streaming}
