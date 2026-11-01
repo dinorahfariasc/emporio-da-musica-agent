@@ -365,7 +365,7 @@ langchain or FastMCP API (research R1/R2/R10).
 - [ ] T029 Gate:
   - `ruff check`, `ruff format --check` and `pytest` green;
   - add the exact-match test: the registered tool names equal `CONTRACT_TOOL_NAMES`;
-  - append DL-011 (agent core implementation: versions, router spike numbers, deviations);
+  - extend DL-011 with the implementation outcome (versions, router spike numbers, deviations);
   - update `docs/HANDOFF.md` (the agent tables are created on first use; production needs `CHAT_MODE=backend`, `LLM_PROVIDER=anthropic`, `ROUTER_PROVIDER`, `ANTHROPIC_API_KEY`, `TYPESAFE_API_KEY`; the user runs the redeploy);
   - QA + senior review;
   - open PR 1 with `Closes #6`.
