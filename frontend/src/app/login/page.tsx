@@ -15,7 +15,7 @@ export default function LoginPage() {
         <LoginNotice />
       </Suspense>
       <p className="text-sm text-muted-foreground">{messages.login.placeholder}</p>
-      <Link href="/" className="text-sm font-medium text-primary underline underline-offset-3">
+      <Link href="/" className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-3">
         {messages.login.backToChat}
       </Link>
     </main>

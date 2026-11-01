@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { locale } from "@/lib/i18n";
+import { getMessages, locale } from "@/lib/i18n";
 
 import "./globals.css";
 
@@ -15,8 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Melody · Empório da Música",
-  description: "Assistente virtual da Empório da Música",
+  title: getMessages(locale).app.title,
+  description: getMessages(locale).app.description,
+};
+
+// viewportFit "cover" lets the input bar use env(safe-area-inset-bottom) on notched phones.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -107,7 +107,7 @@ export function Chat({ fetch }: ChatProps) {
           </MessageList>
         </main>
       )}
-      <div className="shrink-0 border-t bg-background px-4 py-3">
+      <div className="shrink-0 border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto w-full max-w-3xl">
           <ChatInput
             inputRef={inputRef}
