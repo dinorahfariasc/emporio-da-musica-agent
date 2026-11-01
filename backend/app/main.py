@@ -8,29 +8,25 @@ from fastapi.responses import JSONResponse
 from app.api import chat, health, stream_test
 from app.auth.dependency import ServiceAuthMisconfigured, ServiceAuthUnauthorized
 from app.chat import protocol as p
-from app.config import Environment, LLMProvider, get_settings
+from app.config import Environment, LLMProvider, Settings, get_settings
 
 logger = logging.getLogger("app.startup")
 
 
-def check_fail_closed_config() -> None:
+def check_fail_closed_config(settings: Settings | None = None) -> None:
     """Refuse to serve chat requests with missing production secrets (FR-015, research.md R7)."""
-    settings = get_settings()
+    settings = settings or get_settings()
     if settings.environment is not Environment.PRODUCTION:
         return
-    provider_key = {
-        LLMProvider.ANTHROPIC: ("ANTHROPIC_API_KEY", settings.anthropic_api_key),
-        LLMProvider.OPENROUTER: ("OPENROUTER_API_KEY", settings.openrouter_api_key),
-        LLMProvider.FAKE: (
-            None,
-            "ok",
-        ),  # the fake provider needs no key, but must never run in prod
-    }[settings.llm_provider]
     required = [
         ("SERVICE_JWT_SECRET", settings.service_jwt_secret),
         ("DATABASE_URL", settings.database_url),
-        (provider_key[0] or "LLM_PROVIDER", provider_key[1] if provider_key[0] else None),
     ]
+    # The fake provider needs no key; it is a deliberate choice, not a missing one.
+    if settings.llm_provider is LLMProvider.ANTHROPIC:
+        required.append(("ANTHROPIC_API_KEY", settings.anthropic_api_key))
+    elif settings.llm_provider is LLMProvider.OPENROUTER:
+        required.append(("OPENROUTER_API_KEY", settings.openrouter_api_key))
     missing = [name for name, value in required if not value]
     if missing:
         raise RuntimeError(
