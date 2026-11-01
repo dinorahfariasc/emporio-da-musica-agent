@@ -107,3 +107,35 @@ async def test_similar_by_description_only_offers_sellable(tool_ctx):
     result = await find_similar_products(tool_ctx, description="baixo elétrico 4 cordas")
 
     assert result.products and all(p.is_sellable for p in result.products)
+
+
+async def test_out_of_stock_product_gets_at_least_two_sellable_alternatives(tool_ctx):
+    result = await find_similar_products(tool_ctx, product_id=96)
+
+    assert len(result.products) >= 2
+    assert all(p.is_sellable and p.category == "Violões" for p in result.products)
+
+
+async def test_description_constraints_are_respected(tool_ctx):
+    result = await find_similar_products(
+        tool_ctx, description="violão elétrico de aço", max_price_brl=D("2000"), limit=3
+    )
+
+    assert result.products
+    for product in result.products:
+        assert (product.promo_price_brl or product.price_brl) <= 2000
+        assert product.category == "Violões"
+        assert product.specs["strings"] == "steel"
+        assert product.specs["electronics"] == "yes"
+
+
+async def test_an_empty_category_gives_an_empty_list_not_unrelated_products(tool_ctx):
+    result = await search_products(tool_ctx, "flauta transversal", category_id=6)
+
+    assert result.count == 0 and result.products == []
+
+
+async def test_views_carry_specs_for_the_shared_trait_and_difference(tool_ctx):
+    result = await find_similar_products(tool_ctx, product_id=95)
+
+    assert all(p.specs for p in result.products)

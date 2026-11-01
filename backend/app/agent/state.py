@@ -81,6 +81,7 @@ async def reserve_attempt(
     """
     check_conversation_id(conversation_id)
     await _ensure_once(conn)
+    reason: str | None = None
     async with conn.transaction():
         await conn.execute(
             "INSERT INTO conversation_state (conversation_id) VALUES (%s) ON CONFLICT DO NOTHING",
@@ -93,25 +94,28 @@ async def reserve_attempt(
             (CONVERSATION_LOCK_AT, conversation_id),
         )
         if await cur.fetchone() is None:
-            return Reservation(False, "locked")
-        await conn.execute(
-            "INSERT INTO order_verification_failures (order_id) VALUES (%s) ON CONFLICT DO NOTHING",
-            (order_id,),
-        )
-        cur = await conn.execute(
-            "UPDATE order_verification_failures SET failed_attempts = failed_attempts + 1, "
-            "locked_until = CASE WHEN failed_attempts + 1 >= %s THEN now() + %s "
-            "ELSE locked_until END, "
-            "updated_at = now() "
-            "WHERE order_id = %s AND (locked_until IS NULL OR locked_until <= now()) "
-            "RETURNING failed_attempts",
-            (ORDER_LOCK_AT, ORDER_LOCK_FOR, order_id),
-        )
-        if await cur.fetchone() is None:
-            # The attempt must not count against the conversation either.
-            await _release_conversation(conn, conversation_id)
-            return Reservation(False, "order_locked")
-    return Reservation(True)
+            reason = "locked"
+        else:
+            await conn.execute(
+                "INSERT INTO order_verification_failures (order_id) VALUES (%s) "
+                "ON CONFLICT DO NOTHING",
+                (order_id,),
+            )
+            cur = await conn.execute(
+                "UPDATE order_verification_failures SET failed_attempts = failed_attempts + 1, "
+                "locked_until = CASE WHEN failed_attempts + 1 >= %s THEN now() + %s "
+                "ELSE locked_until END, updated_at = now() "
+                "WHERE order_id = %s AND (locked_until IS NULL OR locked_until <= now()) "
+                "RETURNING failed_attempts",
+                (ORDER_LOCK_AT, ORDER_LOCK_FOR, order_id),
+            )
+            if await cur.fetchone() is None:
+                # The attempt must not count against the conversation either.
+                await _release_conversation(conn, conversation_id)
+                reason = "order_locked"
+    # Commit now: a caller that raises next (a failed check) must not roll the attempt back.
+    await conn.commit()
+    return Reservation(reason is None, reason)
 
 
 async def _release_conversation(conn: psycopg.AsyncConnection, conversation_id: str) -> None:
@@ -142,3 +146,4 @@ async def confirm_success(
             "WHERE order_id = %s",
             (ORDER_LOCK_AT, order_id),
         )
+    await conn.commit()
