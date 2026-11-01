@@ -136,6 +136,10 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-01 — EDA notebook (#22, track D)
+- **Done:** `analysis/` (notebook, HTML export, generator, README) and `specs/007-eda-notebook/`; no anomalies beyond the data quality report; DL-DATA-001.
+- **Next:** review and merge.
+
 ### 2026-11-01 — #18 Figma branding (spec 008)
 - **Done:** `specs/008-figma-branding` (spec/plan/tasks); `DL-FE-001`; 003 notes and backlog S13 pointed at 008. Current chat surfaces restyled on a follow-up PR (tokens, mark, empty/conversation/errors/placeholder login). Figma MCP rate-limited — fallback palette documented.
 - **Fixed:** none.
