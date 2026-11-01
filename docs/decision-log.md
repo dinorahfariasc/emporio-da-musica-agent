@@ -327,3 +327,26 @@ warning, and `index_metadata` (provider/model of the index) is read at most ever
 **Role of AI.** Claude Code implemented the tasks from the spec; the stemmer gap and the fake
 embedder weighting were found by the reference-query tests, not predicted.
 
+
+## DL-011 — Agent core plan (2026-10-31, #6/#7/#8)
+
+Spec Kit plan, research, data model, contracts and tasks for `specs/002-agent-core`, delivered
+as 3 PRs: core (#6, P0), actions (#7, P2), MCP (#8, P2).
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Route in plain Python, then stream one `langchain.agents.create_agent` (specialist with Haiku, or general with Sonnet) per request | An outer LangGraph graph with router/specialist/general nodes | The senior review showed that nested-agent `custom` and `updates` events only surface with `subgraphs=True`. The router is never streamed, so an outer graph adds nothing. `create_react_agent` is deprecated. |
+| Pinned `langgraph 1.2.19`, `langchain 1.4.7`, `langchain-anthropic 1.7.7`, `langchain-core 1.7.3`, imported lazily | A hand-written loop on the `anthropic` SDK | Keeps DL-002. About 46 MB and about 1 s of cold import, mitigated by lazy imports. The hand-written loop stays as the fallback. |
+| Tools are plain async functions with an explicit ctx-free schema; the wrapper turns `ToolError` into `ToolException` | `StructuredTool.from_function(partial(...))` | `partial` breaks schema inference, and LangGraph's tool node re-raises unknown exceptions (verified). |
+| Verification state in Postgres; attempts reserved atomically; per-conversation lock at 3 plus a per-order 30 min lock at 5 | In memory; per-conversation only | Serverless instances share nothing. A client-chosen chat id would otherwise reset the lockout. |
+| Jev first, Haiku fallback, one 2.5 s router budget | Jev with retries; separate timeouts | First token within 3 s (SC-006). A 1 h spike decides the threshold and whether Jev is the default. |
+| The fake scenario suite proves tools, wiring and the contract; behaviour is proven with `--live` | Claiming fake mode proves Stories 1–5 | Scripted router and model would only check the script against itself (review). |
+
+**Review (QA + senior).**
+- **QA** checked the facts against the CSVs and fixed two scenarios the data cannot support:
+  - US3-2 now uses order 4;
+  - US3-6 now uses order 10 with customer 43's phone.
+- **QA** also realigned the `data-products` order with the #4 contract and pinned the Saturday dates around Finados.
+- **Senior** verified three LangGraph API pitfalls in a throwaway venv, plus the lockout bypass. All are applied above.
+
+**Role of AI.** Claude Code drafted the artifacts and ran the research and the two reviews with subagents. The research covered PyPI versions and an offline fake-model loop. The decisions and the 3-PR split were mine.
