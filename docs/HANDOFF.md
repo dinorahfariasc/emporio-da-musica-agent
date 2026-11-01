@@ -56,6 +56,18 @@ US6 scenarios, DL-013).
 **Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
 all P0 is in production.
 
+## 3b. UI track (Figma ready) — read before touching `frontend/`
+
+The Figma file is ready and a separate agent applies it (#18, plus #16 Playwright and #12 history UI if time allows). The UI brief is `docs/design/figma-brief.md`. To avoid rework and merge conflicts:
+
+- **Do not start from `main` alone.** Open PRs touch the same frontend files: #44 (auth, spec 004) edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; the PT/EN switch (#13, worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`. **Merge order: #44 → #13 (rebased) → UI branding.** Branch the UI work from `main` after those two are merged; until then work only on tokens/theme.
+- **Safe to do now (no overlap):** design tokens in `src/app/globals.css`, Tailwind theme, fonts, logo asset in `public/`, new presentational components under `src/components/ui/`.
+- **Do not touch:** `frontend/auth.ts`, `src/lib/auth/*`, `src/proxy.ts`, `src/app/api/**`, `scripts/create-user.ts` (auth), and the chat-stream logic (`src/lib/chat/*`, tool labels). Restyle, never re-wire.
+- **Copy:** all strings go through the i18n catalog (pt-BR default, EN via `en.ts` after #13). No hard-coded text in components.
+- **Constraints that must survive the restyle:** 375 px without horizontal scroll, tap targets ≥ 44 px, safe-area insets, `role="status"` announcements, no images in markdown, product cards without images, no status codes or JSON shown. Prices are only formatted, never computed.
+- **Gate per PR:** `pnpm lint && pnpm typecheck && pnpm test && pnpm build`; `/` and `/login` must still prerender. Decision-log prefix `DL-FE-NNN`. Small PRs, `Part of #18`.
+- **Backend/agent files are off limits for this track** (other agents work there: `backend/app/**`, `backend/evals/**`).
+
 ## 4. Working agreements (from the user)
 
 - **Spec-Driven:** no implementation without spec + plan + tasks for the epic (Spec Kit skills in
@@ -127,6 +139,7 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - **Done:** #42 (actions) merged into `main`. User confirmed the final deadline: 2026-11-02 18:00 (America/Campo_Grande) with P0, P1 and P2 all done.
 - **Done (cont.):** DL numbering is now per area (BE/FE/DOCS/DATA). Three parallel worktrees started: track A (spec 004 / #10), track B (MCP #8, then HITL #14), track C (frontend #13, #18; checks #20 is covered by #37, which closed with PR 2 US2 cards).
 - **Done (cont.):** Neon seed (T032) done by the user: 7.24 s, counts and checksums match local; #43 (MCP) merged.
+- **Done (cont.):** track status: #44 (spec 004 + code) open; track D (EDA, DL-DATA-001), E (router benchmark + judge, DL-BE) and F (README draft, delivery checklist) done locally, not pushed; #13 i18n implemented but uncommitted in its worktree. UI work moves to a separate agent (section 3b). `MCP_API_KEY` is set in Vercel; redeploy pending.
 - **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #16, #17, #19, then P2 (#22, #23, #21).
 ### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
 - **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean.
