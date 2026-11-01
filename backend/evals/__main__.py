@@ -19,6 +19,7 @@ def _reset_lockouts(settings: Settings) -> None:
     with psycopg.connect(settings.database_url) as conn:
         conn.execute("DELETE FROM order_verification_failures")
         conn.execute("DELETE FROM conversation_state WHERE conversation_id LIKE 'eval-%'")
+        conn.execute("DELETE FROM service_requests WHERE conversation_id LIKE 'eval-%'")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,6 +34,9 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if scenario.get("live_only") and not args.live:
             print(f"SKIP  {scenario['id']} (live only)")
+            continue
+        if scenario.get("fake_only") and args.live:
+            print(f"SKIP  {scenario['id']} (fake only: scripted clock)")
             continue
         _reset_lockouts(settings)
         failures = run_scenario(scenario, settings, live=args.live)

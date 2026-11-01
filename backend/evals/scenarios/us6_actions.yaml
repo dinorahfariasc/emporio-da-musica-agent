@@ -1,0 +1,112 @@
+# US6: returns, complaints and handoff. `now` scripts the clock, so these run in fake mode only;
+# the dataset orders are all outside the windows at the real date (US6-5).
+- id: us6-1-arrependimento-elegivel
+  fake_only: true
+  now: "2025-12-25T10:00"
+  turns:
+    - say: "Quero devolver o pedido 4, comprei online e não gostei. Meu telefone é 67998123456."
+      intent: service_request
+      calls:
+        - {name: get_order_status, args: {order_id: 4, contact: "67998123456"}}
+        - {name: check_return_eligibility, args: {order_id: 4, reason: regret, bought_online: true}}
+      expect:
+        required_facts: ['"eligible":true', '"rule":"4.1"', '"deadline":"2025-12-29"']
+    - say: "Sim, pode abrir a devolução."
+      intent: service_request
+      calls:
+        - {name: request_return,
+           args: {order_id: 4, reason: regret, details: não gostei, confirmed_by_customer: true,
+                  bought_online: true}}
+      expect:
+        required_facts: ['"type":"return"', '"request_id"']
+
+- id: us6-2-defeito-dentro-de-30-dias
+  fake_only: true
+  now: "2026-01-05T10:00"
+  turns:
+    - say: "O violão do pedido 4 chegou com defeito. Telefone 67998123456."
+      intent: service_request
+      calls:
+        - {name: get_order_status, args: {order_id: 4, contact: "67998123456"}}
+        - {name: check_return_eligibility, args: {order_id: 4, reason: defect}}
+      expect:
+        required_facts: ['"eligible":true', '"rule":"4.2"']
+
+- id: us6-2b-defeito-depois-de-30-dias
+  fake_only: true
+  now: "2026-02-20T10:00"
+  turns:
+    - say: "O violão do pedido 4 deu defeito. Telefone 67998123456."
+      intent: service_request
+      calls:
+        - {name: get_order_status, args: {order_id: 4, contact: "67998123456"}}
+        - {name: check_return_eligibility, args: {order_id: 4, reason: defect}}
+      expect:
+        required_facts: ['"eligible":false', '"rule":"8.1"', "legal_warranty"]
+
+- id: us6-3-troca-por-preferencia
+  fake_only: true
+  now: "2025-12-25T10:00"
+  turns:
+    - say: "Quero trocar o pedido 4 por outra cor. Telefone 67998123456."
+      intent: service_request
+      calls:
+        - {name: get_order_status, args: {order_id: 4, contact: "67998123456"}}
+        - {name: check_return_eligibility, args: {order_id: 4, reason: preference}}
+      expect:
+        required_facts: ['"eligible":true', '"rule":"4.3"', "subject_to_availability"]
+
+- id: us6-5-pedido-do-dataset-fora-do-prazo
+  turns:
+    - say: "Quero devolver o pedido 4, comprei online. Telefone 67998123456."
+      intent: service_request
+      calls:
+        - {name: get_order_status, args: {order_id: 4, contact: "67998123456"}}
+        - {name: check_return_eligibility, args: {order_id: 4, reason: regret, bought_online: true}}
+      expect:
+        required_facts: ['"eligible":false', "window_expired"]
+      live_expect:
+        required_facts: []
+        answer_excludes: ["devolução aberta", "solicitação registrada"]
+
+- id: us6-6-reclamacao
+  fake_only: true
+  turns:
+    - say: "Quero registrar uma reclamação: o atendimento foi muito demorado."
+      intent: service_request
+      calls:
+        - {name: register_complaint,
+           args: {summary: atendimento demorado, confirmed_by_customer: true}}
+      expect:
+        required_facts: ["24 horas úteis"]
+
+- id: us6-7-falar-com-humano
+  fake_only: true
+  turns:
+    - say: "Quero falar com uma pessoa, por favor."
+      intent: service_request
+      calls:
+        - {name: handoff_to_human, args: {reason: pediu atendente, confirmed_by_customer: true}}
+      expect:
+        required_facts: ["3341-4444", "09:00"]
+
+- id: us6-8-sem-pedido-explicito-nada-e-registrado
+  fake_only: true
+  now: "2025-12-25T10:00"
+  turns:
+    - say: "Pedido 4, telefone 67998123456. Será que dá para devolver?"
+      intent: service_request
+      calls:
+        - {name: get_order_status, args: {order_id: 4, contact: "67998123456"}}
+        - {name: request_return,
+           args: {order_id: 4, reason: regret, details: dúvida, bought_online: true}}
+      expect:
+        errors: [not_confirmed]
+
+- id: us6-8b-sem-pedido-explicito-live
+  live_only: true
+  turns:
+    - say: "Queria saber se eu poderia devolver o pedido 4, só estou pensando."
+      intent: service_request
+      expect:
+        tools_not_called: [request_return, register_complaint, handoff_to_human]
