@@ -27,6 +27,7 @@ def _messages() -> list[tuple[str, str]]:
 
 async def _measure(router: Router, samples: list[tuple[str, str]], label: str = "") -> None:
     label = label or router.name
+    print(f"{label}: measuring {len(samples)} messages...", flush=True)
     hits, latencies, confidences = 0, [], []
     for text, expected in samples:
         started = time.monotonic()

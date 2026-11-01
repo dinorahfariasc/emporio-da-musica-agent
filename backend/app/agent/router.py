@@ -55,6 +55,13 @@ class Route(BaseModel):
     model: str = ""
 
 
+class _Decision(BaseModel):
+    """What the model fills in; the rest of Route is ours."""
+
+    intent: Intent
+    confidence: float = Field(ge=0, le=1)
+
+
 UNCLEAR = Route(intent="unclear", confidence=0.0)
 
 
@@ -156,7 +163,7 @@ class HaikuRouter:
         )
 
     async def classify(self, text: str, context: str = "") -> Route:
-        model = self._chat_model().with_structured_output(Route, include_raw=True)
+        model = self._chat_model().with_structured_output(_Decision, include_raw=True)
         criteria = "\n".join(f"- {k}: {v}" for k, v in INTENT_CRITERIA.items())
         result = await model.ainvoke(
             [
@@ -173,9 +180,9 @@ class HaikuRouter:
         self.usage.input_tokens += usage.get("input_tokens", 0)
         self.usage.output_tokens += usage.get("output_tokens", 0)
         parsed = result.get("parsed")
-        if not isinstance(parsed, Route):
+        if not isinstance(parsed, _Decision):
             return UNCLEAR.model_copy(update={"router": self.name})
-        return parsed.model_copy(update={"router": self.name})
+        return Route(intent=parsed.intent, confidence=parsed.confidence, router=self.name)
 
 
 class OpenRouterRouter(HaikuRouter):
@@ -190,6 +197,7 @@ class OpenRouterRouter(HaikuRouter):
             max_tokens=200,
             timeout_s=self._settings.router_timeout_ms / 1000,
             temperature=0,
+            reasoning=False,
         )
 
 

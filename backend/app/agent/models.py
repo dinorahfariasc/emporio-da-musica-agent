@@ -11,6 +11,7 @@ def openrouter_chat(
     timeout_s: float,
     temperature: float | None = None,
     streaming: bool = False,
+    reasoning: bool = True,
 ):
     """A chat model served by OpenRouter (OpenAI-compatible API)."""
     from langchain_openai import ChatOpenAI
@@ -25,6 +26,8 @@ def openrouter_chat(
         temperature=temperature,
         streaming=streaming,
         stream_usage=streaming,
+        # Reasoning tokens would eat max_tokens and add latency; the router turns them off.
+        extra_body=None if reasoning else {"reasoning": {"enabled": False}},
     )
 
 
