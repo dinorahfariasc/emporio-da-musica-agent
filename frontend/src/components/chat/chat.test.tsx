@@ -88,6 +88,22 @@ describe("Chat", () => {
     expect(fetch.requests[1].id).toBe(fetch.requests[0].id);
   });
 
+  it("shows a second answer even when the server repeats the message id", async () => {
+    // The mock replays fixtures, so every answer arrives with the same messageId.
+    const fetch = fixtureFetch("plain-text");
+    const user = userEvent.setup();
+    render(<Chat fetch={fetch} />);
+    const textarea = screen.getByRole("textbox");
+
+    await user.type(textarea, "Oi{Enter}");
+    await waitFor(() => expect(screen.getAllByTestId("message-assistant")).toHaveLength(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Enviar" })).toBeInTheDocument());
+    await user.type(textarea, "Quero comprar uma guitarra{Enter}");
+
+    await waitFor(() => expect(screen.getAllByTestId("message-assistant")).toHaveLength(2));
+    expect(userBubbles()).toHaveLength(2);
+  });
+
   it("sends once when Send is clicked twice in the same tick", async () => {
     const fetch = fixtureFetch("plain-text");
     const user = userEvent.setup();
