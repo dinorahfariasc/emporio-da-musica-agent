@@ -20,6 +20,8 @@
     }
   },
   "rewrites": [
+    { "source": "/mcp", "destination": { "service": "backend" } },
+    { "source": "/mcp/(.*)", "destination": { "service": "backend" } },
     { "source": "/(.*)", "destination": { "service": "frontend" } }
   ]
 }
