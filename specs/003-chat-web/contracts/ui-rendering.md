@@ -5,6 +5,9 @@ This feature exposes no new API. It *consumes* the #4 contract
 the UI must show for each fixture and is the basis of the component tests. If a fixture changes,
 this table and its test change with it.
 
+**Visual:** colours, type and chrome come from `specs/008-figma-branding` (#18). Tests assert
+behaviour in this table, not hex values or class names.
+
 | Fixture | Expected UI | Spec |
 |---|---|---|
 | `plain-text.sse` | One assistant bubble with the markdown-rendered text; no tool status; no products; metadata not shown | US1, FR-002 |

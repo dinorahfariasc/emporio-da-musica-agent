@@ -263,8 +263,10 @@ scrolls horizontally and the input stays visible at the bottom.
 - **FR-014**: The chat MUST be keyboard-operable (Enter sends, Shift+Enter inserts a newline,
   focus returns to the input after sending and after retry), announce new assistant content to
   screen readers through a polite live region, and expose error notices with an alert role.
-- **FR-015**: Visual styling MUST use the component library's default theme via design tokens
-  only, so the Figma branding (#18) can be applied by changing tokens rather than components.
+- **FR-015**: Visual styling MUST use design tokens in `globals.css` (not one-off hex in every
+  component). The default shadcn theme was the 003 baseline; Figma branding (#18,
+  `specs/008-figma-branding`) replaces those tokens and restyles surfaces. Behaviour in FR-001–
+  FR-014 is unchanged.
 - **FR-016**: Lint, typecheck, tests and production build MUST pass in CI; automated tests MUST
   cover rendering of every `.sse` fixture and every `http-*` error state.
 - **FR-017**: The chat MUST NOT log message content or personal data to the browser console or
@@ -317,9 +319,10 @@ scrolls horizontally and the input stays visible at the bottom.
   (in `proxy.ts`, keeping `/` prerendered) belong to #10.
 - Login form, session handling and real limits belong to #10; this epic only reacts to 401/429.
 - One conversation per page session; no history, no multiple conversations (#12).
-- Basic product cards are in scope (clarified); #20 keeps only branded/polished card variants.
-  Cards have no image because the contract's `ProductCard` has no image field.
-- PT/EN switch (#13), Figma branding (#18), Playwright smoke tests (#16) and human-in-the-loop
-  confirmation UI (#14) are out of scope; this epic leaves extension points for them.
+- Basic product cards shipped in this epic; branded/polished card variants are #18 / #20
+  (`specs/008-figma-branding`). Cards have no image because the contract's `ProductCard` has no
+  image field.
+- PT/EN switch (#13), Playwright smoke tests (#16) and human-in-the-loop confirmation UI (#14)
+  remain out of scope. Figma branding is specified in `specs/008-figma-branding` (epic #18).
 - Maximum input length is 2,000 characters (`maxLength` on the input; the backend enforces its
   own limits).

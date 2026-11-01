@@ -4,8 +4,8 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
+_Last updated: 2026-11-01 (#18 branding: spec 008 written; current-surface restyle follows)._
 _Last updated: 2026-11-01 (#42 actions merged; final deadline 2026-11-02 18:00)._
-_Last updated: 2026-11-01 (#8 MCP server implemented, not yet opened as a PR)._
 
 ## 1. What this is
 
@@ -50,17 +50,18 @@ US6 scenarios, DL-013).
   runs the redeploy.
 - **#5 T032 done (2026-11-01):** Neon seeded with Gemini in 7.24 s; the six store-table row counts and checksums match local. Re-seed only if the data or the embedding provider changes.
 - **#8 MCP merged as #43.** Production needs `MCP_API_KEY` (set in Vercel; takes effect on the next redeploy).
-- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0).
-- **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap).
+- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0), **#18 Figma branding** (`specs/008-figma-branding`, `DL-FE-001`).
+- **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap). #18 login-form / PT-EN / Sign out wait for #44 → #13 on `main`.
 
 **Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
 all P0 is in production.
 
 ## 3b. UI track (Figma ready) — read before touching `frontend/`
 
-The Figma file is ready and a separate agent applies it (#18, plus #16 Playwright and #12 history UI if time allows). The UI brief is `docs/design/figma-brief.md`. To avoid rework and merge conflicts:
+The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Brief: `docs/design/figma-brief.md`. Decision: `DL-FE-001`. Figma MCP was rate-limited; first slice uses the brief plus a documented fallback palette.
 
-- **Do not start from `main` alone.** Open PRs touch the same frontend files: #44 (auth, spec 004) edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; the PT/EN switch (#13, worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`. **Merge order: #44 → #13 (rebased) → UI branding.** Branch the UI work from `main` after those two are merged; until then work only on tokens/theme.
+- **#44 and #13 are not on `main` yet.** They still own login-form, Sign out, PT/EN, `en.ts`. **Merge order: #44 → #13 (rebased) → any leftover branding chrome.** Current-surface restyle (tokens, empty/conversation/tools/cards/input/errors, placeholder login, header without Sign out/PT-EN) proceeds on `main` in parallel; expect a rebase when those land.
+- Open PRs that still conflict if edited now: #44 edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; #13 (worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`.
 - **Safe to do now (no overlap):** design tokens in `src/app/globals.css`, Tailwind theme, fonts, logo asset in `public/`, new presentational components under `src/components/ui/`.
 - **Do not touch:** `frontend/auth.ts`, `src/lib/auth/*`, `src/proxy.ts`, `src/app/api/**`, `scripts/create-user.ts` (auth), and the chat-stream logic (`src/lib/chat/*`, tool labels). Restyle, never re-wire.
 - **Copy:** all strings go through the i18n catalog (pt-BR default, EN via `en.ts` after #13). No hard-coded text in components.
@@ -134,6 +135,11 @@ The Figma file is ready and a separate agent applies it (#18, plus #16 Playwrigh
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-11-01 — #18 Figma branding (spec 008)
+- **Done:** `specs/008-figma-branding` (spec/plan/tasks); `DL-FE-001`; 003 notes and backlog S13 pointed at 008. Current chat surfaces restyled on a follow-up PR (tokens, mark, empty/conversation/errors/placeholder login). Figma MCP rate-limited — fallback palette documented.
+- **Fixed:** none.
+- **Next:** rebase login form / Sign out / PT-EN after #44 → #13; re-read Figma when quota allows.
 
 ### 2026-11-01 — #42 merged; deadline confirmed
 - **Done:** #42 (actions) merged into `main`. User confirmed the final deadline: 2026-11-02 18:00 (America/Campo_Grande) with P0, P1 and P2 all done.

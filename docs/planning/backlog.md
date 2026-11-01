@@ -280,7 +280,7 @@ size and Neon connectivity before any feature is built.
 | S10 | Tracing and cost observability with Langfuse | `type:story` `P1` `size:S` `area:infra` | Trace per turn with router decision, tokens, cost; PII masked |
 | S11 | Playwright smoke test in CI | `type:story` `P1` `size:S` `area:frontend` | Login → message → streamed answer against the mock |
 | S12 | Jev vs Haiku routing benchmark | `type:story` `P1` `size:S` `area:agent` | Accuracy, p50/p95 latency and cost over the scenario set; README table |
-| S13 | Apply Figma branding and mockup | `type:story` `P1` `size:M` `area:frontend` | UI matches the mockup; theme tokens applied |
+| S13 | Apply Figma branding and mockup | `type:story` `P1` `size:M` `area:frontend` · spec `specs/008-figma-branding` · #18 | UI matches the Chat Melody mockup (or the documented fallback palette while Figma MCP is rate-limited); theme tokens applied; 003 behaviour unchanged |
 | S14 | MCP demo with Claude Desktop | `type:story` `P1` `size:S` `area:docs` | README section + screenshot; bearer key setup documented |
 | S15 | Product cards in chat | `type:story` `P1` `size:S` `area:frontend` | C2 product data part rendered as cards |
 
