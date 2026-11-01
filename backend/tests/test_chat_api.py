@@ -18,7 +18,8 @@ async def _no_ctx(settings, user_id, cid, emit):
     return None
 
 
-def _client(client_factory, script, *, route=None, settings=None, **overrides):
+def _client(client_factory, script, *, route=None, settings=None, database_url, **overrides):
+    overrides.setdefault("database_url", database_url)
     settings = Settings(_env_file=None, **overrides)
     model = FakeToolModel(script=script)
     runtime = Runtime(
@@ -60,8 +61,8 @@ def _reset():
     app.dependency_overrides.clear()
 
 
-def test_valid_request_streams_contract_chunks(make_client):
-    client, _ = _client(make_client, ["Olá! Como posso ajudar?"])
+def test_valid_request_streams_contract_chunks(make_client, database_url):
+    client, _ = _client(make_client, ["Olá! Como posso ajudar?"], database_url=database_url)
 
     response = client.post("/api/chat", json=_body())
 
@@ -71,8 +72,8 @@ def test_valid_request_streams_contract_chunks(make_client):
     assert types[0] == "start" and types[-1] == "finish" and "text-delta" in types
 
 
-def test_invalid_body_is_a_400_invalid_request(make_client):
-    client, _ = _client(make_client, [])
+def test_invalid_body_is_a_400_invalid_request(make_client, database_url):
+    client, _ = _client(make_client, [], database_url=database_url)
 
     response = client.post("/api/chat", json={"id": "x"})
 
@@ -80,8 +81,8 @@ def test_invalid_body_is_a_400_invalid_request(make_client):
     assert response.json()["error"]["code"] == "invalid_request"
 
 
-def test_empty_message_gets_a_short_reply_without_the_model(make_client):
-    client, model = _client(make_client, [])
+def test_empty_message_gets_a_short_reply_without_the_model(make_client, database_url):
+    client, model = _client(make_client, [], database_url=database_url)
 
     response = client.post("/api/chat", json=_body("   "))
 
@@ -90,8 +91,8 @@ def test_empty_message_gets_a_short_reply_without_the_model(make_client):
     assert model.seen == []
 
 
-def test_long_input_is_truncated(make_client):
-    client, model = _client(make_client, ["ok"], input_max_chars=50)
+def test_long_input_is_truncated(make_client, database_url):
+    client, model = _client(make_client, ["ok"], input_max_chars=50, database_url=database_url)
 
     client.post("/api/chat", json=_body("x" * 500))
 
@@ -99,8 +100,8 @@ def test_long_input_is_truncated(make_client):
     assert len(human.content) == 50
 
 
-def test_history_is_trimmed_to_the_most_recent(make_client):
-    client, model = _client(make_client, ["ok"], history_max_messages=3)
+def test_history_is_trimmed_to_the_most_recent(make_client, database_url):
+    client, model = _client(make_client, ["ok"], history_max_messages=3, database_url=database_url)
     messages = [
         {
             "id": f"m{i}",
@@ -116,8 +117,8 @@ def test_history_is_trimmed_to_the_most_recent(make_client):
     assert sent == ["msg 6", "msg 7", "final"]
 
 
-def test_regenerate_drops_the_trailing_assistant_message(make_client):
-    client, model = _client(make_client, ["ok"])
+def test_regenerate_drops_the_trailing_assistant_message(make_client, database_url):
+    client, model = _client(make_client, ["ok"], database_url=database_url)
     messages = [
         {"id": "u", "role": "user", "parts": [{"type": "text", "text": "pergunta"}]},
         {"id": "a", "role": "assistant", "parts": [{"type": "text", "text": "resposta antiga"}]},
@@ -131,7 +132,7 @@ def test_regenerate_drops_the_trailing_assistant_message(make_client):
     assert "resposta antiga" not in contents and "pergunta" in contents
 
 
-def test_turn_timeout_yields_exactly_one_error_chunk(make_client):
+def test_turn_timeout_yields_exactly_one_error_chunk(make_client, database_url):
     class Slow(FakeToolModel):
         def _stream(self, *args, **kwargs):
             import time
@@ -139,7 +140,7 @@ def test_turn_timeout_yields_exactly_one_error_chunk(make_client):
             time.sleep(0.5)
             return super()._stream(*args, **kwargs)
 
-    client, _ = _client(make_client, ["ok"], turn_timeout_s=0.1)
+    client, _ = _client(make_client, ["ok"], turn_timeout_s=0.1, database_url=database_url)
     slow = Slow(script=["ok"])
     app.dependency_overrides[get_runtime] = lambda: Runtime(
         FakeRouter(default=Route(intent="greeting", confidence=0.99)), None, lambda r: slow, _no_ctx
@@ -152,8 +153,8 @@ def test_turn_timeout_yields_exactly_one_error_chunk(make_client):
     assert response.text.endswith("data: [DONE]\n\n")
 
 
-def test_turn_log_masks_emails(make_client, caplog):
-    client, _ = _client(make_client, ["ok"])
+def test_turn_log_masks_emails(make_client, database_url, caplog):
+    client, _ = _client(make_client, ["ok"], database_url=database_url)
 
     with caplog.at_level(logging.INFO, logger="app.turn"):
         client.post("/api/chat", json=_body("meu email é ana@jmail.com"))
@@ -163,8 +164,8 @@ def test_turn_log_masks_emails(make_client, caplog):
     assert '"intent"' in logged
 
 
-def test_conversation_id_with_odd_characters_is_a_400(make_client):
-    client, _ = _client(make_client, [])
+def test_conversation_id_with_odd_characters_is_a_400(make_client, database_url):
+    client, _ = _client(make_client, [], database_url=database_url)
     body = _body()
     body["id"] = "a b!"
     assert client.post("/api/chat", json=body).status_code == 400
