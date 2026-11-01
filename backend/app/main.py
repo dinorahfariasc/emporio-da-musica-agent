@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from app.api import chat, health, stream_test
 from app.auth.dependency import ServiceAuthMisconfigured, ServiceAuthUnauthorized
 from app.chat import protocol as p
-from app.config import check_fail_closed_config, get_settings
+from app.config import check_fail_closed_config, get_settings, is_production
 
 logger = logging.getLogger("app.startup")
 
@@ -29,9 +29,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
 
 
-app = FastAPI(title="Empório da Música Agent API", version="0.1.0", lifespan=lifespan)
+# In production: no public OpenAPI/Swagger/ReDoc (the schema otherwise discloses every internal
+# route), and /api/stream-test (a walking-skeleton demo endpoint, no auth, no business value once
+# the real chat endpoint is live) is not mounted at all.
+_docs_kwargs = (
+    {"docs_url": None, "redoc_url": None, "openapi_url": None} if is_production(settings) else {}
+)
+app = FastAPI(
+    title="Empório da Música Agent API", version="0.1.0", lifespan=lifespan, **_docs_kwargs
+)
 app.include_router(health.router)
-app.include_router(stream_test.router)
+if not is_production(settings):
+    app.include_router(stream_test.router)
 app.include_router(chat.router)
 if mcp_app is not None:
     # Protected only by MCP_API_KEY (BearerAuthMiddleware in app.mcp), never by a user's service
