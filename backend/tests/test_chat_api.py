@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 
 import pytest
 
@@ -11,8 +12,6 @@ from app.auth.service_jwt import AccountClaims
 from app.chat import protocol as p
 from app.config import Settings, get_settings
 from app.main import app
-
-FAKE_ACCOUNT = AccountClaims(user_id="00000000-0000-0000-0000-000000000001", username="tester")
 
 
 async def _no_ctx(settings, user_id, cid, emit):
@@ -29,9 +28,11 @@ def _client(client_factory, script, *, route=None, settings=None, **overrides):
         _no_ctx,
     )
     client = client_factory(**overrides)
+    # A fresh account per client so one test's requests never trip another's rate limit/budget.
+    account = AccountClaims(user_id=str(uuid.uuid4()), username="tester")
     app.dependency_overrides[get_runtime] = lambda: runtime
     app.dependency_overrides[get_settings] = lambda: settings
-    app.dependency_overrides[require_service_account] = lambda: FAKE_ACCOUNT
+    app.dependency_overrides[require_service_account] = lambda: account
     return client, model
 
 

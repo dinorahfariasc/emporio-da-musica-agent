@@ -26,6 +26,7 @@ from app.auth.dependency import require_service_account
 from app.auth.service_jwt import AccountClaims
 from app.chat import protocol as p
 from app.config import Settings, get_settings
+from app.limits import enforce as limits
 
 logger = logging.getLogger("app.turn")
 router = APIRouter()
@@ -132,6 +133,41 @@ def _invalid(message: str) -> JSONResponse:
     )
 
 
+def _limited(code: str, message: str, retry_after_seconds: int) -> JSONResponse:
+    # contracts/rate-limit-and-budget.md: rate_limited/budget_exhausted, both 429.
+    body = p.ErrorResponse(
+        error=p.ErrorBody(code=code, message=message, retry_after_seconds=retry_after_seconds)
+    )
+    return JSONResponse(
+        body.model_dump(mode="json", by_alias=True, exclude_none=True),
+        status_code=429,
+        headers={"Retry-After": str(retry_after_seconds)},
+    )
+
+
+RATE_LIMITED_MESSAGE = "Muitas mensagens em pouco tempo. Aguarde alguns segundos e tente de novo."
+BUDGET_EXHAUSTED_MESSAGE = "Você atingiu o limite diário de uso. Volta a funcionar à meia-noite."
+
+
+async def _check_limits(settings: Settings, account: AccountClaims) -> JSONResponse | None:
+    """Rate limit first (cheaper, catches the common runaway-client case), then budget."""
+    from app.db import get_pool
+
+    pool = await get_pool(settings)
+    async with pool.connection() as conn:
+        rate = await limits.check_rate_limit(conn, account.user_id, settings.rate_limit_per_minute)
+        if not rate.allowed:
+            return _limited("rate_limited", RATE_LIMITED_MESSAGE, rate.retry_after_seconds or 1)
+        budget = await limits.check_budget(
+            conn, account.user_id, settings.daily_token_budget, settings.budget_timezone
+        )
+        if not budget.allowed:
+            return _limited(
+                "budget_exhausted", BUDGET_EXHAUSTED_MESSAGE, budget.retry_after_seconds or 1
+            )
+    return None
+
+
 @router.post("/api/chat")
 async def chat(
     payload: dict,
@@ -145,6 +181,9 @@ async def chat(
         return _invalid("Invalid chat request.")
     if not CONVERSATION_ID.fullmatch(request.id):
         return _invalid("Invalid chat request.")
+    limited = await _check_limits(settings, account)
+    if limited is not None:
+        return limited
     text = _latest_user_text(request, settings)
     lang = _language(text)
     if not text.strip():
@@ -234,9 +273,23 @@ async def _turn(
         yield p.encode(p.Error(error_text=error_message("internal", lang)))
         yield p.DONE
     finally:
-        # Also runs on client disconnect (CancelledError); it only logs, nothing is written.
+        # Also runs on client disconnect (CancelledError); logs and records whatever usage the
+        # provider already reports, even for a partial/dropped stream (contracts/rate-limit-and-
+        # budget.md: "After the turn finishes").
         log["latency_ms"] = int((time.monotonic() - started) * 1000)
         logger.info(mask_pii(json.dumps(log, ensure_ascii=False)))
+        if log["input_tokens"] or log["output_tokens"]:
+            from app.db import get_pool
+
+            pool = await get_pool(settings)
+            async with pool.connection() as conn:
+                await limits.record_usage(
+                    conn,
+                    account.user_id,
+                    log["input_tokens"],
+                    log["output_tokens"],
+                    settings.budget_timezone,
+                )
 
 
 def _observe(line: str, log: dict[str, Any], started: float) -> None:

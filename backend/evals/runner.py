@@ -24,7 +24,12 @@ from app.config import Settings, get_settings
 from app.main import app
 from app.tools.context import FixedClock
 
-EVAL_ACCOUNT = AccountClaims(user_id="00000000-0000-0000-0000-0000000000e0", username="eval")
+
+# A fresh account per scenario so one eval run's volume never trips the 20/min rate limit that
+# specs/004-auth-limits-deploy enforces on real accounts (scenarios are not testing that limit).
+def _eval_account() -> AccountClaims:
+    return AccountClaims(user_id=str(uuid.uuid4()), username="eval")
+
 
 SCENARIO_DIR = Path(__file__).parent / "scenarios"
 
@@ -153,7 +158,10 @@ def run_scenario(scenario: dict, settings: Settings, *, live: bool = False) -> l
     failures: list[str] = []
     client = _live_client() if live else TestClient(app)
     app.dependency_overrides[get_settings] = lambda: settings
-    app.dependency_overrides[require_service_account] = lambda: EVAL_ACCOUNT
+    # One account per scenario (not per turn): turns of one scenario must share identity so
+    # conversation-scoped state (verified orders) persists across the scenario's own turns.
+    account = _eval_account()
+    app.dependency_overrides[require_service_account] = lambda: account
     try:
         for index, turn in enumerate(scenario["turns"]):
             if not live:
