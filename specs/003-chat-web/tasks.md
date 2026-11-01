@@ -263,7 +263,7 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
   Retry runs `clearError(); regenerate();` and then focuses the input. `ChatError` renders after the last message. Done when T036 passes.
 - [x] T039 [P] [US3] `frontend/src/components/login/login-notice.tsx` (`"use client"`): reads `useSearchParams()`; when `reason === "expired"`, shows an `Alert` with the catalog copy.
 - [x] T040 [US3] `frontend/src/app/login/page.tsx`: a server page using `getMessages(locale)`, with a heading, the placeholder note, `<Suspense><LoginNotice/></Suspense>` (required under Cache Components) and a link back to `/`. `pnpm build` passes.
-- [ ] T041 PR 2 gate: lint, typecheck, test and build green; open PR 2 (`Part of #9`)
+- [x] T041 PR 2 gate: lint, typecheck, test and build green; open PR 2 (`Part of #9`)
 
 ---
 
@@ -273,27 +273,27 @@ Do not add `export const dynamic`. Do not read random ids or `chat.id` during re
 
 **Independent test:** a manual 375 × 667 replay of every quickstart row, with a screenshot in the PR.
 
-- [ ] T042 [US4] Responsive and a11y fixes in `chat.tsx`, `message-list.tsx`, `message-view.tsx`, `markdown.tsx`, `product-cards.tsx` and `chat-input.tsx`:
+- [x] T042 [US4] Responsive and a11y fixes in `chat.tsx`, `message-list.tsx`, `message-view.tsx`, `markdown.tsx`, `product-cards.tsx` and `chat-input.tsx`:
   - bubbles `max-w-[85%] sm:max-w-[75%]`;
   - `overflow-x-hidden` on the list;
   - `pb-[env(safe-area-inset-bottom)]` on the input bar;
   - every button `min-h-11` (at least 44 px).
-- [ ] T043 [US4] `export const viewport` in `frontend/src/app/layout.tsx` (`width: "device-width", initialScale: 1, viewportFit: "cover"`). Check the Next 16 `viewport` docs in `node_modules/next/dist/docs`.
+- [x] T043 [US4] `export const viewport` in `frontend/src/app/layout.tsx` (`width: "device-width", initialScale: 1, viewportFit: "cover"`). Check the Next 16 `viewport` docs in `node_modules/next/dist/docs`.
 
 ## Phase 7: Polish
 
-- [ ] T044 [P] Copy and colour audit:
+- [x] T044 [P] Copy and colour audit:
   - grep `frontend/src/components` and `frontend/src/app` for user-visible JSX string literals and move them into the catalog (SC-005);
   - grep for `#[0-9a-fA-F]{3,6}` and `rgb(`; only theme tokens are allowed (FR-015).
-- [ ] T045 [P] Privacy audit: no `console.*` with message or part content in `frontend/src` (FR-017)
-- [ ] T046 Run [quickstart.md](quickstart.md) manually, covering:
+- [x] T045 [P] Privacy audit: no `console.*` with message or part content in `frontend/src` (FR-017)
+- [x] T046 Run [quickstart.md](quickstart.md) manually, covering:
   - all rows;
   - the image/no-request check;
   - the production fail-closed check;
   - 375 px.
 
   Attach a screenshot to the PR.
-- [ ] T047 Final gate:
+- [x] T047 Final gate:
   - lint, typecheck, test and build green;
   - update DL-009 in `docs/decision-log.md` with the implementation outcomes;
   - update `docs/HANDOFF.md`;

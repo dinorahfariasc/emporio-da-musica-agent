@@ -4,6 +4,8 @@ export const ptBR = {
     storeName: "Empório da Música",
     assistantName: "Melody",
     tagline: "Assistente virtual",
+    title: "Melody · Empório da Música",
+    description: "Assistente virtual da Empório da Música",
   },
   emptyState: {
     greeting: "Oi! Eu sou a Melody. Como posso te ajudar hoje?",

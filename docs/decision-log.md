@@ -303,6 +303,13 @@ the cross-artifact analysis whose 9 findings (3 medium) were fixed before review
 - `ToolStatus` puts the state suffix in sr-only content (not `aria-label`) so the change is
   announced by its `role="status"` region.
 
+**Implementation, PR 3 (US4 + polish).** `viewport` with `viewportFit: "cover"` and a
+safe-area bottom padding on the input bar; page metadata copy moved into the catalog. Audits: no
+user-visible literals outside the catalog, no hard-coded colours, no `console.*` with message
+content (FR-015/017, SC-005). Production fail-closed checked by hand: `NODE_ENV=production`
+without `CHAT_MODE` proxies to the backend (500 "BACKEND_URL is not configured") instead of
+replaying fixtures.
+
 ## DL-010 — Retrieval and search index (2026-10-31, #5, PR B)
 
 | Decision | Alternatives | Rationale |

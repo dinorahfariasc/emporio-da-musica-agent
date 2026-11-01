@@ -40,18 +40,13 @@ report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
 **In flight (check `gh pr list` and the board for the truth):**
 - **#5 PR B** (retrieval) merged as #35. Remaining: T032 (manual: seed Neon with Gemini, user
   holds the keys) and ticking the issue #5 criteria after the seed.
-- **#9 chat web:** PR 1 (Foundation + US1, T001–T027) implemented on branch
-  `feat/9-chat-web-foundation` (worktree `chat-web`): streaming chat at `/` on the mock, hardened
-  Streamdown, fail-closed `chatMode()`, double-send guard, dropped-stream notice; 65 tests, lint,
-  typecheck and build green; QA + senior review applied; PR #36 open (`Part of #9`). PR 2
-  (US2+US3, T029–T041) on `feat/9-chat-web-tools-errors`, stacked on #36, reviewed, PR open. Next: PR 3 (US4+polish, T042–T047, `Closes #9`). Deviations from the
-  plan are in DL-009 (harden prefixes are origin-based → `["*"]` + href re-check; `@source`
-  path is `../../node_modules/...`; i18n split into server-safe `index.ts` + client `context.tsx`).
-- **#6 agent core:** plan, research, data model, contracts and tasks (36 tasks, 3 PRs) on
-  `docs/6-agent-core-plan`, reviewed (QA + senior, applied), docs PR open. Next: implement PR 1
-  (T001–T029, `Closes #6`) once the docs PR is merged. Needs the user's keys for T027 (Jev vs Haiku
-  spike) and T028 (live transcripts). Read DL-011 first (no outer graph; ToolError wrapping;
-  atomic verification reservation).
+- **#9 chat web:** PR 1 (#36) and PR 2 (#37, landed via #36's squash) merged. PR 3 (US4 + polish,
+  `Closes #9`) on `feat/9-chat-web-polish`, reviewed, PR open. **Pending (user):** manual
+  quickstart replay at 375 × 667 and the screenshot (T046), then merge. Chat runs on the mock until
+  #6 ships the agent; production must set `CHAT_MODE=backend` (or leave it unset — fail-closed).
+- **#6 agent core:** spec written on branch `docs/6-agent-core-spec` (not merged, no PR yet).
+  Next: `/speckit-plan`, `/speckit-tasks`, `/speckit-analyze`, then PR + review. Depends on the
+  retrieval API in `specs/001-data-foundation/contracts/retrieval-api.md`.
 - **Not started:** #7 actions, #8 MCP, #10 auth/limits/deploy, #11 README + example conversations.
 
 **Remaining P0 order:** finish #5 PR B → #6 (+#7, #8) → #9 UI → #10 → #11. Do P1/P2 only after
@@ -122,12 +117,12 @@ all P0 is in production.
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
-### 2026-10-31 — #6 agent core plan
-- Done: 002 plan/research/data-model/contracts/tasks; research verified library versions and an
-  offline fake-model tool loop; DL-011.
-- Fixed (review): nested agent events, ToolError crash, partial schema, lockout bypass by new chat
-  id, untestable US3 scenarios, chunk order vs #4.
-- Next: user merges #38 and the docs PR; implement #6 PR 1.
+### 2026-10-31 — #9 PR 3 (mobile + polish)
+- Done: viewport-fit cover + safe-area padding (bottom and sides), catalog-only copy, audits
+  clean, prod fail-closed checked by hand. Review (QA + senior) approved; side insets applied.
+- Gotcha: a PR stacked on another merges into the base branch; it only reached main because it
+  merged before the base was squashed. Retarget stacked PRs to main before merging.
+- Next: user does T046 (375 px screenshot) and merges; then #6 agent core.
 
 ### 2026-10-31 — #9 PR 2 (tools, cards, errors)
 - Done: tool status, product cards, 401/429/budget/retry states, `/login` placeholder; 90 tests.

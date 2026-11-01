@@ -32,7 +32,10 @@ export async function mockChatResponse(body: ChatBody): Promise<Response> {
     return Response.json(spec.body, { status: spec.status, headers: spec.headers });
   }
 
+  // Fixtures carry a fixed messageId; a real backend sends a new one per answer.
+  const messageId = `msg_mock_${crypto.randomUUID()}`;
   const events = (await readFile(path.join(FIXTURES_DIR, `${name}.sse`), "utf8"))
+    .replace(/"messageId":"[^"]*"/, `"messageId":"${messageId}"`)
     .split("\n\n")
     .filter(Boolean);
   const encoder = new TextEncoder();
