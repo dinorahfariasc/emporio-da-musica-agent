@@ -1,0 +1,84 @@
+# One scenario per US1 acceptance item (specs/002-agent-core/spec.md). Fake mode scripts the
+# router and the model; required/forbidden facts are checked on the tool OUTPUTS.
+- id: us1-1-violoes-ate-1000
+  turns:
+    - say: "Quais violões vocês têm até R$ 1000?"
+      intent: product_search
+      calls:
+        - {name: search_products, args: {query: violão, max_price_brl: 1000, category_id: 5}}
+      expect:
+        tools: [search_products]
+        required_facts: ["Violões", "Yamaha C40"]
+        forbidden_facts: ["Martin D-28", "Giannini GF-3D"]
+
+- id: us1-2-gd20-sem-promocao
+  turns:
+    - say: "Quanto custa o Takamine GD20?"
+      intent: product_details
+      calls:
+        - {name: get_product, args: {name: Takamine GD20}}
+        - {name: calculate_payment_options, args: {product_id: 95}}
+      expect:
+        required_facts: ["2199.00", "2089.05"]
+        forbidden_facts: ['"discount_percent":12']
+      live_expect:
+        required_facts: ["2199.00"]
+
+- id: us1-3-promocao-ativa-121
+  turns:
+    - say: "Quanto está o produto 121?"
+      intent: product_details
+      calls:
+        - {name: get_product, args: {product_id: 121}}
+        - {name: calculate_payment_options, args: {product_id: 121}}
+      expect:
+        required_facts: ["439.20", "549.00", "promo_active"]
+      live_expect:
+        required_facts: ["439.20", "549.00"]
+        answer_contains: ["439,20"]
+
+- id: us1-4-parcelamento
+  turns:
+    - say: "Posso parcelar um instrumento de R$ 1200 em 12x?"
+      intent: payment_options
+      calls:
+        - {name: calculate_payment_options, args: {amount_brl: 1200}}
+      expect:
+        required_facts: ['"times":12', "100.00"]
+
+- id: us1-5-descontinuado-136
+  turns:
+    - say: "Tem o produto 136?"
+      intent: product_details
+      calls:
+        - {name: get_product, args: {product_id: 136}}
+      expect:
+        required_facts: ["discontinued", '"is_sellable":false']
+
+- id: us1-6-em-breve-130
+  turns:
+    - say: "E o produto 130?"
+      intent: product_details
+      calls:
+        - {name: get_product, args: {product_id: 130}}
+      expect:
+        required_facts: ["coming_soon", '"is_sellable":false']
+
+- id: us1-7-descricao-nao-confiavel-135
+  turns:
+    - say: "Fale do produto 135"
+      intent: product_details
+      calls:
+        - {name: get_product, args: {product_id: 135}}
+      expect:
+        required_facts: ["Music Man Bass 1X", '"description":null']
+        forbidden_facts: ["Fender Jazz Bass"]
+
+- id: us1-8-promocoes-ativas
+  turns:
+    - say: "Quais promoções vocês têm?"
+      intent: promotions
+      calls:
+        - {name: get_active_promotions, args: {}}
+      expect:
+        required_facts: ["Crafter HT-100", "Taylor 110e"]

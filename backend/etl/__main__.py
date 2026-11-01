@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 import psycopg
 
+from app.agent.state import ensure_agent_tables
 from app.config import EmbeddingsProvider, Environment, Settings
 from app.db import connect
 from app.embeddings import EMBEDDING_DIM, Embedder, get_embedder
@@ -116,6 +117,7 @@ async def seed(
         embedder = get_embedder(settings, purpose="seed")
         index = await build_index_tables(conn, embedder, payload.tables, data_dir)
         await reload(conn, {**payload.tables, **index})
+        await ensure_agent_tables(conn)
         print(f"embeddings: {embedder.provider}/{embedder.model} ({EMBEDDING_DIM} dims)")
         for table, count, checksum in await table_stats(conn):
             print(f"{table:<20} {count:>4}  {checksum}")

@@ -31,6 +31,7 @@ async def get_pool(settings: Settings) -> AsyncConnectionPool:
             min_size=0,
             max_size=4,
             open=False,
+            timeout=5,  # waiting for a connection must not eat the turn budget
             kwargs={"prepare_threshold": None},
         )
     await _pool.open()  # no-op once open

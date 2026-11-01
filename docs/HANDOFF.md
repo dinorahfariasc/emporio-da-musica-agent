@@ -38,16 +38,15 @@ contract · embeddings switch to Gemini · #5 spec + first implementation PR (st
 report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
 
 **In flight (check `gh pr list` and the board for the truth):**
-- **#5 PR B** (retrieval) merged as #35. Remaining: T032 (manual: seed Neon with Gemini, user
-  holds the keys) and ticking the issue #5 criteria after the seed.
-- **#9 chat web:** PR 1 (#36) and PR 2 (#37, landed via #36's squash) merged. PR 3 (US4 + polish,
-  `Closes #9`) on `feat/9-chat-web-polish`, reviewed, PR open. **Pending (user):** manual
-  quickstart replay at 375 × 667 and the screenshot (T046), then merge. Chat runs on the mock until
-  #6 ships the agent; production must set `CHAT_MODE=backend` (or leave it unset — fail-closed).
-- **#6 agent core:** spec written on branch `docs/6-agent-core-spec` (not merged, no PR yet).
-  Next: `/speckit-plan`, `/speckit-tasks`, `/speckit-analyze`, then PR + review. Depends on the
-  retrieval API in `specs/001-data-foundation/contracts/retrieval-api.md`.
-- **Not started:** #7 actions, #8 MCP, #10 auth/limits/deploy, #11 README + example conversations.
+- **#6 agent core PR 1** (branch `feat/6-agent-core`): router, agent, stream adapter, `POST /api/chat`,
+  8 read tools, eval scenarios; all tests green locally. Needs review (QA + senior), then merge.
+  The agent tables (`conversation_state`, ...) are created on first use and at the end of the seed.
+  Production needs `CHAT_MODE=backend`, `LLM_PROVIDER=anthropic`, `ROUTER_PROVIDER`,
+  `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` (`LLM_PROVIDER`/`ROUTER_PROVIDER=openrouter`, model ids in `SPECIALIST_MODEL`/`GENERAL_MODEL`/`ROUTER_MODEL`), `TYPESAFE_API_KEY`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the
+  user runs the redeploy.
+- **#5 T032:** manual seed of Neon with Gemini (user holds the keys) is still pending.
+- **Not started:** #7 actions (PR 2 of 002), #8 MCP (PR 3), #10 auth/limits/deploy, #11 README +
+  example conversations.
 
 **Remaining P0 order:** finish #5 PR B → #6 (+#7, #8) → #9 UI → #10 → #11. Do P1/P2 only after
 all P0 is in production.
@@ -76,7 +75,7 @@ all P0 is in production.
 | Local DB | `docker compose up -d --wait` → Postgres 16 + pgvector on **localhost:5433** (override with `POSTGRES_PORT`; another project may hold 5432/5433) |
 | Backend | `cd backend && cp .env.example .env && uv sync && uv run pytest` — no keys needed (fake providers by default) |
 | Frontend | `cd frontend && cp .env.example .env.local && pnpm install && pnpm dev` (`CHAT_MODE=mock` replays fixtures; **production must use `backend`**) |
-| Secrets (never commit) | `GEMINI_API_KEY` (embeddings, free tier), `ANTHROPIC_API_KEY`, `TYPESAFE_API_KEY` (Jev router). Production values live in Vercel env vars; the user holds the keys. |
+| Secrets (never commit) | `GEMINI_API_KEY` (embeddings, free tier), `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY` (Jev router). Production values live in Vercel env vars; the user holds the keys. |
 | Neon (prod DB) | Vercel Marketplace integration; vars `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (use for seed/DDL). Region São Paulo; Vercel functions run in `iad1` (latency follow-up: move to `gru1`). |
 | Vercel | Single project `emporio-da-musica-agent`; env changes only reach deployments created afterwards (redeploy). Production redeploys must be run by the user. |
 | CLI auth | `gh` is logged in as `dinorahfariasc` (scopes include `project`); `npx vercel login` done on the user's machine. |
@@ -130,6 +129,15 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
   announced tool state) — applied.
 - Next: user merges #36 then PR 2 (retarget to main after #36 squash: `rebase --onto`); PR 3.
 
+### 2026-11-01 — Review of #40 applied
+- **Done:** QA + senior review, no blockers; fixes listed in DL-012 (router fallback budget, chat id validation, history window, aclosing, DDL lock, pool timeout, store date in the prompt, PII phone, stricter live assertions). Live evals 29/29 on two runs; 248 tests.
+- **Next:** user merges #40, then PR 2 of 002 (#7 actions, T030–T033). Open nits and missing scenarios are in DL-012.
+
+### 2026-11-01 — OpenRouter provider and live evals (#6 PR 1, #40)
+- **Done:** `openrouter` provider for the agent LLM and the router (`OPENROUTER_API_KEY`, `ROUTER_MODEL`); decider models go through `/api/alpha/decisions`; router spike takes model ids and passes context; live evals pass 27–29 of 29 with `openai/gpt-6-luna` (specialist) and `deepseek/deepseek-v4.1-flash` (general); see DL-012.
+- **Fixed:** Jev/System One body; DeepSeek reasoning eating the router budget; eval runner event-loop reuse; prompt (greeting, Saturday hours, Portuguese policy queries).
+- **Next:** push the branch, QA + senior review of #40, user merge; Gemini seed on Neon; #7.
+
 ### 2026-10-31 — #9 PR 1 implemented
 - Done: T001–T027 on `feat/9-chat-web-foundation` (4 semantic commits); tests first; guard and
   dropped-stream tests mutation-checked; dev smoke on the mock OK.
@@ -137,6 +145,14 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - Review: QA (request changes) + senior (approve with changes) applied: empty bubble/typing
   indicator, finish without `finishReason` no longer flagged as dropped, focus, more hostile cases.
 - Next: user merges PR 1; then PR 2 (US2+US3).
+
+### 2026-10-31 — #6 PR 1 (agent core)
+- Done: settings, agent state with atomic lockout, payment/hours/PII rules, router (Jev + Haiku
+  fallback, one budget), fake models, tool registry, stream adapter, `/api/chat`, tools for
+  products, payments, policies, store info and orders, 29 scenarios, DL-011 outcome.
+- Fixed: pool rolled back the reserved attempt when a tool raised (commit inside the state calls).
+- Next: review PR, then user runs `python -m evals.router_spike`, `--live`, Neon seed (T032) and
+  the manual UI check; then #7 (PR 2) and #8 (PR 3).
 
 ### 2026-10-31 — Retrieval (#5 PR B)
 - Done: embeddings (fake, Gemini over httpx, cache), policy PDF chunking, product docs, hybrid

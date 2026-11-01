@@ -350,3 +350,54 @@ as 3 PRs: core (#6, P0), actions (#7, P2), MCP (#8, P2).
 - **Senior** verified three LangGraph API pitfalls in a throwaway venv, plus the lockout bypass. All are applied above.
 
 **Role of AI.** Claude Code drafted the artifacts and ran the research and the two reviews with subagents. The research covered PyPI versions and an offline fake-model loop. The decisions and the 3-PR split were mine.
+
+**Implementation outcome (PR 1, #6).**
+- Built as planned: pinned versions as above, no outer graph, per-request `create_agent`, the 8 read tools, `POST /api/chat`, 20 fake-mode scenarios plus 9 `live_only` ones.
+- Deviations:
+  - `get_order_status` takes an optional `contact` (a verified order needs none), and `reserve_attempt`/`confirm_success` commit on their own, because the pool rolls back a connection when the tool raises right after a failed check (found by the lockout test).
+  - Long text-search lexemes were already matched by a 5-character prefix (DL-010), which US1-7 relies on.
+  - The US1-7 test searches by words that only exist in the untrusted description: a "Fender Jazz Bass" query legitimately ranks the bass named "Bass" first.
+  - The Jev request body (`state` plus a `choice` question) follows the research notes and is unverified until the router spike runs.
+- **Residual risk:** until #10 binds the chat id to a user, anyone who knows a chat id sees the orders verified in it. The per-order lock (5 failures, 30 min) still stops guessing across chat ids.
+- **Not done here (needs the user's keys):** the router spike (`python -m evals.router_spike`), `python -m evals --live` and the manual end-to-end through the UI.
+
+## DL-012 — Models via OpenRouter (2026-11-01)
+
+**Context.** One key for every model is simpler than Anthropic plus TypeSafe. `LLM_PROVIDER` and `ROUTER_PROVIDER` gained an `openrouter` value; model ids are settings (`SPECIALIST_MODEL`, `GENERAL_MODEL`, `ROUTER_MODEL`).
+
+**Router spike** (34 scenario messages, previous assistant reply passed as context, ~US$0.001 per run):
+
+| Model | Accuracy | p50 / p95 | Confidence |
+|---|---|---|---|
+| `perplexity/pplx-decider-v1.2` | 30/34 | 456 / 694 ms | spread 0.3–1.0 |
+| `deepseek/deepseek-v4.1-flash` | 30/34 | 546 / 984 ms | 28 of 34 at 0.9 |
+| `typesafe/jev-1.13` | 23/34 | 395 / 467 ms | spread |
+
+Decision: `perplexity/pplx-decider-v1.2` as the router. Its confidence is the only one the 0.75 threshold can act on.
+
+**Findings.**
+- Decider models are not chat models: OpenRouter answers 400 on `/chat/completions` and expects `/api/alpha/decisions` (System One body). The Jev body used before was wrong (`choices` list instead of a `criteria` dict plus `instructions`); fixed.
+- DeepSeek is a reasoning model: reasoning tokens ate `max_tokens=200` (`LengthFinishReasonError`, 9/34). The chat router now sends `reasoning: {enabled: false}` and asks only for `intent` and `confidence` (it used to fill `router`, `path` and `model` with invented values).
+- The free Gemma id answered 429 on the first call, so it is not usable for the spike or the evals.
+- The live eval runner now reuses one client (one event loop); a client per scenario broke the cached provider HTTP client (`Event loop is closed`). Live facts are matched on tool outputs as well as on the answer, and a turn may carry `live_expect` overrides, because a real model picks its own tool arguments.
+
+**Live run** (specialist `openai/gpt-6-luna`, general `deepseek/deepseek-v4.1-flash`): 27/29 and 29/29 on two runs after the prompt fixes. Remaining variance is model nondeterminism, not a defect we found.
+- Prompt fixes: greet only in the first message; `get_store_info` only says whether the store is open now, so day-specific hours also need `search_policies`; policy queries are written in Portuguese (the fake embedder is lexical, so English queries missed the hours section).
+
+**Not verified.** Gemini embeddings (cross-language), the direct TypeSafe endpoint, and behaviour under the free tier's rate limits.
+
+**Role of AI.** Claude Code implemented the provider, ran the spike and the live scenarios, and diagnosed the failures. The model choices were the user's.
+
+**Review of PR 1 (QA + senior, 2026-11-01).** No blockers. Applied:
+- Router: the primary gets half the budget when a fallback exists (a hung primary used to leave the fallback no time, FR-004).
+- `POST /api/chat` rejects chat ids outside `^[A-Za-z0-9_-]{1,128}$` with 400 (they used to fail every order lookup inside the tool).
+- History: the window never starts with the assistant, same-role runs are merged, every message (not only the last) is truncated.
+- Streams are closed with `aclosing` on disconnect or timeout; the agent schema DDL takes an advisory lock; the pool waits at most 5 s; `order_id` is bounded to int32.
+- The system prompt carries the store date and time (FR-018); `mask_pii` also masks a phone without an area code.
+- Stricter live assertions: Spanish reply for US5-8, verification request for US3-9, prompt-leak phrases, invented-discount prices.
+
+Not applied, on purpose:
+- The per-order failure rows are kept for nonexistent orders too: skipping them would make a lock reveal that an order exists (FR-014). The conversation-id reset and the per-order denial of service stay the documented residual risk of DL-011 until #10.
+- Open nits: close text and step parts on a mid-stream error, a request body size cap, and treating `cancellation_reason` as untrusted text. Tracked for #10.
+- QA gaps still without a scenario: Saturday 13:01 closing, the shared e-mail between customers 11 and 43 (US3-6), per-order lock (US3-4) and the two-WhatsApp trap through the policy path.
+
