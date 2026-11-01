@@ -53,14 +53,14 @@ export function ChatInput({ inputRef, disabled, busy, onSend, onStop }: ChatInpu
         rows={1}
         placeholder={messages.input.placeholder}
         aria-label={messages.input.label}
-        className="max-h-40 min-h-11 resize-none"
+        className="max-h-40 min-h-11 resize-none rounded-2xl border-border/80 bg-card px-3.5 py-2.5 shadow-sm"
       />
       {busy ? (
         <Button
           type="button"
           variant="outline"
           size="icon-lg"
-          className="size-11"
+          className="size-11 rounded-2xl"
           onClick={onStop}
           disabled={disabled}
           aria-label={messages.input.stop}
@@ -71,7 +71,7 @@ export function ChatInput({ inputRef, disabled, busy, onSend, onStop }: ChatInpu
         <Button
           type="submit"
           size="icon-lg"
-          className="size-11"
+          className="size-11 rounded-2xl"
           disabled={!canSend}
           aria-label={messages.input.send}
         >

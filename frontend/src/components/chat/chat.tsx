@@ -86,7 +86,7 @@ export function Chat({ fetch }: ChatProps) {
     (status === "streaming" && !(last?.role === "assistant" && hasVisibleContent(last)));
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-transparent">
       <ChatHeader />
       {messages.length === 0 ? (
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -107,7 +107,7 @@ export function Chat({ fetch }: ChatProps) {
           </MessageList>
         </main>
       )}
-      <div className="shrink-0 border-t bg-background pt-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="shrink-0 border-t border-border/80 bg-card/80 pt-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
         <div className="mx-auto w-full max-w-3xl">
           <ChatInput
             inputRef={inputRef}

@@ -52,7 +52,10 @@ export function ChatError({ error, onRetry, onExpire }: ChatErrorProps) {
   const canRetry = error.kind === "retryable" || (error.kind === "rate_limited" && !waiting);
 
   return (
-    <Alert variant="destructive">
+    <Alert
+      variant="destructive"
+      className="rounded-2xl border-transparent bg-banner text-banner-foreground *:data-[slot=alert-description]:text-banner-foreground"
+    >
       <AlertCircle />
       <AlertDescription className="flex flex-col items-start gap-2">
         <span>{error.message || messages.errors.fallback}</span>
@@ -60,7 +63,11 @@ export function ChatError({ error, onRetry, onExpire }: ChatErrorProps) {
           <span aria-live="off">{format(messages.errors.countdown, { seconds: remaining })}</span>
         )}
         {canRetry && (
-          <Button variant="outline" className="min-h-11" onClick={onRetry}>
+          <Button
+            variant="outline"
+            className="min-h-11 rounded-xl border-banner-foreground/20 bg-card/70"
+            onClick={onRetry}
+          >
             {messages.errors.retry}
           </Button>
         )}

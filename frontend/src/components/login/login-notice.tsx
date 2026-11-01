@@ -11,8 +11,8 @@ export function LoginNotice() {
   if (reason !== "expired") return null;
 
   return (
-    <Alert>
-      <AlertDescription>{messages.login.sessionExpired}</AlertDescription>
+    <Alert className="rounded-2xl border-border/70 bg-banner text-banner-foreground">
+      <AlertDescription className="text-banner-foreground">{messages.login.sessionExpired}</AlertDescription>
     </Alert>
   );
 }
