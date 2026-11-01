@@ -129,6 +129,10 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
   announced tool state) — applied.
 - Next: user merges #36 then PR 2 (retarget to main after #36 squash: `rebase --onto`); PR 3.
 
+### 2026-11-01 — #7 actions (PR 2 of 002)
+- **Done:** returns eligibility (`app/policies/returns.py`), `check_return_eligibility`, `request_return`, `register_complaint`, `handoff_to_human`, `service_request` prompt block, US6 scenarios (fake-only with a scripted clock, plus a live-only one), UI label and contract row; 285 tests; live evals pass; DL-013. Branch `feat/7-actions` is based on `feat/6-agent-core` (#40 not merged yet).
+- **Next:** user merges #40, then this PR (retarget to main); then #8 MCP (T034–T036), #10, #11.
+
 ### 2026-11-01 — Review of #40 applied
 - **Done:** QA + senior review, no blockers; fixes listed in DL-012 (router fallback budget, chat id validation, history window, aclosing, DDL lock, pool timeout, store date in the prompt, PII phone, stricter live assertions). Live evals 29/29 on two runs; 248 tests.
 - **Next:** user merges #40, then PR 2 of 002 (#7 actions, T030–T033). Open nits and missing scenarios are in DL-012.

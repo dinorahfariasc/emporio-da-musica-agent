@@ -401,3 +401,19 @@ Not applied, on purpose:
 - Open nits: close text and step parts on a mid-stream error, a request body size cap, and treating `cancellation_reason` as untrusted text. Tracked for #10.
 - QA gaps still without a scenario: Saturday 13:01 closing, the shared e-mail between customers 11 and 43 (US3-6), per-order lock (US3-4) and the two-WhatsApp trap through the policy path.
 
+## DL-013 — Actions: returns, complaints, handoff (#7, 2026-11-01)
+
+**Decision.** `check_return_eligibility` (read-only) and `request_return`, `register_complaint`, `handoff_to_human` (writes) on top of the read tools. Eligibility lives in `app/policies/returns.py`, a pure function: §4.1 and §4.3 count 7 calendar days from `estimated_delivery`, §4.2 30 days from `order_date`, then §8.1 90 days from delivery, then the manufacturer warranty with the store's intermediation. Dates are inclusive: day 7 is eligible, day 8 is not.
+
+| Choice | Why |
+|---|---|
+| A write needs the order verified in this conversation, `confirmed_by_customer is True`, and (returns) an `eligible` decision computed again inside the tool | The prompt asks for an explicit request, the tool does not trust it (FR-020). A refused call writes nothing. |
+| `request_return` takes `bought_online` | The #4 contract has no such input, but §4.1 only applies to online purchases, so a regret return could never be requested without it. |
+| Orders not yet delivered (pending or confirmed, or no delivery date) are `not_delivered_yet` | The windows start at receipt. |
+| `reason` is masked with `mask_pii` and cut at 1000 characters before it is stored | FR-024; the free text is the customer's words. |
+| Eval scenarios with a scripted clock (`now:`) are `fake_only`; US6-8 also has a `live_only` variant | The live runs use the real date, at which every dataset order is outside every window (US6-5). |
+
+**Limits.** §4.4 is detected only for a "boquilha" item name: custom setups and "venda final" are not marked in the dataset, and no product in it is a mouthpiece, so US6-4 is covered by a unit test only. A live model asked to open a return for order 4 correctly refused (window ended 2025-12-29) and offered the defect path.
+
+**Role of AI.** Claude Code wrote the rule function, the tools, the scenarios and the tests; the windows and the write guards follow the spec and the manual.
+
