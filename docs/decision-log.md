@@ -293,6 +293,16 @@ the cross-artifact analysis whose 9 findings (3 medium) were fixed before review
 - The double-send guard and the dropped-stream detection were mutation-checked: disabling either
   makes its flow test fail.
 
+**Implementation, PR 2 (US2 + US3).**
+- Error side effects (401 redirect, rate-limit lock, budget lock) run in `useChat`'s `onError`,
+  not in an effect (lint `set-state-in-effect`; `useChat` reads callbacks through a latest ref,
+  so there are no stale closures).
+- `ChatError` is keyed per error so a repeated rate limit restarts its countdown; starting a
+  send also clears the rate-limit lock. The budget lock is separate state that lasts the page
+  session and is checked in `run()`.
+- `ToolStatus` puts the state suffix in sr-only content (not `aria-label`) so the change is
+  announced by its `role="status"` region.
+
 ## DL-010 — Retrieval and search index (2026-10-31, #5, PR B)
 
 | Decision | Alternatives | Rationale |

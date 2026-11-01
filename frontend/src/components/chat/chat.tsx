@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
 import { ChatError } from "@/components/chat/chat-error";
@@ -23,11 +24,25 @@ export function Chat({ fetch }: ChatProps) {
     () => new ChatTransport({ api: "/api/chat", fetch }),
     [fetch],
   );
+  const router = useRouter();
+  // Rate limit: input locked until the countdown ends. Budget: locked for the page session.
+  const [rateLimitedUntilExpire, setRateLimited] = useState(false);
+  const [locked, setLocked] = useState(false);
+  // Remounts ChatError per error so a repeated rate limit always restarts its countdown.
+  const [errorKey, setErrorKey] = useState(0);
+
   // A stream closed without its `finish` chunk ends as `ready` with no error (research R2).
   const [droppedStream, setDroppedStream] = useState(false);
   const { messages, sendMessage, regenerate, stop, status, error, clearError } =
     useChat<ChatMessage>({
       transport,
+      onError: (error) => {
+        const kind = toChatError(error, copy).kind;
+        setErrorKey((key) => key + 1);
+        if (kind === "unauthorized") router.replace("/login?reason=expired&callbackUrl=/");
+        if (kind === "rate_limited") setRateLimited(true);
+        if (kind === "budget_exhausted") setLocked(true);
+      },
       onFinish: ({ isAbort, isError }) => {
         if (!isAbort && !isError && !transport.sawFinish) setDroppedStream(true);
       },
@@ -39,9 +54,10 @@ export function Chat({ fetch }: ChatProps) {
   const busy = status === "submitted" || status === "streaming";
 
   function run(request: () => Promise<void>): boolean {
-    if (sendingRef.current) return false;
+    if (sendingRef.current || locked) return false;
     sendingRef.current = true;
     setDroppedStream(false);
+    setRateLimited(false);
     if (error) clearError();
     void request().finally(() => {
       sendingRef.current = false;
@@ -80,14 +96,26 @@ export function Chat({ fetch }: ChatProps) {
         <main className="flex min-h-0 flex-1 flex-col">
           <MessageList messages={messages} status={status}>
             {typing && <TypingIndicator />}
-            {chatError && !busy && <ChatError error={chatError} onRetry={handleRetry} />}
+            {chatError && !busy && (
+              <ChatError
+                key={errorKey}
+                error={chatError}
+                onRetry={handleRetry}
+                onExpire={() => setRateLimited(false)}
+              />
+            )}
           </MessageList>
         </main>
       )}
       <div className="shrink-0 border-t bg-background px-4 py-3">
         <div className="mx-auto w-full max-w-3xl">
-          {/* `disabled` is driven by rate limits and the budget lock in US3. */}
-          <ChatInput inputRef={inputRef} disabled={false} busy={busy} onSend={handleSend} onStop={stop} />
+          <ChatInput
+            inputRef={inputRef}
+            disabled={locked || rateLimitedUntilExpire}
+            busy={busy}
+            onSend={handleSend}
+            onStop={stop}
+          />
         </div>
       </div>
     </div>

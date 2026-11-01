@@ -65,6 +65,46 @@ describe("MessageView", () => {
     expect(safe.getAttribute("rel")).toContain("noopener");
   });
 
+  it("renders tool-products as status, then cards, then text", async () => {
+    const message = await assembleMessage("tool-products");
+    const { container } = render(<MessageView message={message} />);
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("data-state", "done");
+    expect(status).toHaveTextContent("Buscando no catálogo…");
+    const cards = screen.getAllByRole("article");
+    expect(cards).toHaveLength(2);
+    const text = screen.getByText(/Encontrei estas opções/);
+
+    const follows = (a: Node, b: Node) =>
+      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(follows(status, cards[0])).toBeTruthy();
+    expect(follows(cards[1], text)).toBeTruthy();
+    expect(container).not.toHaveTextContent("search_products");
+  });
+
+  it("renders tool-error as a failed status without the error code", async () => {
+    const message = await assembleMessage("tool-error");
+    const { container } = render(<MessageView message={message} />);
+    expect(screen.getByRole("status")).toHaveAttribute("data-state", "failed");
+    expect(container).not.toHaveTextContent("verification_failed");
+    expect(screen.getByText(/Não consegui confirmar os dados/)).toBeInTheDocument();
+  });
+
+  it("ignores unknown data parts", () => {
+    const message = {
+      id: "m2",
+      role: "assistant",
+      parts: [
+        { type: "data-unknown", data: { secret: "x-internal" } },
+        { type: "text", text: "Oi", state: "done" },
+      ],
+    } as unknown as ChatMessage;
+    const { container } = render(<MessageView message={message} />);
+    expect(container).not.toHaveTextContent("x-internal");
+    expect(screen.getByText("Oi")).toBeInTheDocument();
+  });
+
   it("renders a user message as plain text", () => {
     const user: ChatMessage = {
       id: "u1",

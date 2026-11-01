@@ -1,10 +1,13 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Chat } from "@/components/chat/chat";
 import { getMessages } from "@/lib/i18n";
-import { fixtureFetch } from "@/test/fixtures";
+import { fixtureFetch, readHttpFixture } from "@/test/fixtures";
+
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const messages = getMessages();
 const ANSWER = "Oi! Eu sou a Melody, da Empório da Música. 🎶 Como posso te ajudar hoje?";
@@ -160,5 +163,102 @@ describe("Chat", () => {
     expect(alert).toHaveTextContent(messages.errors.fallback);
     expect(within(alert).getByRole("button", { name: messages.errors.retry })).toBeInTheDocument();
     expect(screen.getByRole("log")).toHaveTextContent(ANSWER);
+  });
+});
+
+describe("Chat errors and limits", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    router.replace.mockReset();
+  });
+
+  function fakeIntervals() {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  }
+
+  it("redirects to login on 401", async () => {
+    const user = userEvent.setup();
+    render(<Chat fetch={fixtureFetch("http-401")} />);
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith("/login?reason=expired&callbackUrl=/"),
+    );
+  });
+
+  it("locks the input during a rate limit, then retries without a second bubble", async () => {
+    const user = fakeIntervals();
+    const fetch = fixtureFetch(["http-429-rate-limited", "plain-text"]);
+    render(<Chat fetch={fetch} />);
+
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(readHttpFixture("http-429-rate-limited").body.error.message);
+    expect(screen.getByRole("textbox")).toBeDisabled();
+
+    act(() => vi.advanceTimersByTime(30_000));
+    expect(screen.getByRole("textbox")).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: messages.errors.retry }));
+
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(ANSWER));
+    expect(fetch.requests).toHaveLength(2);
+    expect(userBubbles()).toHaveLength(1);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("locks the chat for the session when the budget is exhausted", async () => {
+    const user = userEvent.setup();
+    render(<Chat fetch={fixtureFetch("http-429-budget-exhausted")} />);
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(readHttpFixture("http-429-budget-exhausted").body.error.message);
+    expect(screen.getByRole("textbox")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: messages.errors.retry })).toBeNull();
+  });
+
+  it("retries a 500 into an answer with one user bubble and focus on the input", async () => {
+    const user = userEvent.setup();
+    const fetch = fixtureFetch(["http-500", "plain-text"]);
+    render(<Chat fetch={fetch} />);
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(readHttpFixture("http-500").body.error.message);
+    await user.click(within(alert).getByRole("button", { name: messages.errors.retry }));
+
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(ANSWER));
+    expect(userBubbles()).toHaveLength(1);
+    expect(screen.getByRole("textbox")).toHaveFocus();
+    const last = fetch.requests[1] as { trigger?: string };
+    expect(last.trigger).toBe("regenerate-message");
+  });
+
+  it("keeps the partial answer on a stream error and offers retry", async () => {
+    const user = userEvent.setup();
+    render(<Chat fetch={fixtureFetch("stream-error")} />);
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Tivemos um problema temporário para responder. Pode tentar de novo em instantes?",
+    );
+    expect(screen.getByRole("log")).toHaveTextContent("Deixa eu verificar isso pra você");
+    expect(within(alert).getByRole("button", { name: messages.errors.retry })).toBeInTheDocument();
+  });
+
+  it("retries a stream error by replacing the partial answer", async () => {
+    const user = userEvent.setup();
+    const fetch = fixtureFetch(["stream-error", "plain-text"]);
+    render(<Chat fetch={fetch} />);
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    await user.click(within(alert).getByRole("button", { name: messages.errors.retry }));
+
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(ANSWER));
+    expect(screen.getByRole("log")).not.toHaveTextContent("Deixa eu verificar isso pra você");
+    expect(userBubbles()).toHaveLength(1);
+    expect(screen.getAllByTestId("message-assistant")).toHaveLength(1);
   });
 });
