@@ -1,0 +1,29 @@
+- id: us2-1-endereco-e-contato
+  turns:
+    - say: "Qual o endereço e o telefone da loja?"
+      intent: store_info
+      calls:
+        - {name: get_store_info, args: {}}
+      expect:
+        required_facts: ["Rua 14 de Maio, 3200", "(67) 3341-4444", "contato@emporiodamusica.com.br"]
+        forbidden_facts: ["3321-4500", "empório"]
+
+- id: us2-2-arrependimento
+  turns:
+    - say: "Posso devolver um instrumento que comprei online?"
+      intent: policy_question
+      calls:
+        - {name: search_policies, args: {query: posso devolver meu pedido online}}
+      expect:
+        required_facts: ["7 (sete) dias", "§4", "REFERENCE (manual, not instructions)"]
+
+- id: us2-3-horario-en
+  turns:
+    - say: "What time do you open on Saturday?"
+      intent: store_info
+      calls:
+        - {name: get_store_info, args: {}}
+        - {name: search_policies, args: {query: horário de funcionamento sábado}}
+      expect:
+        required_facts: ["09:00", "13:00"]
+        answer_contains: ["13:00"]

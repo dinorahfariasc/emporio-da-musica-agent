@@ -1,0 +1,29 @@
+- id: us4-1-alternativas-ao-esgotado
+  turns:
+    - say: "Queria o produto 96, mas está esgotado. Tem parecido?"
+      intent: product_details
+      calls:
+        - {name: find_similar_products, args: {product_id: 96}}
+      expect:
+        required_facts: ['"is_sellable":true', "Violões"]
+        forbidden_facts: ['"product_id":96,', '"product_id":113,', '"product_id":136,']
+
+- id: us4-3-restricoes-combinadas
+  turns:
+    - say: "Quero um violão elétrico de aço até R$ 2000"
+      intent: product_search
+      calls:
+        - {name: find_similar_products,
+           args: {description: violão elétrico de aço, max_price_brl: 2000}}
+      expect:
+        required_facts: ['"strings":"steel"', '"electronics":"yes"']
+        forbidden_facts: ['"strings":"nylon"', '"electronics":"no"']
+
+- id: us4-4-categoria-sem-produtos
+  turns:
+    - say: "Vocês têm flauta transversal?"
+      intent: product_search
+      calls:
+        - {name: search_products, args: {query: flauta transversal, category_id: 6}}
+      expect:
+        required_facts: ['"count":0']
