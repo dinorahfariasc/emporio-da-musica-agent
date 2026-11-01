@@ -5,16 +5,16 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { safeCallbackPath } from "@/lib/auth/request-guards";
 import { useMessages } from "@/lib/i18n/context";
-
-function sameSiteCallbackUrl(raw: string | null): string {
-  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
-  return "/";
-}
 
 export function LoginForm() {
   const messages = useMessages();
-  const callbackUrl = sameSiteCallbackUrl(useSearchParams().get("callbackUrl"));
+  const rawCallbackUrl = useSearchParams().get("callbackUrl");
+  const callbackUrl =
+    typeof window === "undefined"
+      ? "/"
+      : safeCallbackPath(rawCallbackUrl, window.location.origin);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
