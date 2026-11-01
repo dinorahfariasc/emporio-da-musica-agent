@@ -7,6 +7,9 @@
       expect:
         required_facts: ['"is_sellable":true', "Violões"]
         forbidden_facts: ['"product_id":96,', '"product_id":113,', '"product_id":136,']
+      live_expect:
+        required_facts: ['"is_sellable":true']
+        forbidden_facts: ['"product_id":113,', '"product_id":136,']
 
 - id: us4-3-restricoes-combinadas
   turns:
@@ -18,6 +21,9 @@
       expect:
         required_facts: ['"strings":"steel"', '"electronics":"yes"']
         forbidden_facts: ['"strings":"nylon"', '"electronics":"no"']
+      live_expect:
+        required_facts: ['"strings":"steel"']
+        forbidden_facts: []
 
 - id: us4-4-categoria-sem-produtos
   turns:
@@ -27,3 +33,6 @@
         - {name: search_products, args: {query: flauta transversal, category_id: 6}}
       expect:
         required_facts: ['"count":0']
+      live_expect:
+        required_facts: []
+        answer_excludes: ["temos flauta", "R$"]

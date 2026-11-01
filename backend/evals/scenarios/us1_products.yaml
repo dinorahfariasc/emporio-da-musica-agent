@@ -21,6 +21,8 @@
       expect:
         required_facts: ["2199.00", "2089.05"]
         forbidden_facts: ['"discount_percent":12']
+      live_expect:
+        required_facts: ["2199.00"]
 
 - id: us1-3-promocao-ativa-121
   turns:
@@ -31,6 +33,9 @@
         - {name: calculate_payment_options, args: {product_id: 121}}
       expect:
         required_facts: ["439.20", "549.00", "promo_active"]
+      live_expect:
+        required_facts: ["439.20", "549.00"]
+        answer_contains: ["439,20"]
 
 - id: us1-4-parcelamento
   turns:

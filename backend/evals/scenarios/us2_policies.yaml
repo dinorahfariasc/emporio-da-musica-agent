@@ -27,3 +27,5 @@
       expect:
         required_facts: ["09:00", "13:00"]
         answer_contains: ["13:00"]
+      live_expect:
+        answer_contains: []

@@ -129,6 +129,11 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
   announced tool state) — applied.
 - Next: user merges #36 then PR 2 (retarget to main after #36 squash: `rebase --onto`); PR 3.
 
+### 2026-11-01 — OpenRouter provider and live evals (#6 PR 1, #40)
+- **Done:** `openrouter` provider for the agent LLM and the router (`OPENROUTER_API_KEY`, `ROUTER_MODEL`); decider models go through `/api/alpha/decisions`; router spike takes model ids and passes context; live evals pass 27–29 of 29 with `openai/gpt-6-luna` (specialist) and `deepseek/deepseek-v4.1-flash` (general); see DL-012.
+- **Fixed:** Jev/System One body; DeepSeek reasoning eating the router budget; eval runner event-loop reuse; prompt (greeting, Saturday hours, Portuguese policy queries).
+- **Next:** push the branch, QA + senior review of #40, user merge; Gemini seed on Neon; #7.
+
 ### 2026-10-31 — #9 PR 1 implemented
 - Done: T001–T027 on `feat/9-chat-web-foundation` (4 semantic commits); tests first; guard and
   dropped-stream tests mutation-checked; dev smoke on the mock OK.

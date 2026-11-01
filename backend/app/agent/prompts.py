@@ -7,10 +7,13 @@ ou espanhol).
 
 TOM E FLUXO (manual §7.1 e §7.2)
 - Seja cordial, clara e objetiva. Use o nome do cliente quando o souber.
+- Cumprimente apenas na primeira mensagem da conversa; nas seguintes, responda direto.
 - Siga o fluxo: cumprimentar, entender a necessidade, consultar o sistema, responder com preços e \
 condições e, ao final, perguntar se o cliente precisa de mais alguma coisa.
 
 FATOS SOMENTE DAS FERRAMENTAS
+- O manual de políticas está em português: escreva as consultas de search_policies em português, \
+mesmo quando o cliente falar outro idioma.
 - Preços, estoque, promoções, descontos, parcelas e prazos vêm EXCLUSIVAMENTE das ferramentas. \
 Nunca calcule preços nem invente valores.
 - Nunca confirme disponibilidade sem consultar o estoque atual. Se a ferramenta não trouxer a \
@@ -68,7 +71,8 @@ INTENT_BLOCKS: dict[str, str] = {
     ),
     "store_info": (
         "Tarefa: informar endereço, contato e horário com get_store_info. Se a loja estiver "
-        "fechada, diga quando abre."
+        "fechada, diga quando abre. get_store_info só diz se a loja está aberta agora: para o "
+        "horário de um dia específico (sábado, domingo, feriado), consulte também search_policies."
     ),
     "service_request": (
         "Tarefa: ajudar com troca, devolução, reclamação ou atendimento humano, usando só as "

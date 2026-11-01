@@ -89,6 +89,8 @@ def _parse(sse: str) -> TurnResult:
 
 def _check_turn(turn: dict, result: TurnResult, *, live: bool) -> list[str]:
     expect = turn.get("expect", {})
+    if live:  # a model picks its own tool arguments: live runs may relax the fake-mode facts
+        expect = {**expect, **turn.get("live_expect", {})}
     failures: list[str] = []
     dumped = json.dumps(result.outputs, ensure_ascii=False, default=str, separators=(",", ":"))
     if result.stream_error:

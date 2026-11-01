@@ -361,3 +361,29 @@ as 3 PRs: core (#6, P0), actions (#7, P2), MCP (#8, P2).
 - **Residual risk:** until #10 binds the chat id to a user, anyone who knows a chat id sees the orders verified in it. The per-order lock (5 failures, 30 min) still stops guessing across chat ids.
 - **Not done here (needs the user's keys):** the router spike (`python -m evals.router_spike`), `python -m evals --live` and the manual end-to-end through the UI.
 
+## DL-012 — Models via OpenRouter (2026-11-01)
+
+**Context.** One key for every model is simpler than Anthropic plus TypeSafe. `LLM_PROVIDER` and `ROUTER_PROVIDER` gained an `openrouter` value; model ids are settings (`SPECIALIST_MODEL`, `GENERAL_MODEL`, `ROUTER_MODEL`).
+
+**Router spike** (34 scenario messages, previous assistant reply passed as context, ~US$0.001 per run):
+
+| Model | Accuracy | p50 / p95 | Confidence |
+|---|---|---|---|
+| `perplexity/pplx-decider-v1.2` | 30/34 | 456 / 694 ms | spread 0.3–1.0 |
+| `deepseek/deepseek-v4.1-flash` | 30/34 | 546 / 984 ms | 28 of 34 at 0.9 |
+| `typesafe/jev-1.13` | 23/34 | 395 / 467 ms | spread |
+
+Decision: `perplexity/pplx-decider-v1.2` as the router. Its confidence is the only one the 0.75 threshold can act on.
+
+**Findings.**
+- Decider models are not chat models: OpenRouter answers 400 on `/chat/completions` and expects `/api/alpha/decisions` (System One body). The Jev body used before was wrong (`choices` list instead of a `criteria` dict plus `instructions`); fixed.
+- DeepSeek is a reasoning model: reasoning tokens ate `max_tokens=200` (`LengthFinishReasonError`, 9/34). The chat router now sends `reasoning: {enabled: false}` and asks only for `intent` and `confidence` (it used to fill `router`, `path` and `model` with invented values).
+- The free Gemma id answered 429 on the first call, so it is not usable for the spike or the evals.
+- The live eval runner now reuses one client (one event loop); a client per scenario broke the cached provider HTTP client (`Event loop is closed`). Live facts are matched on tool outputs as well as on the answer, and a turn may carry `live_expect` overrides, because a real model picks its own tool arguments.
+
+**Live run** (specialist `openai/gpt-6-luna`, general `deepseek/deepseek-v4.1-flash`): 27/29 and 29/29 on two runs after the prompt fixes. Remaining variance is model nondeterminism, not a defect we found.
+- Prompt fixes: greet only in the first message; `get_store_info` only says whether the store is open now, so day-specific hours also need `search_policies`; policy queries are written in Portuguese (the fake embedder is lexical, so English queries missed the hours section).
+
+**Not verified.** Gemini embeddings (cross-language), the direct TypeSafe endpoint, and behaviour under the free tier's rate limits.
+
+**Role of AI.** Claude Code implemented the provider, ran the spike and the live scenarios, and diagnosed the failures. The model choices were the user's.

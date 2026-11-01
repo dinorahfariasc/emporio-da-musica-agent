@@ -6,7 +6,7 @@
       intent: out_of_scope
       expect:
         tools_not_called: [search_products]
-        answer_contains: ["instrumentos"]
+        answer_contains: ["instrument"]
         answer_excludes: ["R$"]
 
 - id: us5-2-fora-de-escopo

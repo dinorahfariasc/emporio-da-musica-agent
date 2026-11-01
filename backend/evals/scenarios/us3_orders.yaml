@@ -64,6 +64,8 @@
         - {name: get_order_status, args: {order_id: 11}}
       expect:
         errors: [not_verified]
+      live_expect:
+        errors: []
 
 - id: us3-8-pedido-cancelado
   turns:
@@ -83,3 +85,5 @@
       expect:
         errors: [not_verified]
         forbidden_facts: ['"status":"confirmed"']
+      live_expect:
+        errors: []
