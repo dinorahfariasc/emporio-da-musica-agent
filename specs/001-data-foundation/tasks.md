@@ -196,7 +196,7 @@ tests use the `local_database_url` fixture (T005).
 
 ## Phase 8: US5 (production part) and polish
 
-- [ ] T032 [US5] Manual. Run quickstart step 7 against Neon (`DATABASE_URL_UNPOOLED`, `--yes`, Gemini), then record:
+- [x] T032 [US5] Manual (done 2026-11-01: 7.24 s wall time, all six store-table counts and checksums identical to local, Gemini 768 dims). Run quickstart step 7 against Neon (`DATABASE_URL_UNPOOLED`, `--yes`, Gemini), then record:
   - the wall time (SC-001: under 2 min);
   - that the **store-table** counts and checksums match local (excluding `policy_chunks`, `product_search_docs` and `index_metadata`);
   - that non-owned tables are unchanged.

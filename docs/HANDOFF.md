@@ -48,15 +48,10 @@ US6 scenarios, DL-013).
   `LLM_PROVIDER=openrouter`, `ROUTER_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, `ROUTER_MODEL`,
   `SPECIALIST_MODEL`, `GENERAL_MODEL`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the user
   runs the redeploy.
-- **#5 T032:** manual seed of Neon with Gemini (user holds the keys) is still pending; local seeds use
-  the fake embedder, and the seed and the query must use the same provider.
-- **#8 MCP (PR 3 of 002, T034–T036): implemented on branch `dinorahfariasc/track-b-mcp-hitl`, not
-  yet opened as a PR.** `backend/app/mcp.py` (FastMCP, bearer auth, `/mcp` mount with a combined
-  lifespan), `backend/tests/test_mcp.py`, `vercel.json` `/mcp` rewrite, README section, DL-BE-001.
-  Needs the user's go-ahead to open the PR.
-- **Not started:** #10 auth/limits/deploy, #11 README + example conversations, #14 human-in-the-loop
-  confirmation for write actions (needs a short spec first). Open nits from the #40 review are in
-  DL-012 (stream close on error, body size cap).
+- **#5 T032 done (2026-11-01):** Neon seeded with Gemini in 7.24 s; the six store-table row counts and checksums match local. Re-seed only if the data or the embedding provider changes.
+- **#8 MCP merged as #43.** Production needs `MCP_API_KEY` (set in Vercel; takes effect on the next redeploy).
+- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0).
+- **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap).
 
 **Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
 all P0 is in production.
@@ -131,6 +126,7 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 ### 2026-11-01 — #42 merged; deadline confirmed
 - **Done:** #42 (actions) merged into `main`. User confirmed the final deadline: 2026-11-02 18:00 (America/Campo_Grande) with P0, P1 and P2 all done.
 - **Done (cont.):** DL numbering is now per area (BE/FE/DOCS/DATA). Three parallel worktrees started: track A (spec 004 / #10), track B (MCP #8, then HITL #14), track C (frontend #13, #18; checks #20 is covered by #37, which closed with PR 2 US2 cards).
+- **Done (cont.):** Neon seed (T032) done by the user: 7.24 s, counts and checksums match local; #43 (MCP) merged.
 - **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #16, #17, #19, then P2 (#22, #23, #21).
 ### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
 - **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean.
