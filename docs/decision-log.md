@@ -463,4 +463,24 @@ for AA contrast even if the Figma file has no dark frames.
 
 **Role of AI.** Cursor Grok drafted the 008 spec/plan/tasks and the restyle; the screen list and
 non-negotiable constraints come from the Figma brief, the UI-agent prompt and constitution I.
+---
+
+## DL-DATA-001 — EDA notebook as a standalone uv project (#22, 2026-11-01)
+
+**Decision.** Exploratory analysis lives in a new `analysis/` directory with its own
+`pyproject.toml` (pandas, matplotlib, jupyter, nbconvert, ipykernel), not inside `backend/`.
+
+| Choice | Why |
+|---|---|
+| Separate uv project instead of a `backend` dependency group | Keeps data-science packages (pandas, jupyter, matplotlib — tens of MB) out of the agent API's dependency graph and Vercel function size; the notebook is a one-off analysis artifact, not a runtime dependency. |
+| `eda.ipynb` built from `analysis/build_notebook.py` (a generator script) | Cell sources live as plain Python strings in one file, which diffs cleanly in review; the notebook's own JSON diff on every re-execution (cell ids, timing metadata) would otherwise dominate PRs. The script is the source of truth; the `.ipynb` output is regenerated, not hand-edited. |
+| No new anomaly beyond `docs/data-quality-report.md` | This pass is distributions and visual confirmation of the existing ETL-generated findings (DL-002), not a second source of truth; the notebook's summary section maps each chart back to that report's table by name. |
+| Executed headless and committed with outputs, plus a static `eda.html` export | FR-004: a reviewer should see results without running Jupyter; `nbconvert --execute` has no network or LLM calls, so the output is deterministic given the committed CSVs. |
+
+**Spec.** `specs/007-eda-notebook/` (007 is the next free number; 004–006 are reserved for other
+tracks per the user's instruction).
+
+**Role of AI.** Claude Code wrote the spec/plan/tasks, the notebook generator, and ran the
+headless execution and export; the anomaly catalogue it cross-references was already decided in
+DL-002 and is unchanged here.
 
