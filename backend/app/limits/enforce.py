@@ -24,7 +24,7 @@ def current_local_date(tz_name: str, now: datetime | None = None) -> date:
 
 
 def _seconds_to_next_minute(now: datetime) -> int:
-    next_minute = (now.replace(second=0, microsecond=0) + timedelta(minutes=1))
+    next_minute = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
     return max(1, int((next_minute - now).total_seconds()))
 
 
