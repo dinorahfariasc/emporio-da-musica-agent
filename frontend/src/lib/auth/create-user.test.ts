@@ -1,7 +1,9 @@
 import type { Pool } from "pg";
 import { describe, expect, it } from "vitest";
 
-import { createUser, UsernameAlreadyExists } from "./create-user";
+import { createUser, PasswordTooShort, UsernameAlreadyExists } from "./create-user";
+
+const VALID_PASSWORD = "a-fine-long-password";
 
 class FakePool {
   users = new Map<string, { id: string; username: string; password_hash: string }>();
@@ -24,7 +26,7 @@ class FakePool {
 describe("createUser", () => {
   it("creates a new account and returns its id and username", async () => {
     const pool = new FakePool() as unknown as Pool;
-    const user = await createUser(pool, "Demo", "s3cret");
+    const user = await createUser(pool, "Demo", VALID_PASSWORD);
     expect(user.username).toBe("demo"); // lowercased
     expect(user.id).toBeTruthy();
   });
@@ -32,12 +34,17 @@ describe("createUser", () => {
   it("fails clearly without modifying the existing row on a duplicate username", async () => {
     const fake = new FakePool();
     const pool = fake as unknown as Pool;
-    await createUser(pool, "demo", "first-password");
+    await createUser(pool, "demo", VALID_PASSWORD);
     const before = fake.users.get("demo")?.password_hash;
 
-    await expect(createUser(pool, "demo", "second-password")).rejects.toBeInstanceOf(
+    await expect(createUser(pool, "demo", "another-long-password")).rejects.toBeInstanceOf(
       UsernameAlreadyExists,
     );
     expect(fake.users.get("demo")?.password_hash).toBe(before);
+  });
+
+  it("rejects a password shorter than 12 characters without touching the database", async () => {
+    const pool = new FakePool() as unknown as Pool;
+    await expect(createUser(pool, "demo", "short")).rejects.toBeInstanceOf(PasswordTooShort);
   });
 });

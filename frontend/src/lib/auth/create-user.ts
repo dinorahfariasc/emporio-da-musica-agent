@@ -3,9 +3,17 @@
 import bcrypt from "bcryptjs";
 import type { Pool } from "pg";
 
+export const MIN_PASSWORD_LENGTH = 12;
+
 export class UsernameAlreadyExists extends Error {
   constructor(username: string) {
     super(`username already exists: ${username}`);
+  }
+}
+
+export class PasswordTooShort extends Error {
+  constructor() {
+    super(`password must be at least ${MIN_PASSWORD_LENGTH} characters`);
   }
 }
 
@@ -27,6 +35,9 @@ export async function createUser(
   password: string,
 ): Promise<{ id: string; username: string }> {
   const username = rawUsername.toLowerCase();
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new PasswordTooShort();
+  }
   await ensureUsersTable(pool);
   const passwordHash = await bcrypt.hash(password, 12);
   const result = await pool.query<{ id: string; username: string }>(
