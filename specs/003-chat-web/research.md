@@ -63,8 +63,14 @@ shadcn `base-nova` style on `@base-ui/react`.
   - `translations` from the catalog.
   - `mode="streaming"` with `parseIncompleteMarkdown`.
   - Exact prop names are confirmed in `node_modules/streamdown/dist/index.d.ts`.
+- **Implementation note (PR 1)**: rehype-harden matches prefixes by origin, so explicit
+  `https://`-style prefixes block every link. Shipped config: `allowedLinkPrefixes: ["*"]`
+  (harden limits it to http(s) and always blocks `javascript:`/`data:`/`file:`/`vbscript:`),
+  `allowedImagePrefixes: []`, `allowDataImages: false`, `linkBlockPolicy: "text-only"`,
+  `imageBlockPolicy: "remove"`, plus an `a` renderer that re-checks `^(https?:|mailto:)`.
+  See DL-009.
 - **Tailwind v4**: Streamdown's classes live in its dist files. `globals.css` needs
-  `@source "../node_modules/streamdown/dist/*.js";` (path relative to `src/app/globals.css`),
+  `@source "../../node_modules/streamdown/dist/*.js";` (path relative to `src/app/globals.css`),
   otherwise tables and code silently lose their styling.
 - **Rationale**: built for AI streaming. `remend` closes incomplete markdown (unclosed `**`, half
   tables) so the layout does not flash. It supports GFM tables and ships the sanitize/harden

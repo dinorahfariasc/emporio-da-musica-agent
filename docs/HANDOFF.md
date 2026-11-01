@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-10-31._
+_Last updated: 2026-10-31 (#9 PR 1 reviewed; #5 PR B merged as #35)._
 
 ## 1. What this is
 
@@ -38,16 +38,15 @@ contract · embeddings switch to Gemini · #5 spec + first implementation PR (st
 report, safe seed) · #32 003 chat-web spec (spec, plan, tasks; review applied).
 
 **In flight (check `gh pr list` and the board for the truth):**
-- **#5 PR B** (retrieval): T021–T031 implemented on branch `feat/5-retrieval` (97 tests pass
-  locally); PR to open and review. Remaining: T032 (manual: seed Neon with Gemini, user holds the
-  keys) and T033 polish (README/DL-010 done; tick the issue #5 criteria after the Neon seed).
-- **#9 chat web:** spec merged (#32). **Next: implementation PR 1 — Foundation + US1, tasks
-  T001–T028** in `specs/003-chat-web/tasks.md` (worktree `chat-web`, new branch from `main`).
-  Read first: `spec.md` (FR-001…FR-019), `research.md` R2 (error mapping + dropped stream), R4
-  (**hardened Streamdown — mandatory**), R10 (Cache Components), R11 (fail-closed `chatMode()`),
-  R12 (double-send guard). Tests first; `pnpm lint && pnpm typecheck && pnpm test && pnpm build`
-  green; PR body `Part of #9`; QA + senior review before merge. Then PR 2 (US2+US3, T029–T041)
-  and PR 3 (US4+polish, T042–T047, `Closes #9`).
+- **#5 PR B** (retrieval) merged as #35. Remaining: T032 (manual: seed Neon with Gemini, user
+  holds the keys) and ticking the issue #5 criteria after the seed.
+- **#9 chat web:** PR 1 (Foundation + US1, T001–T027) implemented on branch
+  `feat/9-chat-web-foundation` (worktree `chat-web`): streaming chat at `/` on the mock, hardened
+  Streamdown, fail-closed `chatMode()`, double-send guard, dropped-stream notice; 65 tests, lint,
+  typecheck and build green; QA + senior review applied; PR #36 open (`Part of #9`). PR 2
+  (US2+US3, T029–T041) on `feat/9-chat-web-tools-errors`, stacked on #36, reviewed, PR open. Next: PR 3 (US4+polish, T042–T047, `Closes #9`). Deviations from the
+  plan are in DL-009 (harden prefixes are origin-based → `["*"]` + href re-check; `@source`
+  path is `../../node_modules/...`; i18n split into server-safe `index.ts` + client `context.tsx`).
 - **#6 agent core:** spec written on branch `docs/6-agent-core-spec` (not merged, no PR yet).
   Next: `/speckit-plan`, `/speckit-tasks`, `/speckit-analyze`, then PR + review. Depends on the
   retrieval API in `specs/001-data-foundation/contracts/retrieval-api.md`.
@@ -97,6 +96,9 @@ all P0 is in production.
 - Vercel Services: the backend is **private**; reach it from Next.js route handlers via
   `BACKEND_URL` (binding). `/mcp` will need its own public rewrite (issue #8).
 - Voyage was rejected (needs a card); embeddings are Gemini `gemini-embedding-001`, 768 dims.
+- rehype-harden matches `allowedLinkPrefixes` by **origin** (needs `defaultOrigin`); `"https://"`
+  blocks every link. Use `["*"]` and re-check the href in the `a` renderer.
+- Streamdown renders `**bold**` as `<span data-streamdown="strong">`, not `<strong>`.
 - Streamdown 2.7.1 defaults allow any image/link prefix, `data:` images and raw HTML; never use
   them as-is (see `specs/003-chat-web/research.md` R4).
 - ai@7 `useChat`: a stream that closes without `finish` ends as `ready` with no error; detect it
@@ -117,6 +119,20 @@ all P0 is in production.
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-10-31 — #9 PR 2 (tools, cards, errors)
+- Done: tool status, product cards, 401/429/budget/retry states, `/login` placeholder; 90 tests.
+- Review: QA approve, senior approve with minors (countdown remount key, rate-limit flag reset,
+  announced tool state) — applied.
+- Next: user merges #36 then PR 2 (retarget to main after #36 squash: `rebase --onto`); PR 3.
+
+### 2026-10-31 — #9 PR 1 implemented
+- Done: T001–T027 on `feat/9-chat-web-foundation` (4 semantic commits); tests first; guard and
+  dropped-stream tests mutation-checked; dev smoke on the mock OK.
+- Fixed: harden config (origin-based prefixes), `@source` path, server/client split of i18n.
+- Review: QA (request changes) + senior (approve with changes) applied: empty bubble/typing
+  indicator, finish without `finishReason` no longer flagged as dropped, focus, more hostile cases.
+- Next: user merges PR 1; then PR 2 (US2+US3).
 
 ### 2026-10-31 — Retrieval (#5 PR B)
 - Done: embeddings (fake, Gemini over httpx, cache), policy PDF chunking, product docs, hybrid
