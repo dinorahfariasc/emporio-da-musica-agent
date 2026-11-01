@@ -9,7 +9,9 @@ database sessions).
 `verificationTokens`, etc.) for a feature that only ever needs one provider and no OAuth linking.
 JWT sessions need only the app's own `users` table, checked inside `authorize()`. Auth.js v5 is
 the version with first-class Next.js App Router middleware support (`auth()` export usable in
-`middleware.ts`), matching Next 16 already in use.
+`src/proxy.ts` — Next.js 16 renamed "middleware" to "proxy"; with a `src/` layout the file must
+live at `src/proxy.ts`, next to `app/`, not at the project root, or it is silently never loaded),
+matching Next 16 already in use.
 
 **Alternatives considered**:
 - Roll a custom cookie/session system — rejected: reimplements CSRF-safe cookies, signing and

@@ -144,7 +144,7 @@ frontend/
 
 **Structure Decision**: extends the existing `backend/` + `frontend/` split; no new top-level
 project. Auth/limits logic is isolated in two new backend packages (`app/auth`, `app/limits`) and
-one new frontend concern (`auth.ts` + `middleware.ts` + `lib/auth/`), matching the "thin provider
+one new frontend concern (`auth.ts` + `src/proxy.ts` + `lib/auth/`), matching the "thin provider
 interface" style already used for LLM/embeddings providers (constitution VI).
 
 ## Complexity Tracking
