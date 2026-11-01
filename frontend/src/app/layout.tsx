@@ -14,9 +14,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const copy = getMessages(locale);
+
 export const metadata: Metadata = {
-  title: getMessages(locale).app.title,
-  description: getMessages(locale).app.description,
+  title: copy.app.title,
+  description: copy.app.description,
 };
 
 // viewportFit "cover" lets the input bar use env(safe-area-inset-bottom) on notched phones.
