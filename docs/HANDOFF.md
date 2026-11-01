@@ -4,6 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
+_Last updated: 2026-11-01 (#42 actions merged; final deadline 2026-11-02 18:00)._
 _Last updated: 2026-11-01 (#8 MCP server implemented, not yet opened as a PR)._
 
 ## 1. What this is
@@ -11,9 +12,9 @@ _Last updated: 2026-11-01 (#8 MCP server implemented, not yet opened as a PR)._
 Artefact AI Engineer take-home: a customer-service agent ("Melody") for a fictional music store,
 **Empório da Música**. Brief: `challenge/challenge_brief.pdf`. Data: `challenge/data/`.
 Deliverables: public repo with real commit history, README (run instructions, decisions,
-limitations, **AI-assistant workflow**), 3–5 example conversations. **Deadline: P0 done by
-2026-11-01 evening (America/Campo_Grande); D2 (11-02) is improvements only. The brief forbids any
-change to the repo after the delivery time (exact time: ask the user, it is in their email).**
+limitations, **AI-assistant workflow**), 3–5 example conversations. **Final deadline: 2026-11-02 18:00
+(America/Campo_Grande), with P0, P1 and P2 all done. Target: P0 in production by 2026-11-01 evening, then
+P1/P2 on 11-02. The brief forbids any change to the repo after the delivery time.**
 The repo is private now; the user makes it public at delivery.
 
 ## 2. Where everything lives
@@ -38,11 +39,10 @@ embeddings switch to Gemini · #5 store ETL, retrieval (#35) · #36/#38 chat web
 agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, stream adapter,
 `POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012).
 
+**Merged:** #7 actions (PR 2 of 002) landed on `main` as #42 (return eligibility, action tools,
+US6 scenarios, DL-013).
+
 **In flight (check `gh pr list` and the board for the truth):**
-- **#7 actions (PR 2 of 002)**: return eligibility, `check_return_eligibility`, `request_return`,
-  `register_complaint`, `handoff_to_human`, US6 scenarios, UI label (DL-013). #41 was merged into
-  the stale `feat/6-agent-core` branch after #40 was squashed, so it never reached `main`; the same
-  commit is re-opened from `feat/7-actions-main`. Needs the user's merge.
 - **Models (DL-012):** router `perplexity/pplx-decider-v1.2`, specialist `openai/gpt-6-luna`, general
   `deepseek/deepseek-v4.1-flash`, all through OpenRouter. Production env: `CHAT_MODE=backend`,
   `LLM_PROVIDER=openrouter`, `ROUTER_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, `ROUTER_MODEL`,
@@ -58,7 +58,7 @@ agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, str
   confirmation for write actions (needs a short spec first). Open nits from the #40 review are in
   DL-012 (stream close on error, body size cap).
 
-**Remaining P0 order:** merge #7 → merge #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 (including #14) only after
+**Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
 all P0 is in production.
 
 ## 4. Working agreements (from the user)
@@ -73,7 +73,7 @@ all P0 is in production.
   trailers** — even if a tool's default asks for it. AI usage is documented in the decision log
   and README instead. The **user merges** PRs; agents open them.
 - **Language:** everything English except the agent persona and the website copy (pt-BR first).
-- **Decision log numbering:** next free is DL-014 (check the file; parallel branches collide).
+- **Decision log numbering:** DL-001..DL-013 are sequential and stay. New entries use per-area ids so parallel branches do not collide: `DL-BE-001` (backend/agent), `DL-FE-001` (frontend), `DL-DOCS-001` (docs, specs, README), `DL-DATA-001` (data/EDA). Take the next free number inside your own prefix.
 - **Facts from the system:** prices, stock, promos, eligibility are computed in Python, never by
   the LLM (constitution I).
 - Update the board status and this file as you go.
@@ -128,6 +128,10 @@ all P0 is in production.
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-01 — #42 merged; deadline confirmed
+- **Done:** #42 (actions) merged into `main`. User confirmed the final deadline: 2026-11-02 18:00 (America/Campo_Grande) with P0, P1 and P2 all done.
+- **Done (cont.):** DL numbering is now per area (BE/FE/DOCS/DATA). Three parallel worktrees started: track A (spec 004 / #10), track B (MCP #8, then HITL #14), track C (frontend #13, #18; checks #20 is covered by #37, which closed with PR 2 US2 cards).
+- **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #16, #17, #19, then P2 (#22, #23, #21).
 ### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
 - **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean.
 - **Next:** user reviews and says go for opening the PR (`Closes #8`); then #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).
