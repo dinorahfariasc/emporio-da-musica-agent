@@ -72,6 +72,7 @@ usage: {inputTokens, outputTokens}}`.
 | `get_order_status` | Consultando seu pedido… |
 | `search_policies` | Consultando as políticas da loja… |
 | `get_store_info` | Buscando informações da loja… |
+| `check_return_eligibility` | Verificando se dá para trocar ou devolver… |
 | `request_return` | Abrindo solicitação de devolução… |
 | `register_complaint` | Registrando sua reclamação… |
 | `handoff_to_human` | Chamando um atendente… |

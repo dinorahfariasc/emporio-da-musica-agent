@@ -5,7 +5,8 @@ with --live, against the real models (review H2)."""
 import functools
 import json
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from app.api.chat import Runtime, _default_ctx, get_runtime
 from app.chat import protocol as p
 from app.config import Settings, get_settings
 from app.main import app
+from app.tools.context import FixedClock
 
 SCENARIO_DIR = Path(__file__).parent / "scenarios"
 
@@ -126,6 +128,18 @@ def _check_turn(turn: dict, result: TurnResult, *, live: bool) -> list[str]:
     return failures
 
 
+def _ctx_at(now: str | None):
+    """A ctx factory with a scripted clock (`now: 2025-12-25T10:00`), for time-dependent rules."""
+    if not now:
+        return _default_ctx
+
+    async def make(settings: Settings, conversation_id: str, emit):
+        ctx = await _default_ctx(settings, conversation_id, emit)
+        return replace(ctx, clock=FixedClock(datetime.fromisoformat(now)))
+
+    return make
+
+
 def run_scenario(scenario: dict, settings: Settings, *, live: bool = False) -> list[str]:
     """Runs every turn of a scenario through POST /api/chat; returns the failures."""
     if scenario.get("live_only") and not live:
@@ -141,7 +155,10 @@ def run_scenario(scenario: dict, settings: Settings, *, live: bool = False) -> l
                 route = Route(intent=turn["intent"], confidence=0.95)
                 model = _scripted_model(turn.get("calls", []))
                 runtime = Runtime(
-                    FakeRouter(default=route), None, lambda role, m=model: m, _default_ctx
+                    FakeRouter(default=route),
+                    None,
+                    lambda role, m=model: m,
+                    _ctx_at(scenario.get("now")),
                 )
                 app.dependency_overrides[get_runtime] = lambda r=runtime: r
             history.append(

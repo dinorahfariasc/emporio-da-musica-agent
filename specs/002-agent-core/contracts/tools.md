@@ -34,7 +34,7 @@ second guard.
 | Tool | Inputs | Output |
 |---|---|---|
 | `check_return_eligibility` | `order_id`, `reason: regret\|defect\|preference`, `bought_online?: bool` | `Eligibility` (the order must be verified) |
-| `request_return` | `order_id`, `reason`, `details: str`, `confirmed_by_customer` | `{request_id, type, next_step}`. Refused unless `check_return_eligibility` is `eligible`; the check runs again inside the tool. |
+| `request_return` | `order_id`, `reason`, `details: str`, `confirmed_by_customer`, `bought_online?: bool` (needed for regret) | `{request_id, type, next_step}`. Refused unless `check_return_eligibility` is `eligible`; the check runs again inside the tool. |
 | `register_complaint` | `summary: str`, `order_id?`, `confirmed_by_customer` | `{request_id, response_within: "24 business hours"}` |
 | `handoff_to_human` | `reason: str`, `confirmed_by_customer` | `{request_id, channel, hours}` |
 

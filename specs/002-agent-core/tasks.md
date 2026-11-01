@@ -374,22 +374,22 @@ langchain or FastMCP API (research R1/R2/R10).
 
 # PR 2 — Actions (#7, US6, P2)
 
-- [ ] T030 [P] [US6] Write the tests in `backend/tests/policies/test_returns.py`, then implement `eligibility(order, reason, bought_online, today)` in `backend/app/policies/returns.py` (FR-019, data-model Eligibility).
+- [x] T030 [P] [US6] Write the tests in `backend/tests/policies/test_returns.py`, then implement `eligibility(order, reason, bought_online, today)` in `backend/app/policies/returns.py` (FR-019, data-model Eligibility).
   - **Windows**:
     - §4.1 regret: online only, ≤ 7 days from `estimated_delivery`; `bought_online=None` → `reason_code="ask_channel"`;
     - §4.2 defect: ≤ 30 days from `order_date`, otherwise §8.1 90-day legal warranty, otherwise manufacturer warranty with the store's intermediation;
     - §4.3 preference: ≤ 7 days, subject to availability;
     - §4.4 non-eligible: a wind-instrument mouthpiece, a custom setup or "final sale" (read the exact list from the manual chunk).
   - Test each boundary (day 7 vs 8, 30 vs 31, 90 vs 91), plus dataset orders against the real date (US6-5).
-- [ ] T031 [US6] Write the tests in `backend/tests/tools/test_actions.py`, then implement `backend/app/tools/actions.py`:
+- [x] T031 [US6] Write the tests in `backend/tests/tools/test_actions.py`, then implement `backend/app/tools/actions.py`:
   - `check_return_eligibility`: requires the order to be verified in `conversation_state`, otherwise `not_verified`;
   - `request_return`: runs the check again, writes `service_requests` only when eligible, and requires `confirmed_by_customer is True`;
   - `register_complaint`: returns `response_within` "24 horas úteis";
   - `handoff_to_human`: returns `channel` and `hours`.
 
   No row is created when `confirmed_by_customer` is false (US6-8). `reason` is masked with `mask_pii` and truncated to 1000 chars.
-- [ ] T032 [US6] Register the actions in `TOOLS_BY_INTENT["service_request"]` and the general tool set. Add the prompt block: an explicit request is required before any write, and the agent states what was recorded and the next step. Add `backend/evals/scenarios/us6_actions.yaml` (US6-1…8, using `FixedClock`).
-- [ ] T033 [US6] Contract and UI label:
+- [x] T032 [US6] Register the actions in `TOOLS_BY_INTENT["service_request"]` and the general tool set. Add the prompt block: an explicit request is required before any write, and the agent states what was recorded and the next step. Add `backend/evals/scenarios/us6_actions.yaml` (US6-1…8, using `FixedClock`).
+- [x] T033 [US6] Contract and UI label:
   - add `check_return_eligibility` with the label "Verificando se dá para trocar ou devolver…" to `docs/contracts/chat-stream.md`'s tool table, `frontend/src/lib/i18n/pt-BR.ts` and the i18n test's tool list;
   - frontend lint and test green;
   - gate (lint, tests), DL entry, HANDOFF, review, PR 2 with `Closes #7`.

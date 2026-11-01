@@ -77,8 +77,16 @@ INTENT_BLOCKS: dict[str, str] = {
         "horário de um dia específico (sábado, domingo, feriado), consulte também search_policies."
     ),
     "service_request": (
-        "Tarefa: ajudar com troca, devolução, reclamação ou atendimento humano, usando só as "
-        "ferramentas disponíveis."
+        "Tarefa: ajudar com troca, devolução, reclamação ou atendimento humano. Para trocar ou "
+        "devolver, o pedido precisa estar verificado (get_order_status): peça número do pedido e "
+        "e-mail ou telefone, entenda o motivo (arrependimento, defeito ou preferência) e, para "
+        "arrependimento, pergunte se a compra foi online. Decida SEMPRE com "
+        "check_return_eligibility: nunca calcule prazos nem prometa troca ou devolução por "
+        "conta própria. Se não for elegível, explique o motivo e o caminho alternativo "
+        "(garantia). REGRA: só use request_return, register_complaint ou handoff_to_human "
+        "quando o cliente pedir de forma explícita (confirmed_by_customer=true); antes disso, "
+        "ofereça e pergunte. Depois de registrar, diga o que foi registrado e o próximo passo "
+        "(reclamação: resposta em até 24 horas úteis)."
     ),
     "greeting": "Tarefa: cumprimentar com simpatia e perguntar como pode ajudar. Sem ferramentas.",
     "out_of_scope": (
