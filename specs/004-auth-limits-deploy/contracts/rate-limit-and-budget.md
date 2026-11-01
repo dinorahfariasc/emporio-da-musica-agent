@@ -49,3 +49,22 @@ runaway loop" case), then daily budget.
 A request that is only over the per-minute limit (but has daily budget left) gets `rate_limited`;
 a request that is only over budget (but within the per-minute limit) gets `budget_exhausted`; a
 request over both gets `rate_limited` (checked first, cheaper, and the more common failure mode).
+
+## Deliberate choices (QA review #44)
+
+- **An empty-message request (the canned greeting, no model call) still counts against the
+  per-minute rate limit.** The rate-limit check runs before the handler knows whether the message
+  is empty, by design: the limit exists to cap request *volume* against the service (including a
+  scripted/buggy client hammering the endpoint with empty bodies), not only paid model calls — the
+  daily token *budget*, separately, is never touched by an empty-message request since no model
+  runs. A request refused by the rate limit or the budget check itself also consumes no budget
+  (`check_budget` is a pure read; only `record_usage`, reached after a turn actually runs, writes).
+- **The budget is soft under concurrency, by design.** Two requests for the same account arriving
+  at nearly the same instant can both pass `check_budget` (each sees the pre-turn balance) before
+  either calls `record_usage`, so the account can briefly go slightly over 200,000 tokens for that
+  day before the *next* request is refused. Making this strictly atomic would mean reserving an
+  estimated token cost before the model call (an estimate, since the real cost is unknown until the
+  provider responds) and reconciling afterward — real complexity for a one-evaluator-scale
+  deployment where the realistic failure mode is one client sending turns sequentially, not a
+  deliberate concurrent-request attack on the budget specifically (the per-minute rate limit above
+  already bounds how much damage a burst can do either way).

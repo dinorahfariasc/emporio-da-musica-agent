@@ -273,23 +273,35 @@ async def _turn(
         yield p.encode(p.Error(error_text=error_message("internal", lang)))
         yield p.DONE
     finally:
-        # Also runs on client disconnect (CancelledError); logs and records whatever usage the
-        # provider already reports, even for a partial/dropped stream (contracts/rate-limit-and-
-        # budget.md: "After the turn finishes").
+        # Also runs on client disconnect (GeneratorExit from the ASGI server closing the stream);
+        # logs and records whatever usage the provider already reports, even for a partial/dropped
+        # stream (contracts/rate-limit-and-budget.md: "After the turn finishes"). Recording usage
+        # is fired as a detached task (QA review #44): it must not be torn down along with the
+        # response generator it is cleaning up after, and a failure to record it must never mask
+        # whatever the turn itself raised or block the stream from closing.
         log["latency_ms"] = int((time.monotonic() - started) * 1000)
         logger.info(mask_pii(json.dumps(log, ensure_ascii=False)))
         if log["input_tokens"] or log["output_tokens"]:
-            from app.db import get_pool
-
-            pool = await get_pool(settings)
-            async with pool.connection() as conn:
-                await limits.record_usage(
-                    conn,
-                    account.user_id,
-                    log["input_tokens"],
-                    log["output_tokens"],
-                    settings.budget_timezone,
+            asyncio.create_task(
+                _record_usage_safely(
+                    settings, account.user_id, log["input_tokens"], log["output_tokens"]
                 )
+            )
+
+
+async def _record_usage_safely(
+    settings: Settings, user_id: str, input_tokens: int, output_tokens: int
+) -> None:
+    try:
+        from app.db import get_pool
+
+        pool = await get_pool(settings)
+        async with pool.connection() as conn:
+            await limits.record_usage(
+                conn, user_id, input_tokens, output_tokens, settings.budget_timezone
+            )
+    except Exception:  # noqa: BLE001 - never let a usage-recording failure surface anywhere else
+        logger.warning("failed to record usage for a finished turn", exc_info=True)
 
 
 def _observe(line: str, log: dict[str, Any], started: float) -> None:

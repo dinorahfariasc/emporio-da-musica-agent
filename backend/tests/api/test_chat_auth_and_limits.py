@@ -13,6 +13,7 @@ import jwt as pyjwt
 import pytest
 from fastapi.testclient import TestClient
 
+import app.api.chat as chat_module
 from app.agent.fakes import FakeToolModel
 from app.agent.router import FakeRouter, Route
 from app.api.chat import Runtime, get_runtime
@@ -198,3 +199,31 @@ def test_two_accounts_are_independent(client):
         "/api/chat", json=_body(chat_id="b-1"), headers={"Authorization": f"Bearer {token_b}"}
     )
     assert still_ok.status_code == 200
+
+
+async def test_record_usage_safely_writes_then_the_next_request_can_be_refused(database_url):
+    """QA review #44: a real turn's usage write (chat.py's _record_usage_safely, a detached task
+    fired from _turn's finally block) actually lands, and the *next* request sees it — exercised
+    directly since FakeToolModel always reports zero usage (nothing to detach/record otherwise)."""
+    from app.db import connect
+    from app.limits.enforce import check_budget
+
+    user_id = str(uuid.uuid4())
+    settings = Settings(_env_file=None, database_url=database_url, daily_token_budget=100)
+    await chat_module._record_usage_safely(settings, user_id, 60, 50)  # 110 > 100
+
+    async with await connect(database_url) as conn:
+        result = await check_budget(conn, user_id, budget=100, tz_name="America/Campo_Grande")
+    assert not result.allowed
+
+
+async def test_record_usage_safely_never_raises_on_a_db_failure(monkeypatch, database_url):
+    """A failure recording usage must not surface anywhere else (it runs detached, after the
+    response has already been sent) — it only logs."""
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("db hiccup")
+
+    monkeypatch.setattr(chat_module.limits, "record_usage", _boom)
+    settings = Settings(_env_file=None, database_url=database_url)
+    await chat_module._record_usage_safely(settings, str(uuid.uuid4()), 10, 10)  # must not raise

@@ -11,7 +11,7 @@
    `frontend/.env.local`; set `AUTH_SECRET` (Auth.js) in `frontend/.env.local` (any random string
    locally, e.g. `openssl rand -base64 32`).
 4. Create a local test account:
-   `cd frontend && DATABASE_URL_UNPOOLED=$DATABASE_URL pnpm tsx scripts/create-user.ts demo demo-password`
+   `cd frontend && DATABASE_URL_UNPOOLED=$DATABASE_URL CREATE_USER_PASSWORD=a-fine-long-password pnpm tsx scripts/create-user.ts demo`
 5. `cd backend && uv run pytest` — unit tests for JWT verify, rate limit, budget, fail-closed
    startup check should pass with no network access.
 6. `cd frontend && pnpm dev`, open `http://localhost:3000` → redirected to `/login` → sign in with
@@ -28,7 +28,7 @@
    `/api/chat` now fails every request (500, not silently open) and confirm `/api/health` can still
    report what's wrong without leaking the secret's value.
 10. Conversation-scoping check (FR-009a, SC-007): create a second local account
-    (`pnpm tsx scripts/create-user.ts demo2 demo-password-2`), verify an order in a conversation as
+    (`CREATE_USER_PASSWORD=another-long-password pnpm tsx scripts/create-user.ts demo2`), verify an order in a conversation as
     `demo`, then send a message with that same conversation id signed in as `demo2`; confirm `demo2`
     is asked to verify again and never sees `demo`'s verified order.
 11. Lockout check: submit the wrong password for `demo` 6 times within a minute; confirm the 6th
