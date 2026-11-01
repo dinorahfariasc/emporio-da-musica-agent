@@ -417,6 +417,92 @@ Not applied, on purpose:
 
 **Role of AI.** Claude Code wrote the rule function, the tools, the scenarios and the tests; the windows and the write guards follow the spec and the manual.
 
+## DL-DOCS-001 — 004 spec, plan and tasks: auth, limits, deploy (#10, 2026-11-01)
+
+**Context.** Two independent spec drafts existed for #10: one on this branch, one on
+`docs/10-auth-limits-spec`. The two were compared and merged rather than picking one outright.
+
+**Decision.** This branch's spec/plan/tasks are the ones kept. Folded in from the other draft:
+closing the conversation-id residual risk from DL-012 as its own user story (FR-009a: conversation
+state is scoped to `(account, conversation_id)`, not the conversation id alone), a sign-in lockout
+(5 failed attempts / 15 minutes per username), and exact alignment of the 401/429 error bodies with
+the already-shipped `#4` contract (`unauthorized`/`rate_limited`/`budget_exhausted`,
+`retryAfterSeconds`) instead of inventing a new shape.
+
+| Choice | Why |
+|---|---|
+| Auth.js v5, Credentials provider, JWT session strategy | No OAuth/sign-up needed; avoids the full adapter schema a database-session strategy would require for one provider and a handful of accounts. |
+| `users`/`login_attempts` owned by the frontend (Node, plain `pg`), not the backend | Only the frontend ever reads/writes them (login path, create-user CLI); the backend only verifies an opaque, already-issued JWT and never touches a password. |
+| `rate_limit_minute`/`token_usage_daily` owned by the backend, same idempotent `CREATE TABLE IF NOT EXISTS` + advisory-lock pattern as the existing `conversation_state` | Both are read and written only by the backend; matches the project's existing schema convention instead of introducing a numbered-migrations mechanism. |
+| Fixed-window (not sliding-window/token-bucket) rate limiting | A single-digit number of accounts does not need a distributed limiter; the realistic adversary at this scale is a runaway client/bug, not a sophisticated rate-limit evader (documented trade-off, not an oversight). |
+| Service JWT: HS256, 120s lifetime, 30s clock-skew leeway | Short-lived per the backlog decision; the skew leeway avoids false-positive rejections from ordinary VM clock drift at this token lifetime. |
+
+**Role of AI.** Claude Code wrote both the compared drafts' synthesis and the spec/plan/tasks
+themselves; the merge decisions (which story to add, which numbers to keep) were made against the
+existing decision log and contract, not invented.
+
+## DL-BE-002 — Service JWT, conversation scoping, rate limit and budget (#10, 2026-11-01)
+
+**Decision.** `app/auth` (service JWT verify + the `require_service_account` FastAPI dependency)
+and `app/limits` (rate limit + daily budget, Postgres-backed) gate `POST /api/chat`. The dependency
+fails closed: a missing `SERVICE_JWT_SECRET` is a `500`, never treated as "accept any token". A
+startup check (`app/main.py: check_fail_closed_config`) additionally refuses to come up in
+`Environment.PRODUCTION` if `SERVICE_JWT_SECRET`, `DATABASE_URL`, or the configured LLM provider's
+key is missing.
+
+**`conversation_state` is now keyed by `(user_id, conversation_id)`**, not `conversation_id` alone
+— this closes the residual risk DL-012 flagged ("until #10 binds the chat id to a user, anyone who
+knows a chat id sees the orders verified in it"). `ToolContext` carries `user_id`; every call into
+`app.agent.state` (`get`, `reserve_attempt`, `confirm_success`) now requires it. A unit test
+(`tests/agent/test_state.py::test_a_conversation_id_alone_does_not_grant_access_across_accounts`)
+and a full-request test through `POST /api/chat` (`tests/api/test_chat_auth_and_limits.py`) both
+cover it.
+
+**Limits.** 20 requests/minute (fixed window, UTC-minute bucket) and 200,000 input+output
+tokens/day (local day in `America/Campo_Grande`, computed with `zoneinfo`) per account, checked
+before the agent runs (rate first, then budget — cheaper and more common first) and recorded after
+the turn finishes from its actual token counts. A turn already streaming when a limit is reached
+elsewhere is unaffected; only the next request is refused. Both refusals reuse the existing `#4`
+chat-stream error contract exactly (`rate_limited`/`budget_exhausted`, `retryAfterSeconds`,
+`Retry-After` header).
+
+**Found by the new tests, fixed before merge:** the fail-closed startup check had a logic bug that
+flagged the (deliberately keyless) fake LLM provider as a missing-config error in production;
+`tests/test_fail_closed_startup.py` caught it immediately.
+
+**Not done here.** Numbered-migration tooling was deliberately not introduced; new tables use the
+project's existing idempotent-DDL-on-first-use pattern. The Anthropic/OpenRouter workspace spend
+cap is a dashboard setting, documented in `quickstart.md`, not enforced in code (FR-016).
+
+**Role of AI.** Claude Code implemented the dependency, the schema changes, the limiter, the tests,
+and found/fixed the startup-check bug the tests surfaced.
+
+**Integration fix on merge with #43 (MCP, 2026-11-01).** `ToolContext.user_id` is now required by
+every tool, but `app/mcp.py`'s `_tool_context` (added in #43/DL-BE-001 above) only built
+`conversation_id`. Fixed by reusing the same `mcp:{client_id}` value for both fields — MCP clients
+authenticate with `MCP_API_KEY`, not a login, so the client id is the only identity available, and
+`/mcp` stays protected only by that key (never by a user's service JWT; `require_service_account`
+is not on the `/mcp` mount at all).
+
+## DL-FE-001 — Auth.js login and create-user CLI (#10, 2026-11-01)
+
+**Decision.** Auth.js v5 (Credentials provider, JWT sessions, 30-day max age) replaces the
+`/login` placeholder. `src/proxy.ts` (Next.js 16 renamed "middleware" to "proxy"; with a `src/`
+layout the file must live at `src/proxy.ts`, next to `app/`, or it is silently never loaded —
+cost real debugging time) redirects an unauthenticated request to `/login`, accepting `callbackUrl`
+only as a same-site relative path. `scripts/create-user.ts` is the only way an account is created;
+there is no sign-up page or endpoint. A sign-in lockout (5 failures/15 minutes per username) is
+checked before the password comparison. `POST /api/chat`'s route handler requires a session,
+re-checks the account is not disabled at mint time (not only at login), and mints a 120s HS256
+service JWT forwarded to the backend as `Authorization: Bearer`.
+
+**Verified end to end locally** (not just unit tests): an unauthenticated request to `/` redirects
+to `/login`; logging in via the Auth.js credentials callback sets a session cookie; an authenticated
+`POST /api/chat` reaches the backend past `require_service_account` (confirmed via the backend
+log, not just a 200 status).
+
+**Role of AI.** Claude Code implemented the login flow, the CLI, the proxy, and diagnosed the
+Next.js 16 proxy/middleware rename that was silently breaking redirects in manual testing.
 
 ## DL-BE-001 — MCP server for external AI clients (#8, 2026-11-01)
 

@@ -37,7 +37,9 @@ The repo is private now; the user makes it public at delivery.
 **Merged to `main`:** #2 bootstrap · #3 scaffolding + walking skeleton · #4 chat stream contract ·
 embeddings switch to Gemini · #5 store ETL, retrieval (#35) · #36/#38 chat web (US1, mobile) · #39
 agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, stream adapter,
-`POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012).
+`POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012) ·
+**#43 MCP server**: `backend/app/mcp.py` (FastMCP, bearer auth, `/mcp` mount), `vercel.json` `/mcp`
+rewrite, README section (DL-BE-001).
 
 **Merged:** #7 actions (PR 2 of 002) landed on `main` as #42 (return eligibility, action tools,
 US6 scenarios, DL-013).
@@ -152,8 +154,8 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - **Done (cont.):** track status: #44 (spec 004 + code) open; track D (EDA, DL-DATA-001), E (router benchmark + judge, DL-BE) and F (README draft, delivery checklist) done locally, not pushed; #13 i18n implemented but uncommitted in its worktree. UI work moves to a separate agent (section 3b). `MCP_API_KEY` is set in Vercel; redeploy pending.
 - **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #16, #17, #19, then P2 (#22, #23, #21).
 ### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
-- **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean.
-- **Next:** user reviews and says go for opening the PR (`Closes #8`); then #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).
+- **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean. Merged to `main` as #43.
+- **Next:** #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).
 
 ### 2026-11-01 — #40 merged; #7 re-opened against main
 - **Done:** #40 merged. #41 had been merged into the stale `feat/6-agent-core` branch, so the actions commit was cherry-picked onto `main` as `feat/7-actions-main` and re-opened; HANDOFF status refreshed.

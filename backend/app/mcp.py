@@ -45,10 +45,15 @@ async def _tool_context(settings: Settings, ctx: Context) -> ToolContext:
     from app.db import get_pool
     from app.embeddings import get_embedder
 
+    # MCP clients authenticate with MCP_API_KEY, not a user login (specs/004-auth-limits-deploy
+    # does not apply here): the client id is the only identity available, so it is reused as both
+    # the conversation id and the account id scoping conversation_state (data-model.md).
+    client_id = f"mcp:{ctx.client_id or 'unknown'}"
     return ToolContext(
         pool=await get_pool(settings),
         embedder=get_embedder(settings, purpose="query"),
-        conversation_id=f"mcp:{ctx.client_id or 'unknown'}",
+        conversation_id=client_id,
+        user_id=client_id,
     )
 
 

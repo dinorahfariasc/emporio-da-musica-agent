@@ -67,8 +67,13 @@ export const ptBR = {
   login: {
     title: "Entrar",
     sessionExpired: "Sua sessão expirou. Entre novamente para continuar.",
-    placeholder: "O login estará disponível em breve.",
     backToChat: "Voltar para o chat",
+    username: "Usuário",
+    password: "Senha",
+    submit: "Entrar",
+    submitting: "Entrando…",
+    invalidCredentials: "Usuário ou senha incorretos.",
+    signOut: "Sair",
   },
   markdown: {
     close: "Fechar",

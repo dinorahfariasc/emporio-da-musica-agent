@@ -56,6 +56,8 @@ class ToolContext:
     pool: AsyncConnectionPool
     embedder: Embedder
     conversation_id: str
+    # specs/004-auth-limits-deploy: scopes conversation_state to the signed-in account (DL-012).
+    user_id: str
     clock: Clock = field(default_factory=SystemClock)
     # The agent sets this to LangGraph's stream writer; MCP keeps the no-op.
     emit: Callable[[dict], None] = _no_emit

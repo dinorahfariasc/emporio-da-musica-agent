@@ -89,14 +89,14 @@ async def get_order_status(
     this order was already verified in this conversation."""
     today = ctx.clock.now().date()
     async with ctx.pool.connection() as conn:
-        current = await state.get(conn, ctx.conversation_id)
+        current = await state.get(conn, ctx.user_id, ctx.conversation_id)
         if order_id in current.verified_order_ids:
             return await _view(conn, order_id, today)
         if not (contact or "").strip():
             raise ToolError("not_verified")
 
         # Count the attempt before comparing, so concurrent guesses cannot all get through.
-        reservation = await state.reserve_attempt(conn, ctx.conversation_id, order_id)
+        reservation = await state.reserve_attempt(conn, ctx.user_id, ctx.conversation_id, order_id)
         if not reservation.allowed:
             raise ToolError("locked")
         cur = await conn.execute(
@@ -107,5 +107,5 @@ async def get_order_status(
         row = await cur.fetchone()
         if row is None or not _same_contact(contact or "", *row):
             raise ToolError("verification_failed")
-        await state.confirm_success(conn, ctx.conversation_id, order_id)
+        await state.confirm_success(conn, ctx.user_id, ctx.conversation_id, order_id)
         return await _view(conn, order_id, today)
