@@ -22,6 +22,8 @@ from pydantic import ValidationError
 from app.agent.logging import mask_pii
 from app.agent.prompts import error_message
 from app.agent.state import CONVERSATION_ID
+from app.auth.dependency import require_service_account
+from app.auth.service_jwt import AccountClaims
 from app.chat import protocol as p
 from app.config import Settings, get_settings
 
@@ -42,10 +44,12 @@ class Runtime:
     primary: Any
     fallback: Any
     model_factory: Callable[[str], Any] | None
-    make_ctx: Callable[[Settings, str, Callable[[dict], None]], Any]
+    make_ctx: Callable[[Settings, str, str, Callable[[dict], None]], Any]
 
 
-async def _default_ctx(settings: Settings, conversation_id: str, emit: Callable[[dict], None]):
+async def _default_ctx(
+    settings: Settings, user_id: str, conversation_id: str, emit: Callable[[dict], None]
+):
     from app.db import get_pool
     from app.embeddings import get_embedder
     from app.tools.context import ToolContext
@@ -54,6 +58,7 @@ async def _default_ctx(settings: Settings, conversation_id: str, emit: Callable[
         pool=await get_pool(settings),
         embedder=get_embedder(settings, purpose="query"),
         conversation_id=conversation_id,
+        user_id=user_id,
         emit=emit,
     )
 
@@ -132,6 +137,7 @@ async def chat(
     payload: dict,
     settings: Annotated[Settings, Depends(get_settings)],
     runtime: Annotated[Runtime, Depends(get_runtime)],
+    account: Annotated[AccountClaims, Depends(require_service_account)],
 ):
     try:
         request = p.ChatRequest.model_validate(payload)
@@ -146,14 +152,19 @@ async def chat(
             _canned(EMPTY_REPLY[lang]), media_type="text/event-stream", headers=p.STREAM_HEADERS
         )
     return StreamingResponse(
-        _turn(request, text, lang, settings, runtime),
+        _turn(request, text, lang, settings, runtime, account),
         media_type="text/event-stream",
         headers=p.STREAM_HEADERS,
     )
 
 
 async def _turn(
-    request: p.ChatRequest, text: str, lang: str, settings: Settings, runtime: Runtime
+    request: p.ChatRequest,
+    text: str,
+    lang: str,
+    settings: Settings,
+    runtime: Runtime,
+    account: AccountClaims,
 ) -> AsyncIterator[str]:
     from app.agent.agent import build_agent
     from app.agent.router import route as classify
@@ -181,7 +192,7 @@ async def _turn(
 
                 get_stream_writer()(event)
 
-            ctx = await runtime.make_ctx(settings, request.id, emit)
+            ctx = await runtime.make_ctx(settings, account.user_id, request.id, emit)
             agent, routed = build_agent(settings, ctx, routed, model_factory=runtime.model_factory)
             log.update(
                 intent=routed.intent,

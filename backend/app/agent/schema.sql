@@ -1,12 +1,17 @@
 -- Agent state (specs/002-agent-core/data-model.md). Created idempotently on first use and at the
 -- end of the seed; no foreign keys to store tables, so a store reseed never touches these rows.
 
+-- Keyed by (user_id, conversation_id) since specs/004-auth-limits-deploy/data-model.md: a
+-- conversation id alone must never grant access to another account's verified order data
+-- (closes the residual risk in docs/decision-log.md DL-012).
 CREATE TABLE IF NOT EXISTS conversation_state (
-    conversation_id    text PRIMARY KEY,
+    user_id            uuid NOT NULL,
+    conversation_id    text NOT NULL,
     verified_order_ids int[] NOT NULL DEFAULT '{}',
     failed_attempts    int NOT NULL DEFAULT 0,
     locked             boolean NOT NULL DEFAULT false,
-    updated_at         timestamptz NOT NULL DEFAULT now()
+    updated_at         timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, conversation_id)
 );
 
 -- Failures per order across conversations, so a new chat id does not reset the lockout.

@@ -16,11 +16,13 @@ async def test_ensure_agent_tables_is_idempotent(seeded_db):
 
 
 async def test_reseed_keeps_agent_rows(seeded_db, tmp_path):
+    user_id = "00000000-0000-0000-0000-000000000001"
     async with await connect(seeded_db) as conn:
         await ensure_agent_tables(conn)
         await conn.execute(
-            "INSERT INTO conversation_state (conversation_id) VALUES ('keep-me') "
-            "ON CONFLICT DO NOTHING"
+            "INSERT INTO conversation_state (user_id, conversation_id) VALUES (%s, 'keep-me') "
+            "ON CONFLICT DO NOTHING",
+            (user_id,),
         )
         await conn.commit()
 

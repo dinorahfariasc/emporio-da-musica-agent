@@ -18,19 +18,27 @@ def _cid() -> str:
     return f"t-{uuid.uuid4().hex[:12]}"
 
 
-async def _reserve(url: str, cid: str, order_id: int) -> bool:
+def _uid() -> str:
+    return str(uuid.uuid4())
+
+
+USER_A = _uid()
+USER_B = _uid()
+
+
+async def _reserve(url: str, user_id: str, cid: str, order_id: int) -> bool:
     async with await connect(url) as conn:
-        return (await state.reserve_attempt(conn, cid, order_id)).allowed
+        return (await state.reserve_attempt(conn, user_id, cid, order_id)).allowed
 
 
 async def test_default_state_when_no_row(ready):
     async with await connect(ready) as conn:
-        assert await state.get(conn, _cid()) == state.ConversationState()
+        assert await state.get(conn, USER_A, _cid()) == state.ConversationState()
 
 
 async def test_ten_concurrent_attempts_allow_at_most_three(ready):
     cid = _cid()
-    results = await asyncio.gather(*(_reserve(ready, cid, 910) for _ in range(10)))
+    results = await asyncio.gather(*(_reserve(ready, USER_A, cid, 910) for _ in range(10)))
     assert sum(results) <= 3
     await _clear_order(ready, 910)
 
@@ -46,20 +54,20 @@ async def _clear_order(url: str, order_id: int) -> None:
 async def test_a_new_conversation_cannot_bypass_an_order_lock(ready):
     order_id = 911
     for _ in range(state.ORDER_LOCK_AT):
-        assert await _reserve(ready, _cid(), order_id)  # fresh chat id each time
+        assert await _reserve(ready, USER_A, _cid(), order_id)  # fresh chat id each time
 
-    assert not await _reserve(ready, _cid(), order_id)
+    assert not await _reserve(ready, USER_A, _cid(), order_id)
     await _clear_order(ready, order_id)
 
 
 async def test_success_gives_the_attempt_back_and_records_the_order(ready):
     cid = _cid()
     async with await connect(ready) as conn:
-        assert (await state.reserve_attempt(conn, cid, 912)).allowed
-        await state.confirm_success(conn, cid, 912)
-        await state.confirm_success(conn, cid, 912)  # no duplicates
+        assert (await state.reserve_attempt(conn, USER_A, cid, 912)).allowed
+        await state.confirm_success(conn, USER_A, cid, 912)
+        await state.confirm_success(conn, USER_A, cid, 912)  # no duplicates
 
-        current = await state.get(conn, cid)
+        current = await state.get(conn, USER_A, cid)
     assert current.failed_attempts == 0
     assert current.verified_order_ids == {912}
     await _clear_order(ready, 912)
@@ -69,16 +77,29 @@ async def test_conversation_locks_after_three_failures(ready):
     cid = _cid()
     async with await connect(ready) as conn:
         for _ in range(3):
-            assert (await state.reserve_attempt(conn, cid, 913)).allowed
-        assert not (await state.reserve_attempt(conn, cid, 913)).allowed
-        assert (await state.get(conn, cid)).locked
+            assert (await state.reserve_attempt(conn, USER_A, cid, 913)).allowed
+        assert not (await state.reserve_attempt(conn, USER_A, cid, 913)).allowed
+        assert (await state.get(conn, USER_A, cid)).locked
     await _clear_order(ready, 913)
+
+
+async def test_a_conversation_id_alone_does_not_grant_access_across_accounts(ready):
+    """specs/004-auth-limits-deploy FR-009a/SC-007: closes DL-012."""
+    cid = _cid()
+    async with await connect(ready) as conn:
+        assert (await state.reserve_attempt(conn, USER_A, cid, 914)).allowed
+        await state.confirm_success(conn, USER_A, cid, 914)
+
+        assert (await state.get(conn, USER_A, cid)).verified_order_ids == {914}
+        # Same conversation id, different account: must not see A's verified order.
+        assert await state.get(conn, USER_B, cid) == state.ConversationState()
+    await _clear_order(ready, 914)
 
 
 @pytest.mark.parametrize("bad", ["", "a b", "x" * 129, "../etc", "é"])
 async def test_invalid_conversation_ids_are_rejected(ready, bad):
     async with await connect(ready) as conn:
         with pytest.raises(state.InvalidConversationId):
-            await state.get(conn, bad)
+            await state.get(conn, USER_A, bad)
         with pytest.raises(state.InvalidConversationId):
-            await state.reserve_attempt(conn, bad, 1)
+            await state.reserve_attempt(conn, USER_A, bad, 1)

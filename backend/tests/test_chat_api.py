@@ -6,12 +6,16 @@ import pytest
 from app.agent.fakes import FakeToolModel
 from app.agent.router import FakeRouter, Route
 from app.api.chat import Runtime, get_runtime
+from app.auth.dependency import require_service_account
+from app.auth.service_jwt import AccountClaims
 from app.chat import protocol as p
 from app.config import Settings, get_settings
 from app.main import app
 
+FAKE_ACCOUNT = AccountClaims(user_id="00000000-0000-0000-0000-000000000001", username="tester")
 
-async def _no_ctx(settings, cid, emit):
+
+async def _no_ctx(settings, user_id, cid, emit):
     return None
 
 
@@ -27,6 +31,7 @@ def _client(client_factory, script, *, route=None, settings=None, **overrides):
     client = client_factory(**overrides)
     app.dependency_overrides[get_runtime] = lambda: runtime
     app.dependency_overrides[get_settings] = lambda: settings
+    app.dependency_overrides[require_service_account] = lambda: FAKE_ACCOUNT
     return client, model
 
 

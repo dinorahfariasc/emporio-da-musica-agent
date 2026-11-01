@@ -17,10 +17,14 @@ from langchain_core.messages import AIMessage, ToolMessage
 from app.agent.fakes import FakeToolModel
 from app.agent.router import FakeRouter, Route
 from app.api.chat import Runtime, _default_ctx, get_runtime
+from app.auth.dependency import require_service_account
+from app.auth.service_jwt import AccountClaims
 from app.chat import protocol as p
 from app.config import Settings, get_settings
 from app.main import app
 from app.tools.context import FixedClock
+
+EVAL_ACCOUNT = AccountClaims(user_id="00000000-0000-0000-0000-0000000000e0", username="eval")
 
 SCENARIO_DIR = Path(__file__).parent / "scenarios"
 
@@ -133,8 +137,8 @@ def _ctx_at(now: str | None):
     if not now:
         return _default_ctx
 
-    async def make(settings: Settings, conversation_id: str, emit):
-        ctx = await _default_ctx(settings, conversation_id, emit)
+    async def make(settings: Settings, user_id: str, conversation_id: str, emit):
+        ctx = await _default_ctx(settings, user_id, conversation_id, emit)
         return replace(ctx, clock=FixedClock(datetime.fromisoformat(now)))
 
     return make
@@ -149,6 +153,7 @@ def run_scenario(scenario: dict, settings: Settings, *, live: bool = False) -> l
     failures: list[str] = []
     client = _live_client() if live else TestClient(app)
     app.dependency_overrides[get_settings] = lambda: settings
+    app.dependency_overrides[require_service_account] = lambda: EVAL_ACCOUNT
     try:
         for index, turn in enumerate(scenario["turns"]):
             if not live:
