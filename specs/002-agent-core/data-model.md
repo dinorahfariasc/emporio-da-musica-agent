@@ -3,7 +3,12 @@
 Store data (`products`, `promotions`, `customers`, `orders`, `order_items`, `policy_chunks`) is
 owned by 001 and read-only here. This feature adds the tables and in-memory types below.
 
-## New tables (`backend/app/agent/schema.sql`, applied by the seed and tests)
+## New tables (`backend/app/agent/schema.sql`)
+
+Both tables use `CREATE TABLE IF NOT EXISTS`, so they persist across reseeds. They are applied by
+`python -m etl` after the reload, and by the test fixtures. They have **no foreign keys to store
+tables**: the 001 seed drops those tables, and fails by design if another table references them
+(`etl/load.py`). Referential checks happen in the tools instead.
 
 ### `conversation_state`
 
@@ -35,7 +40,7 @@ Records created only after an explicit customer request (FR-020).
 | `request_id` | bigint identity PK | |
 | `conversation_id` | text NOT NULL | |
 | `type` | text | `return` \| `exchange_defect` \| `exchange_preference` \| `complaint` \| `handoff` |
-| `order_id` | int NULL REFERENCES orders | required for return/exchange; the order must be verified in this conversation |
+| `order_id` | int NULL (no FK, see above) | required for return/exchange; the order must be verified in this conversation |
 | `reason` | text NOT NULL | the customer's words, truncated to 1000 chars; personal data masked |
 | `eligibility` | jsonb NULL | the decision record for return/exchange (rule, window, dates) |
 | `status` | text NOT NULL DEFAULT 'open' | |
