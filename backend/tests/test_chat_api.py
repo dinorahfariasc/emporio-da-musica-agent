@@ -155,3 +155,36 @@ def test_turn_log_masks_emails(make_client, caplog):
     logged = " ".join(r.getMessage() for r in caplog.records if r.name == "app.turn")
     assert "ana@jmail.com" not in logged and "chat-1" not in logged
     assert '"intent"' in logged
+
+
+def test_conversation_id_with_odd_characters_is_a_400(make_client):
+    client, _ = _client(make_client, [])
+    body = _body()
+    body["id"] = "a b!"
+    assert client.post("/api/chat", json=body).status_code == 400
+
+
+def _turns(roles_and_texts):
+    return [
+        {"id": f"m{i}", "role": role, "parts": [{"type": "text", "text": text}]}
+        for i, (role, text) in enumerate(roles_and_texts)
+    ]
+
+
+def test_history_window_never_starts_with_the_assistant_and_merges_runs():
+    from app.api.chat import prepare_history
+
+    settings = Settings(_env_file=None, history_max_messages=3, input_max_chars=5)
+    request = p.ChatRequest.model_validate(
+        {
+            "id": "c",
+            "trigger": "submit-message",
+            "messages": _turns(
+                [("user", "u0"), ("assistant", "a0"), ("user", "u1"), ("user", "u2-long-text")]
+            ),
+        }
+    )
+    pairs = prepare_history(request, settings)
+    assert pairs[0][0] == "human"
+    assert [r for r, _ in pairs] == ["human"]  # [a0, u1, u2] -> leading ai dropped, runs merged
+    assert all(len(t) <= 5 for _, t in pairs)

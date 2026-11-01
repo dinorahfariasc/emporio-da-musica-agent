@@ -387,3 +387,17 @@ Decision: `perplexity/pplx-decider-v1.2` as the router. Its confidence is the on
 **Not verified.** Gemini embeddings (cross-language), the direct TypeSafe endpoint, and behaviour under the free tier's rate limits.
 
 **Role of AI.** Claude Code implemented the provider, ran the spike and the live scenarios, and diagnosed the failures. The model choices were the user's.
+
+**Review of PR 1 (QA + senior, 2026-11-01).** No blockers. Applied:
+- Router: the primary gets half the budget when a fallback exists (a hung primary used to leave the fallback no time, FR-004).
+- `POST /api/chat` rejects chat ids outside `^[A-Za-z0-9_-]{1,128}$` with 400 (they used to fail every order lookup inside the tool).
+- History: the window never starts with the assistant, same-role runs are merged, every message (not only the last) is truncated.
+- Streams are closed with `aclosing` on disconnect or timeout; the agent schema DDL takes an advisory lock; the pool waits at most 5 s; `order_id` is bounded to int32.
+- The system prompt carries the store date and time (FR-018); `mask_pii` also masks a phone without an area code.
+- Stricter live assertions: Spanish reply for US5-8, verification request for US3-9, prompt-leak phrases, invented-discount prices.
+
+Not applied, on purpose:
+- The per-order failure rows are kept for nonexistent orders too: skipping them would make a lock reveal that an order exists (FR-014). The conversation-id reset and the per-order denial of service stay the documented residual risk of DL-011 until #10.
+- Open nits: close text and step parts on a mid-stream error, a request body size cap, and treating `cancellation_reason` as untrusted text. Tracked for #10.
+- QA gaps still without a scenario: Saturday 13:01 closing, the shared e-mail between customers 11 and 43 (US3-6), per-order lock (US3-4) and the two-WhatsApp trap through the policy path.
+

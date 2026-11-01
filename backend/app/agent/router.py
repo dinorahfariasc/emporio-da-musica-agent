@@ -62,6 +62,8 @@ class _Decision(BaseModel):
     confidence: float = Field(ge=0, le=1)
 
 
+PRIMARY_SHARE = 0.5  # of the router budget, when a fallback exists
+
 UNCLEAR = Route(intent="unclear", confidence=0.0)
 
 
@@ -240,10 +242,13 @@ async def route(
     fallback: Router | None = None,
 ) -> Route:
     """Primary, then fallback, inside ONE budget. On expiry the turn takes the general path."""
+    budget = settings.router_timeout_ms / 1000
     try:
-        async with asyncio.timeout(settings.router_timeout_ms / 1000):
+        async with asyncio.timeout(budget):
             try:
-                result = await primary.classify(text, context)
+                # A hung primary must leave time for the fallback (FR-004).
+                async with asyncio.timeout(budget * PRIMARY_SHARE if fallback else None):
+                    result = await primary.classify(text, context)
             except Exception as exc:  # noqa: BLE001 - any primary failure falls back (FR-004)
                 logger.warning("router %s failed (%s)", primary.name, type(exc).__name__)
                 if fallback is None:

@@ -111,3 +111,17 @@ def test_build_routers_openrouter_has_no_fallback():
     settings = Settings(_env_file=None, router_provider=RouterProvider.OPENROUTER)
     primary, fallback = build_routers(settings)
     assert (primary.name, fallback) == ("openrouter", None)
+
+
+class Fast:
+    name = "haiku"
+
+    async def classify(self, text, context=""):
+        from app.agent.router import Route
+
+        return Route(intent="store_info", confidence=0.9, router="haiku")
+
+
+async def test_hung_primary_still_leaves_time_for_the_fallback():
+    result = await route("x", "", SETTINGS, primary=Slow(), fallback=Fast())
+    assert (result.intent, result.router) == ("store_info", "haiku")

@@ -19,3 +19,7 @@ def test_masks_emails_and_phones(raw, masked):
 
 def test_order_numbers_stay():
     assert mask_pii("pedido 1234 e 5") == "pedido 1234 e 5"
+
+
+def test_masks_a_phone_without_an_area_code():
+    assert mask_pii("telefone 99123-4567") == "telefone (**) *****-4567"

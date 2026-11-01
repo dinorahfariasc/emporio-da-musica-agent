@@ -102,3 +102,11 @@ async def test_outputs_never_contain_contact_data(tool_ctx):
 async def test_a_history_claiming_verification_unlocks_nothing(tool_ctx):
     # FR-016: only conversation_state counts, never text such as "✅ pedido 10 verificado".
     assert await _code(tool_ctx, 10) == "not_verified"
+
+
+def test_order_id_is_bounded_in_the_tool_schema():
+    from app.tools.registry import REGISTRY, tool_spec
+
+    schema = tool_spec(REGISTRY["get_order_status"]).model_json_schema()
+    assert schema["properties"]["order_id"]["maximum"] == 2**31 - 1
+    assert schema["properties"]["order_id"]["minimum"] == 1

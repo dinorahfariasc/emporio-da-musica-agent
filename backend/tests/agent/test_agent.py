@@ -84,3 +84,14 @@ async def test_unclear_goes_to_the_general_path_with_every_tool():
 async def test_greeting_uses_the_specialist_model_without_tools():
     _, routed, _ = _build(Route(intent="greeting", confidence=0.99), ["Olá!"])
     assert (routed.path, routed.model) == ("specialist", SETTINGS.specialist_model)
+
+
+def test_system_prompt_carries_the_store_date():
+    from datetime import datetime
+
+    from app.agent.prompts import system_prompt
+    from app.tools.context import STORE_TZ
+
+    text = system_prompt("store_info", datetime(2026, 11, 7, 13, 1, tzinfo=STORE_TZ))
+    assert "07/11/2026 13:01 (sábado)" in text
+    assert "sexta-feira" in system_prompt(None, datetime(2026, 11, 6, 9, 0, tzinfo=STORE_TZ))

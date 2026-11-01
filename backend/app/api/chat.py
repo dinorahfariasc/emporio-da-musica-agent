@@ -11,6 +11,7 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
+from contextlib import aclosing
 from dataclasses import dataclass
 from typing import Annotated, Any
 
@@ -20,6 +21,7 @@ from pydantic import ValidationError
 
 from app.agent.logging import mask_pii
 from app.agent.prompts import error_message
+from app.agent.state import CONVERSATION_ID
 from app.chat import protocol as p
 from app.config import Settings, get_settings
 
@@ -83,9 +85,13 @@ def prepare_history(request: p.ChatRequest, settings: Settings) -> list[tuple[st
         for m in messages
         if m.role in ("user", "assistant") and _text(m).strip()
     ][-settings.history_max_messages :]
-    if pairs and pairs[-1][0] == "human":
-        pairs[-1] = ("human", pairs[-1][1][: settings.input_max_chars])
-    return pairs
+    merged: list[tuple[str, str]] = []
+    for role, text in ((r, t[: settings.input_max_chars]) for r, t in pairs):
+        if merged and merged[-1][0] == role:
+            merged[-1] = (role, f"{merged[-1][1]}\n{text}")
+        elif merged or role == "human":  # a window never starts with the assistant
+            merged.append((role, text))
+    return [(role, text[: settings.input_max_chars]) for role, text in merged]
 
 
 def _latest_user_text(request: p.ChatRequest, settings: Settings) -> str:
@@ -130,6 +136,8 @@ async def chat(
     try:
         request = p.ChatRequest.model_validate(payload)
     except ValidationError:
+        return _invalid("Invalid chat request.")
+    if not CONVERSATION_ID.fullmatch(request.id):
         return _invalid("Invalid chat request.")
     text = _latest_user_text(request, settings)
     lang = _language(text)
@@ -187,16 +195,24 @@ async def _turn(
                 stream_mode=["messages", "updates", "custom"],
                 config={"recursion_limit": 2 * settings.agent_max_steps + 2},
             )
-            async for line in to_ui_stream(
-                events,
-                route=p.Route(
-                    intent=routed.intent, confidence=routed.confidence, router=routed.router
-                ),
-                model_name=routed.model,
-                lang=lang,
+            async with (
+                aclosing(events) as events_,
+                aclosing(
+                    to_ui_stream(
+                        events_,
+                        route=p.Route(
+                            intent=routed.intent,
+                            confidence=routed.confidence,
+                            router=routed.router,
+                        ),
+                        model_name=routed.model,
+                        lang=lang,
+                    )
+                ) as lines,
             ):
-                _observe(line, log, started)
-                yield line
+                async for line in lines:
+                    _observe(line, log, started)
+                    yield line
     except TimeoutError:
         log["error_code"] = "timeout"
         yield p.encode(p.Error(error_text=error_message("timeout", lang)))

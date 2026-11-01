@@ -1,5 +1,7 @@
 """Melody's system prompt (pt-BR source) and the error-message catalog."""
 
+from datetime import datetime
+
 BASE_PROMPT = """\
 Você é a Melody, a atendente virtual da Empório da Música, uma loja de instrumentos musicais de \
 Campo Grande - MS. Responda sempre no idioma da ÚLTIMA mensagem do cliente (português, inglês \
@@ -86,9 +88,22 @@ INTENT_BLOCKS: dict[str, str] = {
 }
 
 
-def system_prompt(intent: str | None = None) -> str:
+_WEEKDAYS = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
+
+
+def system_prompt(intent: str | None = None, now: datetime | None = None) -> str:
+    """`now` (store time, FR-018) is appended so the model knows today's date without a tool."""
     block = INTENT_BLOCKS.get(intent or "")
-    return f"{BASE_PROMPT}\n{block}" if block else BASE_PROMPT
+    prompt = f"{BASE_PROMPT}\n{block}" if block else BASE_PROMPT
+    if now is not None:
+        prompt += (
+            f"\nData e hora atuais em Campo Grande: {now:%d/%m/%Y %H:%M} "
+            f"({_WEEKDAYS[now.weekday()]}-feira)."
+            if now.weekday() < 5
+            else f"\nData e hora atuais em Campo Grande: {now:%d/%m/%Y %H:%M} "
+            f"({_WEEKDAYS[now.weekday()]})."
+        )
+    return prompt
 
 
 ERROR_MESSAGES: dict[str, dict[str, str]] = {

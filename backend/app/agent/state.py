@@ -10,11 +10,14 @@ import psycopg
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 _ensured = False
+_DDL_LOCK = 0x656D706F  # arbitrary app-wide key for the schema advisory lock
 
 
 async def ensure_agent_tables(conn: psycopg.AsyncConnection) -> None:
     """Idempotent DDL; runs at the end of the seed and once per process on first use."""
     global _ensured
+    # Concurrent first requests would otherwise collide on the catalog.
+    await conn.execute("SELECT pg_advisory_xact_lock(%s)", (_DDL_LOCK,))
     await conn.execute(SCHEMA.read_text())
     await conn.commit()
     _ensured = True

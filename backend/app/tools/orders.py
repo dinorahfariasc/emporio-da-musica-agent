@@ -7,10 +7,11 @@ counts. A wrong contact and an unknown order are indistinguishable from the outs
 import re
 from datetime import date
 from decimal import Decimal
+from typing import Annotated
 
 import psycopg
 from psycopg.rows import dict_row
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.agent import state
 from app.tools.context import ToolContext, ToolError
@@ -80,7 +81,9 @@ async def _view(conn: psycopg.AsyncConnection, order_id: int, today: date) -> Or
 
 @tool
 async def get_order_status(
-    ctx: ToolContext, order_id: int, contact: str | None = None
+    ctx: ToolContext,
+    order_id: Annotated[int, Field(ge=1, le=2**31 - 1)],
+    contact: str | None = None,
 ) -> OrderStatusView:
     """Order status, tracking and delivery date. Needs the e-mail or phone on the order, unless
     this order was already verified in this conversation."""

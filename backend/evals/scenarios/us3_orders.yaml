@@ -87,3 +87,4 @@
         forbidden_facts: ['"status":"confirmed"']
       live_expect:
         errors: []
+        answer_contains: ["mail"]

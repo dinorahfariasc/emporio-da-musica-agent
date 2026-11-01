@@ -26,17 +26,19 @@ def build_agent(
     from langchain.agents import create_agent
 
     registry = REGISTRY if registry is None else registry
+    clock = getattr(ctx, "clock", None)  # test doubles may not carry one
+    now = clock.now() if clock else None
     path = choose_path(route, settings)
     role: Literal["specialist", "general"] = path
     if path == "specialist":
         # Filtered by the registry so tests can use a small one; a gate test (T029) checks that
         # every contract tool is registered in the real one.
         names = tuple(n for n in TOOLS_BY_INTENT[route.intent] if n in registry)
-        prompt = system_prompt(route.intent)
+        prompt = system_prompt(route.intent, now)
         model_name = settings.specialist_model
     else:
         names = tuple(registry)
-        prompt = system_prompt()
+        prompt = system_prompt(now=now)
         model_name = settings.general_model
     factory = model_factory or (lambda r: chat_model(settings, r))
     agent = create_agent(
