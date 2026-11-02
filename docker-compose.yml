@@ -20,18 +20,16 @@ services:
       context: ./backend
     ports:
       - "8000:8000"
+    env_file:
+      - path: ./backend/.env
+        required: false
     environment:
       ENVIRONMENT: local
       DATABASE_URL: postgresql://emporio:emporio@db:5432/emporio
       SERVICE_JWT_SECRET: ${SERVICE_JWT_SECRET:-dev-secret-at-least-32-bytes-long-ok}
-      LLM_PROVIDER: fake
-      ROUTER_PROVIDER: fake
-      EMBEDDINGS_PROVIDER: fake
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
 
   frontend:
     build:
@@ -51,10 +49,6 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
 
 volumes:
   pgdata:

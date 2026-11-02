@@ -33,9 +33,10 @@ docker-compose up
    - Username: `adm`
    - Password: aquela que você configurou
 
-3. **Chat funciona**
-   - Backend fake (sem custo de API real) por padrão
-   - Rota do backend: `/api/chat`
+3. **Chat precisa de um LLM real**
+   - Copie `backend/.env.example` para `backend/.env` e preencha `LLM_PROVIDER`/`ROUTER_PROVIDER`
+     (`openrouter` ou `anthropic`) e a chave correspondente. O compose carrega esse arquivo.
+   - `LLM_PROVIDER=fake` serve só para testes automatizados: no chat, toda mensagem falha.
 
 ## Variáveis de ambiente
 
