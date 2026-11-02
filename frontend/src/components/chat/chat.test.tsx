@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Chat } from "@/components/chat/chat";
+import { loadHistory, saveHistory } from "@/lib/chat/history";
+import type { ChatMessage } from "@/lib/chat/types";
 import { getMessages } from "@/lib/i18n";
 import { fixtureFetch, readHttpFixture } from "@/test/fixtures";
 
@@ -277,5 +279,54 @@ describe("Chat errors and limits", () => {
     expect(screen.getByRole("log")).not.toHaveTextContent("Deixa eu verificar isso pra você");
     expect(userBubbles()).toHaveLength(1);
     expect(screen.getAllByTestId("message-assistant")).toHaveLength(1);
+  });
+});
+
+describe("Chat history", () => {
+  afterEach(() => localStorage.clear());
+
+  const saved = [
+    { id: "u1", role: "user", parts: [{ type: "text", text: "Quanto custa o C40?" }] },
+    { id: "a1", role: "assistant", parts: [{ type: "text", text: "Custa R$ 599,90." }] },
+  ] as ChatMessage[];
+
+  it("restores the saved conversation and keeps its id after a reload", async () => {
+    saveHistory("chat-saved", saved);
+    const fetch = fixtureFetch("plain-text");
+    const user = userEvent.setup();
+    render(<Chat fetch={fetch} />);
+
+    expect((await screen.findAllByTestId("message-assistant"))[0]).toHaveTextContent("Custa R$ 599,90.");
+    await user.type(screen.getByRole("textbox"), "E em promoção?{Enter}");
+
+    await waitFor(() => expect(fetch.requests).toHaveLength(1));
+    expect(fetch.requests[0].id).toBe("chat-saved");
+    expect(fetch.requests[0].messages).toHaveLength(3);
+  });
+
+  it("saves the conversation once an answer finishes", async () => {
+    const user = userEvent.setup();
+    render(<Chat fetch={fixtureFetch("plain-text")} />);
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+
+    await waitFor(() => expect(loadHistory()?.messages).toHaveLength(2));
+    expect(loadHistory()?.messages[1].role).toBe("assistant");
+  });
+
+  it("starts a new conversation with a fresh id and an empty history", async () => {
+    saveHistory("chat-saved", saved);
+    const fetch = fixtureFetch("plain-text");
+    const user = userEvent.setup();
+    render(<Chat fetch={fetch} />);
+    await screen.findAllByTestId("message-assistant");
+
+    await user.click(screen.getByRole("button", { name: messages.app.newChat }));
+
+    expect(screen.queryByRole("log")).toBeNull();
+    expect(screen.getByText(messages.emptyState.greeting)).toBeInTheDocument();
+    expect(loadHistory()).toBeNull();
+    await user.type(screen.getByRole("textbox"), "Oi{Enter}");
+    await waitFor(() => expect(fetch.requests).toHaveLength(1));
+    expect(fetch.requests[0].id).not.toBe("chat-saved");
   });
 });

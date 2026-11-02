@@ -96,6 +96,33 @@ describe("MessageView", () => {
     expect(screen.getByText(/Não consegui confirmar os dados/)).toBeInTheDocument();
   });
 
+  it("shows each product card once per answer, even when two tools emit it", () => {
+    const card = (id: number, name: string) => ({
+      id,
+      name,
+      categoryId: 1,
+      priceBrl: 599.9,
+      promoPriceBrl: null,
+      discountPercent: null,
+      availability: "in_stock",
+    });
+    const message = {
+      id: "m3",
+      role: "assistant",
+      parts: [
+        { type: "data-products", id: "p1", data: { products: [card(81, "Yamaha C40")] } },
+        {
+          type: "data-products",
+          id: "p2",
+          data: { products: [card(81, "Yamaha C40"), card(82, "Yamaha C70")] },
+        },
+      ],
+    } as unknown as ChatMessage;
+    render(<MessageView message={message} />);
+    expect(screen.getAllByRole("article")).toHaveLength(2);
+    expect(screen.getAllByText("Yamaha C40")).toHaveLength(1);
+  });
+
   it("ignores unknown data parts", () => {
     const message = {
       id: "m2",

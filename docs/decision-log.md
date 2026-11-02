@@ -616,6 +616,23 @@ store.
 **Role of AI.** Claude found the gap, wrote the failing tests first and checked the live answer
 for 5 and 10 units. Dinorah reported the bad answer.
 
+## DL-FE-003 — Conversation kept in the browser; one card per product (2026-11-01)
+
+**Problem.** A reload lost the whole conversation (and the backend's order verification, which
+is keyed by conversation id). The brief asks to justify conversation-history persistence. A
+price question also showed the same product card twice (`get_product` and
+`calculate_payment_options` both emit it).
+
+**Decision.** The conversation id and its last 40 messages are saved in `localStorage`
+(`melody-chat`) when an answer finishes and restored after hydration, so `/` stays prerendered.
+Keeping the id keeps the order verification. A "New chat" button starts over; signing out
+clears it so the next person on a shared browser does not see it. Nothing is stored
+server-side: durable, cross-device history stays a P1 (Postgres checkpointer). Within one
+answer each product card shows once, at its first appearance (rendering only; the stream
+contract is unchanged).
+
+**Role of AI.** Claude wrote the tests first, implemented it and checked reload, new chat and
+the single card in Chrome with Playwright against the Docker stack.
 ## DL-BE-004 — Prompt fixes from a review against the brief (2026-11-01)
 
 **Problem.** A live run of 11 conversations against the brief showed four gaps: the greeting did

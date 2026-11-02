@@ -35,6 +35,9 @@ export function MessageView({ message, streaming = false, footer }: MessageViewP
     );
   }
 
+  // Two tools can emit the same product (e.g. get_product then calculate_payment_options):
+  // each product shows once per answer, at its first appearance.
+  const shownProducts = new Set<number>();
   return (
     <div data-testid={`message-${message.role}`} className="w-full">
       <MelodyRow>
@@ -49,7 +52,10 @@ export function MessageView({ message, streaming = false, footer }: MessageViewP
             );
           }
           if (part.type === "data-products") {
-            return <ProductCards key={part.id ?? index} products={part.data.products} />;
+            const fresh = part.data.products.filter((product) => !shownProducts.has(product.id));
+            for (const product of fresh) shownProducts.add(product.id);
+            if (fresh.length === 0) return null;
+            return <ProductCards key={part.id ?? index} products={fresh} />;
           }
           if (part.type !== "text" || part.text.length === 0) return null;
           return (
