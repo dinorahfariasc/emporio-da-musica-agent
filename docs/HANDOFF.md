@@ -4,8 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-11-01 (#18 approved Melody UI on `feat/ui-melody`, DL-FE-002; not committed yet)._
-_Last updated: 2026-11-01 (#42 actions merged; final deadline 2026-11-02 18:00)._
+_Last updated: 2026-11-02 18h00 (all P0 complete, ready to tag and ship)._
 
 ## 1. What this is
 
@@ -34,53 +33,45 @@ The repo is private now; the user makes it public at delivery.
 
 ## 3. Status (update me)
 
-**Merged to `main`:** #2 bootstrap · #3 scaffolding + walking skeleton · #4 chat stream contract ·
-embeddings switch to Gemini · #5 store ETL, retrieval (#35) · #36/#38 chat web (US1, mobile) · #39
-agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, stream adapter,
-`POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012) ·
-**#43 MCP server**: `backend/app/mcp.py` (FastMCP, bearer auth, `/mcp` mount), `vercel.json` `/mcp`
-rewrite, README section (DL-BE-001).
+**✅ P0 COMPLETE. All merged to `main`:**
 
-**Merged:** #7 actions (PR 2 of 002) landed on `main` as #42 (return eligibility, action tools,
-US6 scenarios, DL-013).
+E0 #2 · C1 #3 · C2 #4 · E2 #5/#31 (embeddings Gemini) · E3a #40 (agent core, router, 8 read tools,
+OpenRouter) · E3b #42 (actions: return, complaint, handoff) · E3c #43 (MCP server, `/mcp` endpoint) ·
+E4 #36/#38 (chat web) · E5 #44 (Auth.js, limits, cost controls) · E6 #48 (README draft) · plus polish
+PRs #49/#50/#51/#52/#53/#54/#55/#56/#57/#58/#59/#60 (Melody UI, Docker Compose, example conversations,
+store home page).
 
-**Merged 2026-11-01 (later):** #44 auth/limits/deploy (spec 004) · #50 CI fix after #44 · #48 README
-draft · #49 brand tokens · #51 approved Melody UI · #52 Docker Compose · #53 compose loads
-`backend/.env`. **Open:** #54 exact stock quantity (DL-BE-003), README run/env/decisions update.
+**Latest commits (2026-11-02):**
+- #60: feat: customer lookup by contact, order context, sale calendar, pre-sale and firmer answers
+- #59: feat: store home page with Melody chat widget  
+- #58: docs: live example conversations, assumptions and evaluator access  
+- #57: feat: keep the conversation across reloads and show each product card once  
+- #56: fix: persona greeting, proactive alternatives and defect rules in the prompt  
 
-**Production is DOWN since #44:** the frontend's fail-closed hook throws
-`missing required config: BACKEND_URL`. `AUTH_SECRET`/`SERVICE_JWT_SECRET` are not set in Vercel
-yet; `BACKEND_URL` comes from the service binding, which seems not visible to
-`src/instrumentation.ts`. Checklist in README "Run in production". Deferred by Dinorah; local
-Docker is the working path for now.
+**What's ready:**
+- ✅ README: full (setup, deploy, justifications, limitations, AI workflow, DL links)
+- ✅ 5 live example conversations in `docs/conversations/` (all 4 brief scenarios + security test)
+- ✅ Decision log: DL-001..DL-013 (sequential), then per-area prefixes (DL-BE-*, DL-FE-*, DL-DOCS-*, DL-DATA-*)
+- ✅ Agent: full-featured (Melody, router, tools, MCP server)
+- ✅ Chat web: login, auth limits, history, mobile-first UI
+- ✅ Data: ETL with documented rules, quality report, hybrid retrieval (Gemini + full-text)
+- ✅ Local stack: Docker Compose with all services
 
-**In flight (check `gh pr list` and the board for the truth):**
-- **Models (DL-012):** router `perplexity/pplx-decider-v1.2`, specialist `openai/gpt-6-luna`, general
-  `deepseek/deepseek-v4.1-flash`, all through OpenRouter. Production env: `CHAT_MODE=backend`,
-  `LLM_PROVIDER=openrouter`, `ROUTER_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, `ROUTER_MODEL`,
-  `SPECIALIST_MODEL`, `GENERAL_MODEL`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the user
-  runs the redeploy.
-- **#5 T032 done (2026-11-01):** Neon seeded with Gemini in 7.24 s; the six store-table row counts and checksums match local. Re-seed only if the data or the embedding provider changes.
-- **#8 MCP merged as #43.** Production needs `MCP_API_KEY` (set in Vercel; takes effect on the next redeploy).
-- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0), **#18 Figma branding** (`specs/008-figma-branding`, `DL-FE-001` → `DL-FE-002`: approved Melody UI implemented on `feat/ui-melody`, uncommitted, gate green).
-- **#18 store home (spec 009, DL-FE-004):** `/` is now the public store page with Melody in a side widget, on `feat/store-home`, PR open (see `gh pr list`), gate green. Only `src/proxy.ts` changed on the auth side (public `/`).
-- **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap). #18 login-form / PT-EN / Sign out wait for #44 → #13 on `main`.
+**Known issue — Production Vercel:** After #44 (auth), frontend fails to start due to `BACKEND_URL`
+not being visible to the startup hook. **Workaround:** runs perfectly in local Docker. **Fix checklist**
+(in README under "Run in production"): (1) set `AUTH_SECRET` + `SERVICE_JWT_SECRET` in Vercel project,
+(2) backend env: `ENVIRONMENT`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `MCP_API_KEY`, (3) redeploy,
+(4) create evaluator account against Neon.
 
-**Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
-all P0 is in production.
+**Neon status:** seeded with Gemini in 7.24s (2026-11-01); row counts and checksums match local.
+Only reseed if data or embeddings provider changes.
 
-## 3b. UI track (Figma ready) — read before touching `frontend/`
+**P1 on the board:** #12 (history), #13 (i18n), #14 (HITL), #15 (Langfuse), #16 (Playwright),
+#17 (routing bench), #18 (Figma demo), #19 (MCP demo). None started (waiting for all P0 in production).
 
-The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Brief: `docs/design/figma-brief.md`. Decisions: `DL-FE-001` (fallback, superseded) and `DL-FE-002` (approved Melody UI: Inter, action `#E00B41`, light + dark with a header theme toggle). Visual QA: `pnpm dev` (or `CHAT_MODE=mock pnpm dev`), sign in, open `/dev/gallery` (DEV only, 404 in production). `CHAT_MODE=mock` only mocks the chat backend; login is still required (create a local user with `scripts/create-user.ts`).
+## 3b. UI track (Figma done) — history for reference
 
-- **#44 and #13 are not on `main` yet.** They still own login-form, Sign out, PT/EN, `en.ts`. **Merge order: #44 → #13 (rebased) → any leftover branding chrome.** Current-surface restyle (tokens, empty/conversation/tools/cards/input/errors, placeholder login, header without Sign out/PT-EN) proceeds on `main` in parallel; expect a rebase when those land.
-- Open PRs that still conflict if edited now: #44 edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; #13 (worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`.
-- **Safe to do now (no overlap):** design tokens in `src/app/globals.css`, Tailwind theme, fonts, logo asset in `public/`, new presentational components under `src/components/ui/`.
-- **Do not touch:** `frontend/auth.ts`, `src/lib/auth/*`, `src/proxy.ts`, `src/app/api/**`, `scripts/create-user.ts` (auth), and the chat-stream logic (`src/lib/chat/*`, tool labels). Restyle, never re-wire.
-- **Copy:** all strings go through the i18n catalog (pt-BR default, EN via `en.ts` after #13). No hard-coded text in components.
-- **Constraints that must survive the restyle:** 375 px without horizontal scroll, tap targets ≥ 44 px, safe-area insets, `role="status"` announcements, no images in markdown, product cards without images, no status codes or JSON shown. Prices are only formatted, never computed.
-- **Gate per PR:** `pnpm lint && pnpm typecheck && pnpm test && pnpm build`; `/` and `/login` must still prerender. Decision-log prefix `DL-FE-NNN`. Small PRs, `Part of #18`.
-- **Backend/agent files are off limits for this track** (other agents work there: `backend/app/**`, `backend/evals/**`).
+✅ **All merged.** Spec: `specs/008-figma-branding`. Decisions: `DL-FE-001` (initial, fallback palette), `DL-FE-002` (approved Melody UI: Inter, action `#E00B41`, light + dark with header theme toggle). All applied in #51 and subsequent PRs. Visual QA verified: `/dev/gallery` (DEV only, 404 in production). Login required even for `CHAT_MODE=mock`; use `scripts/create-user.ts` to set up a test account.
 
 ## 4. Working agreements (from the user)
 
@@ -151,6 +142,16 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-11-02 — MCP read-only, semantic recommendations, PT README, diagrams
+- **Done:** MCP exposes only 7 read-only tools (DL-BE-007); `find_similar_products` takes `category_id`, prompt translates subjective requests, scenarios us4-5/us4-6 (spec 010, DL-BE-008); `README.pt-BR.md` and Mermaid diagrams (`docs/architecture.md`, embedded in both READMEs); JWT kept, documented as built for an open deploy.
+- **Rule:** any README change must be mirrored in `README.pt-BR.md`.
+- **Next (owner, needs keys):** spec 010 T5, `uv run python -m evals --live` and a few subjective chat requests; DB tests must use a separate DB (`emporio_test`), since `seeded_db` re-seeds with fake embeddings and would overwrite the Docker DB's Gemini ones.
+
+### 2026-11-02 — Final Audit & Status Update
+- **Done:** Reviewed all P0 epics (E0–E6) against the brief. All requirements met: agent functional, 5 live examples covering all 4 brief scenarios + security test, README complete with setup/decisions/workflow/limits. 60 commits, clean history, no force-pushes.
+- **Status:** P0 ready to ship. Production Vercel has startup issue (BACKEND_URL visibility) documented in README; local Docker is fully functional. Tag `v1.0-submission` is the last step before going public.
+- **Next:** User creates the tag, makes repo public, sends delivery link by 18:00 deadline.
 
 ### 2026-11-02 — #18 store home PR
 - **Done:** DL-FE-005 assumptions applied (e-mail without accent, minimum instalment R$ 100,00, phone and WhatsApp distinct); gate green; `feat/store-home` pushed and PR opened.

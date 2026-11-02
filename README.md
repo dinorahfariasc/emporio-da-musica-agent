@@ -1,5 +1,7 @@
 # Empório da Música — Melody, the customer service agent
 
+**🇧🇷 [Clique aqui para a versão em português](README.pt-BR.md)**
+
 AI customer-service agent for Empório da Música, a fictional musical instrument store in Campo
 Grande/MS (Artefact AI Engineer take-home challenge, `challenge/challenge_brief.pdf`). The agent
 ("Melody") answers customers in Portuguese or English about the catalog, prices, order status,
@@ -27,46 +29,72 @@ store policies and return/complaint requests, backed by the store's real data an
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    user([Customer]) --> web["Next.js frontend<br/>chat UI, login (Auth.js),<br/>/api/chat as BFF"]
+    web -->|"SSE stream<br/>service JWT"| api["FastAPI backend<br/>/api/chat"]
+    api --> agent["Agent<br/>router + create_agent<br/>(LangChain/LangGraph)"]
+    agent --> tools["Tools<br/>plain Python,<br/>facts computed here"]
+    tools --> db[("Postgres + pgvector<br/>store tables, search index,<br/>limits, conversation state")]
+    agent -.->|chat + router models| or["OpenRouter"]
+    tools -.->|query embeddings| gem["Gemini embeddings"]
+    ext([External MCP client]) -->|"bearer key<br/>read-only tools"| mcp["/mcp"]
+    mcp --> tools
 ```
-┌─────────────┐      SSE stream       ┌──────────────────────────┐
-│  Next.js     │  POST /api/chat ───▶ │  FastAPI backend          │
-│  chat UI     │ ◀─── token/tool parts │                           │
-│  (frontend/) │                       │  ┌─────────────────────┐ │
-└─────────────┘                       │  │ router (plain Python)│ │
-                                       │  │ intent classifier:   │ │
-                                       │  │ decider model, Haiku │ │
-                                       │  │ fallback             │ │
-                                       │  └──────────┬───────────┘ │
-                                       │             ▼             │
-                                       │  ┌─────────────────────┐  │
-                                       │  │ create_agent (per    │  │
-                                       │  │ request): specialist │  │
-                                       │  │ or general model,    │  │
-                                       │  │ LangChain/LangGraph  │  │
-                                       │  └──────────┬───────────┘  │
-                                       │             ▼              │
-                                       │  ┌─────────────────────┐   │
-                                       │  │ tools (plain async   │   │
-                                       │  │ functions, Python-   │   │
-                                       │  │ computed facts):      │   │
-                                       │  │ products, orders,     │   │
-                                       │  │ payments, policies,   │   │
-                                       │  │ actions (return,      │   │
-                                       │  │ complaint, handoff)   │   │
-                                       │  └──────────┬───────────┘   │
-                                       └─────────────┼───────────────┘
-                                                      ▼
-                             ┌─────────────────────────────────────┐
-                             │ Postgres (Neon) + pgvector           │
-                             │ store tables (products, orders, ...) │
-                             │ hybrid search index (policy chunks,  │
-                             │ product docs: full-text + vectors)   │
-                             └───────────────────────────────────────┘
+
+One chat turn, end to end:
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant W as Next.js /api/chat
+    participant B as FastAPI /api/chat
+    participant R as Router (decider)
+    participant A as Agent (create_agent)
+    participant T as Tools
+    participant D as Postgres
+    C->>W: message (+ recent history)
+    W->>W: check session, sign short-lived JWT
+    W->>B: POST with JWT
+    B->>D: rate limit and daily token budget
+    B->>R: classify intent
+    R-->>B: intent + confidence
+    B->>A: run with the tools for that intent
+    loop while the model needs facts
+        A->>T: tool call
+        T->>D: parameterized SQL / hybrid search
+        D-->>T: rows
+        T-->>A: JSON result
+    end
+    A-->>B: token and tool events
+    B-->>W: SSE (AI SDK UI message stream)
+    W-->>C: streamed answer + product cards
+    B->>D: record token usage
 ```
+
+More diagrams (decision flow, data and retrieval, semantic recommendation) in [`docs/architecture.md`](docs/architecture.md).
 
 - **Routing happens in plain Python, not a LangGraph node.** A request is classified by intent
   first (decider model, with a chat-model fallback), then exactly one `create_agent` run streams
   the answer with the tools for that intent. See DL-011 for why an outer graph was dropped.
+- **Fact or policy?** Facts come from deterministic tools, policies from RAG plus Python rules:
+
+```mermaid
+flowchart TD
+    q[Customer message] --> i{Intent}
+    i -->|price, stock, promotion| t1["Deterministic tools<br/>get_product, calculate_payment_options,<br/>get_active_promotions"]
+    i -->|returns, hours, payment rules| t2["search_policies<br/>(RAG over the manual)<br/>+ Python rules for deadlines"]
+    i -->|order status| v{"Order number +<br/>owner's e-mail or phone?"}
+    v -->|yes| t3[get_order_status]
+    v -->|no, or mismatch| deny["Generic refusal,<br/>lockout after repeated failures"]
+    i -->|return, complaint, human| act["check_return_eligibility,<br/>then action tools only on<br/>explicit customer request"]
+    i -->|out of scope| out["Polite decline,<br/>offer instruments"]
+    t1 --> w[LLM writes the answer from tool results only]
+    t2 --> w
+    t3 --> w
+    act --> w
+```
+
 - **Facts are never computed by the LLM.** Price, stock, discount eligibility and return windows
   are plain Python (`app/catalog/rules.py`, `app/policies/returns.py`); tools return JSON the model
   can only read and quote, never derive (constitution principle I).
@@ -180,6 +208,11 @@ uv run python -m evals --live     # real models, needs keys above
 ```
 
 ## Run in production
+
+> **Scope note.** The login, the signed service token (JWT) between frontend and backend, and the
+> per-account limits exist because the plan was an open public deploy on paid models. The project
+> is now run and demonstrated locally, where `docker compose` already provides development secrets,
+> so none of this needs configuring. The Vercel deploy is kept as documented, not required.
 
 One Vercel project using [Services](https://vercel.com/docs/services) (`vercel.json` at the repo
 root): the Next.js `frontend` is the only public service; the FastAPI `backend` is private and
