@@ -31,4 +31,19 @@ describe("i18n", () => {
       [...CONTRACT_TOOLS, "fallback"].sort(),
     );
   });
+
+  it("has a done label for every tool label, in both locales", () => {
+    for (const locale of ["pt-BR", "en"] as const) {
+      const catalog = getMessages(locale);
+      expect(Object.keys(catalog.toolsDone).sort()).toEqual(Object.keys(catalog.tools).sort());
+    }
+  });
+
+  it("keeps the English catalog in step with pt-BR", () => {
+    const keys = (value: unknown, prefix = ""): string[] =>
+      value && typeof value === "object"
+        ? Object.entries(value).flatMap(([k, v]) => keys(v, `${prefix}${k}.`))
+        : [prefix];
+    expect(keys(getMessages("en")).sort()).toEqual(keys(getMessages("pt-BR")).sort());
+  });
 });

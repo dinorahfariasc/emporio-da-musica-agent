@@ -3,177 +3,190 @@
 @import "shadcn/tailwind.css";
 @source "../../node_modules/streamdown/dist/*.js";
 
-@custom-variant dark (&:is(.dark *));
+/* Dark follows the OS setting (the approved tokens ship Light and Dark; there is no in-app switch). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Empório da Música — approved design tokens (DL-FE-002).
+ * Literal copy of the design handoff `html/tokens.css` (Figma "Foundations"): primitives,
+ * semantic Light/Dark, spacing, radius, sizes, elevation and the Inter type scale.
+ */
+:root {
+  /* Primitives */
+  --base-white: #FFFFFF; --gray-25: #FAFAFA; --gray-50: #F7F7F7; --gray-100: #EBEBEB; --gray-200: #DDDDDD; --gray-300: #C8C8C8;
+  --gray-400: #B0B0B0; --gray-500: #6A6A6A; --gray-700: #3A3A3A; --gray-800: #2E2E2E; --gray-850: #242424; --gray-900: #222222; --gray-950: #181818;
+  --rausch-50: #FFF1F3; --rausch-300: #FF6B81; --rausch-400: #FF385C; --rausch-500: #E00B41; --rausch-600: #C1083A; --rausch-900: #3A0E18;
+  --red-50: #FFF4F2; --red-300: #FF8A75; --red-600: #C13515; --red-950: #2A1A17;
+  --amber-50: #FFF8EC; --amber-300: #F2B45C; --amber-700: #9A5B00; --amber-950: #2A2112;
+  --green-50: #EEF8F1; --green-300: #6FD08C; --green-700: #1A7F37; --green-950: #142619;
+  --blue-50: #EEF4FF; --blue-300: #8AB4FF; --blue-700: #2155C7; --blue-950: #121C2E;
+
+  /* Semantic — Light */
+  --color-bg-canvas: var(--base-white); --color-bg-surface: var(--base-white); --color-bg-subtle: var(--gray-50);
+  --color-bg-muted: var(--gray-100); --color-bg-inverse: var(--gray-900);
+  --color-bubble-user-bg: var(--gray-900); --color-bubble-user-text: var(--base-white); --color-bubble-melody-bg: var(--gray-50);
+  --color-text-primary: var(--gray-900); --color-text-secondary: var(--gray-500); --color-text-disabled: var(--gray-400);
+  --color-text-on-accent: var(--base-white); --color-text-on-inverse: var(--base-white); --color-text-link: var(--rausch-600);
+  --color-border-default: var(--gray-200); --color-border-strong: var(--gray-900); --color-border-focus: var(--gray-900);
+  --color-accent-default: var(--rausch-500); --color-accent-pressed: var(--rausch-600); --color-accent-brand: var(--rausch-400);
+  --color-accent-subtle: var(--rausch-50); --color-accent-on-subtle: var(--rausch-600);
+  --color-status-success-bg: var(--green-50); --color-status-success-fg: var(--green-700);
+  --color-status-warning-bg: var(--amber-50); --color-status-warning-fg: var(--amber-700);
+  --color-status-error-bg: var(--red-50); --color-status-error-fg: var(--red-600);
+  --color-status-info-bg: var(--blue-50); --color-status-info-fg: var(--blue-700);
+  --color-status-neutral-bg: var(--gray-100); --color-status-neutral-fg: var(--gray-500);
+
+  /* Spacing / radius / sizes */
+  --space-0: 0; --space-4: 4px; --space-8: 8px; --space-12: 12px; --space-16: 16px; --space-20: 20px; --space-24: 24px;
+  --space-32: 32px; --space-40: 40px; --space-48: 48px; --space-64: 64px;
+  --radius-pill: 999px;
+  --size-tap-min: 44px; --size-input-h: 52px; --size-content-max: 760px;
+
+  /* Elevation (used through shadow-[var(--elevation-*)] so the Dark overrides apply) */
+  --elevation-sm: 0 1px 2px rgba(0,0,0,.08);
+  --elevation-card: 0 6px 16px rgba(0,0,0,.12);
+  --elevation-floating: 0 8px 28px rgba(0,0,0,.18);
+
+  /* shadcn/ui aliases, mapped onto the semantic tokens above */
+  --background: var(--color-bg-canvas);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-surface);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-surface);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-default);
+  --primary-foreground: var(--color-text-on-accent);
+  --secondary: var(--color-bg-subtle);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-muted);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-bg-subtle);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-status-error-fg);
+  --border: var(--color-border-default);
+  --input: var(--color-border-default);
+  --ring: var(--color-border-focus);
+  --radius: 12px;
+}
+
+/* Dark is chosen on <html data-theme="dark"> by the inline script in layout.tsx (stored choice,
+   else prefers-color-scheme) and by the header theme toggle. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    /* Semantic — Dark */
+    --color-bg-canvas: var(--gray-950); --color-bg-surface: var(--gray-850); --color-bg-subtle: var(--gray-800);
+    --color-bg-muted: var(--gray-700); --color-bg-inverse: var(--gray-50);
+    --color-bubble-user-bg: var(--gray-100); --color-bubble-user-text: var(--gray-900); --color-bubble-melody-bg: var(--gray-850);
+    --color-text-primary: var(--gray-50); --color-text-secondary: var(--gray-400); --color-text-disabled: var(--gray-500);
+    --color-text-link: var(--rausch-300); --color-text-on-inverse: var(--gray-900);
+    --color-border-default: var(--gray-700); --color-border-strong: var(--gray-300); --color-border-focus: var(--base-white);
+    --color-accent-subtle: var(--rausch-900); --color-accent-on-subtle: var(--rausch-300);
+    --color-status-success-bg: var(--green-950); --color-status-success-fg: var(--green-300);
+    --color-status-warning-bg: var(--amber-950); --color-status-warning-fg: var(--amber-300);
+    --color-status-error-bg: var(--red-950); --color-status-error-fg: var(--red-300);
+    --color-status-info-bg: var(--blue-950); --color-status-info-fg: var(--blue-300);
+    --color-status-neutral-bg: var(--gray-700); --color-status-neutral-fg: var(--gray-300);
+    --elevation-card: 0 6px 16px rgba(0,0,0,.5); --elevation-floating: 0 8px 28px rgba(0,0,0,.6);
+}
 
 @theme inline {
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-sans);
+
+  /* shadcn/ui names */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-heading: var(--font-fraunces), ui-serif, Georgia, serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --color-bubble-user: var(--bubble-user);
-  --color-bubble-user-foreground: var(--bubble-user-foreground);
-  --color-bubble-assistant: var(--bubble-assistant);
-  --color-bubble-assistant-foreground: var(--bubble-assistant-foreground);
-  --color-brass: var(--brass);
-  --color-banner: var(--banner);
-  --color-banner-foreground: var(--banner-foreground);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Design-token utilities (bg-canvas, text-secondary, border-strong, bg-action, …) */
+  --color-canvas: var(--color-bg-canvas);
+  --color-surface: var(--color-bg-surface);
+  --color-subtle: var(--color-bg-subtle);
+  --color-inverse: var(--color-bg-inverse);
+  --color-on-inverse: var(--color-text-on-inverse);
+  --color-bubble-user: var(--color-bubble-user-bg);
+  --color-bubble-user-foreground: var(--color-bubble-user-text);
+  --color-bubble-melody: var(--color-bubble-melody-bg);
+  --color-primary-text: var(--color-text-primary);
+  --color-secondary-text: var(--color-text-secondary);
+  --color-disabled: var(--color-text-disabled);
+  --color-on-accent: var(--color-text-on-accent);
+  --color-link: var(--color-text-link);
+  --color-strong: var(--color-border-strong);
+  --color-focus: var(--color-border-focus);
+  --color-action: var(--color-accent-default);
+  --color-action-pressed: var(--color-accent-pressed);
+  --color-brand: var(--color-accent-brand);
+  --color-brand-subtle: var(--color-accent-subtle);
+  --color-on-brand-subtle: var(--color-accent-on-subtle);
+  --color-success: var(--color-status-success-fg);
+  --color-success-bg: var(--color-status-success-bg);
+  --color-warning: var(--color-status-warning-fg);
+  --color-warning-bg: var(--color-status-warning-bg);
+  --color-error: var(--color-status-error-fg);
+  --color-error-bg: var(--color-status-error-bg);
+  --color-info: var(--color-status-info-fg);
+  --color-info-bg: var(--color-status-info-bg);
+  --color-neutral: var(--color-status-neutral-fg);
+  --color-neutral-bg: var(--color-status-neutral-bg);
+
+  /* Radius (tokens.css): sm 8 · md 12 · lg 16 · xl 20 · 2xl 28 · pill → rounded-full */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
 }
 
-/* Empório da Música — paper, rosewood, brass (DL-FE-001 fallback until Figma can be re-read). */
-:root {
-  --background: oklch(0.962 0.018 85);
-  --foreground: oklch(0.236 0.03 45);
-  --card: oklch(0.985 0.01 85);
-  --card-foreground: oklch(0.236 0.03 45);
-  --popover: oklch(0.985 0.01 85);
-  --popover-foreground: oklch(0.236 0.03 45);
-  --primary: oklch(0.392 0.095 18);
-  --primary-foreground: oklch(0.97 0.015 85);
-  --secondary: oklch(0.91 0.028 80);
-  --secondary-foreground: oklch(0.3 0.04 40);
-  --muted: oklch(0.93 0.02 80);
-  --muted-foreground: oklch(0.47 0.03 50);
-  --accent: oklch(0.78 0.09 80);
-  --accent-foreground: oklch(0.28 0.04 45);
-  --destructive: oklch(0.5 0.15 25);
-  --border: oklch(0.86 0.028 75);
-  --input: oklch(0.88 0.024 75);
-  --ring: oklch(0.48 0.08 22);
-  --chart-1: oklch(0.392 0.095 18);
-  --chart-2: oklch(0.72 0.1 80);
-  --chart-3: oklch(0.5 0.06 140);
-  --chart-4: oklch(0.45 0.07 250);
-  --chart-5: oklch(0.4 0.06 320);
-  --radius: 0.85rem;
-  --sidebar: oklch(0.97 0.014 85);
-  --sidebar-foreground: oklch(0.236 0.03 45);
-  --sidebar-primary: oklch(0.392 0.095 18);
-  --sidebar-primary-foreground: oklch(0.97 0.015 85);
-  --sidebar-accent: oklch(0.91 0.028 80);
-  --sidebar-accent-foreground: oklch(0.3 0.04 40);
-  --sidebar-border: oklch(0.86 0.028 75);
-  --sidebar-ring: oklch(0.48 0.08 22);
-  --brass: oklch(0.74 0.1 80);
-  --bubble-user: oklch(0.392 0.095 18);
-  --bubble-user-foreground: oklch(0.97 0.015 85);
-  --bubble-assistant: oklch(0.99 0.008 85);
-  --bubble-assistant-foreground: oklch(0.236 0.03 45);
-  --banner: oklch(0.93 0.04 55);
-  --banner-foreground: oklch(0.38 0.1 30);
-  --swatch-0: oklch(0.42 0.1 18);
-  --swatch-1: oklch(0.62 0.1 80);
-  --swatch-2: oklch(0.48 0.07 145);
-  --swatch-3: oklch(0.46 0.07 250);
-  --swatch-4: oklch(0.5 0.08 320);
-  --swatch-5: oklch(0.4 0.05 50);
-}
-
-.dark {
-  --background: oklch(0.2 0.02 45);
-  --foreground: oklch(0.95 0.015 85);
-  --card: oklch(0.25 0.022 45);
-  --card-foreground: oklch(0.95 0.015 85);
-  --popover: oklch(0.25 0.022 45);
-  --popover-foreground: oklch(0.95 0.015 85);
-  --primary: oklch(0.76 0.1 80);
-  --primary-foreground: oklch(0.22 0.03 45);
-  --secondary: oklch(0.3 0.025 45);
-  --secondary-foreground: oklch(0.95 0.015 85);
-  --muted: oklch(0.3 0.02 45);
-  --muted-foreground: oklch(0.74 0.03 80);
-  --accent: oklch(0.36 0.04 45);
-  --accent-foreground: oklch(0.95 0.015 85);
-  --destructive: oklch(0.7 0.14 25);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.76 0.1 80);
-  --chart-1: oklch(0.76 0.1 80);
-  --chart-2: oklch(0.62 0.08 18);
-  --chart-3: oklch(0.62 0.07 145);
-  --chart-4: oklch(0.6 0.07 250);
-  --chart-5: oklch(0.62 0.08 320);
-  --sidebar: oklch(0.25 0.022 45);
-  --sidebar-foreground: oklch(0.95 0.015 85);
-  --sidebar-primary: oklch(0.76 0.1 80);
-  --sidebar-primary-foreground: oklch(0.22 0.03 45);
-  --sidebar-accent: oklch(0.3 0.025 45);
-  --sidebar-accent-foreground: oklch(0.95 0.015 85);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.76 0.1 80);
-  --brass: oklch(0.76 0.1 80);
-  --bubble-user: oklch(0.45 0.08 18);
-  --bubble-user-foreground: oklch(0.97 0.015 85);
-  --bubble-assistant: oklch(0.28 0.022 45);
-  --bubble-assistant-foreground: oklch(0.95 0.015 85);
-  --banner: oklch(0.32 0.05 40);
-  --banner-foreground: oklch(0.9 0.05 75);
-  --swatch-0: oklch(0.55 0.1 18);
-  --swatch-1: oklch(0.7 0.1 80);
-  --swatch-2: oklch(0.58 0.07 145);
-  --swatch-3: oklch(0.56 0.07 250);
-  --swatch-4: oklch(0.58 0.08 320);
-  --swatch-5: oklch(0.52 0.05 50);
-}
+/* Type scale (tokens.css) */
+@utility t-display { font: 600 32px/40px var(--font-sans); letter-spacing: -.02em; }
+@utility t-title-l { font: 600 26px/32px var(--font-sans); letter-spacing: -.01em; }
+@utility t-title-m { font: 600 22px/28px var(--font-sans); letter-spacing: -.01em; }
+@utility t-title-s { font: 600 18px/24px var(--font-sans); }
+@utility t-body-l { font: 400 16px/24px var(--font-sans); }
+@utility t-body-m { font: 400 15px/22px var(--font-sans); }
+@utility t-body-s { font: 400 14px/20px var(--font-sans); }
+@utility t-label-m { font: 600 16px/24px var(--font-sans); }
+@utility t-label-s { font: 600 14px/20px var(--font-sans); }
+@utility t-caption { font: 500 12px/16px var(--font-sans); }
+@utility t-price { font: 600 18px/24px var(--font-sans); font-variant-numeric: tabular-nums; }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(1100px 520px at 8% -12%, oklch(0.78 0.09 80 / 0.2), transparent 55%),
-      radial-gradient(900px 420px at 100% 0%, oklch(0.4 0.09 18 / 0.08), transparent 50%);
-    background-attachment: fixed;
+    @apply border-border;
   }
   html {
     @apply font-sans;
   }
-  .font-heading {
-    font-family: var(--font-heading);
+  body {
+    background: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Visible focus everywhere: 2 px ring in border/focus with a 2 px offset (components.css .focus). */
+  :focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
   }
 }
 
-[data-swatch="0"] { background-color: var(--swatch-0); }
-[data-swatch="1"] { background-color: var(--swatch-1); }
-[data-swatch="2"] { background-color: var(--swatch-2); }
-[data-swatch="3"] { background-color: var(--swatch-3); }
-[data-swatch="4"] { background-color: var(--swatch-4); }
-[data-swatch="5"] { background-color: var(--swatch-5); }
+@keyframes melody-dot {
+  0%, 80%, 100% { opacity: .3; }
+  40% { opacity: 1; }
+}

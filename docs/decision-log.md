@@ -570,3 +570,32 @@ tracks per the user's instruction).
 headless execution and export; the anomaly catalogue it cross-references was already decided in
 DL-002 and is unchanged here.
 
+---
+
+## DL-FE-002 — Approved Melody UI replaces the fallback palette (#18, 2026-11-01)
+
+**Decision.** The approved Empório da Música / Melody design (tokens, components and 25 screens,
+light and dark) replaces the DL-FE-001 fallback. Fraunces + Figtree, the warm paper / rosewood /
+brass palette and `public/brand-mark.svg` are gone. Inter (via `next/font`) and the approved
+tokens are now the source of truth. Branch `feat/ui-melody`.
+
+| Choice | Why |
+|---|---|
+| Literal token values in `globals.css` (`:root` + `:root[data-theme="dark"]`), exposed through `@theme inline` | One place for colour, radius, type and elevation; shadcn aliases map onto them so existing primitives keep working. Shadows are `--elevation-*` because `--shadow-*` is a Tailwind namespace. |
+| Action `#E00B41` (pressed `#C1083A`); `#FF385C` only for the brand mark and store name | `#FF385C` on white fails AA for text and buttons; the darker action colour passes. |
+| Store mark as a component (`BrandMark`: brand tile + music icon), not an SVG asset | Matches the approved logo, follows the theme, no extra request. |
+| Theme toggle in the header (superseded the first "OS only, no toggle" choice) | Dinorah asked for it. Sun while light, moon while dark; ghost 44 px icon button between PT \| EN and Sign out. The choice is kept in localStorage (`melody-theme`); with no choice the OS preference wins. A static inline script in `<head>` sets `<html data-theme>` before first paint, so there is no flash and `/` and `/login` still prerender. |
+| Below 420 px the header store name is visually hidden (`sr-only`), the brand tile stays | The name, PT \| EN, the theme toggle and Sign out do not fit in 375 px. A screen reader still reads the name. A fidelity compromise against the mobile header frames. |
+| PT \| EN switch, `en.ts` and a `LocaleProvider` (localStorage) on this branch | The approved screens include the switch and EN copy. This overlaps #13; reconcile when both land. |
+| Product card without category label or instalments | The design shows both, but `ProductCard` in the contract has neither; the UI formats facts, never derives them. The availability badge hides when availability is unknown. |
+| Rate-limit and budget banners use catalog copy; generic errors keep the backend message | Keeps EN consistent and the countdown (`0:42`) formatted by the UI. No codes or JSON are shown. |
+| Login lockout state only in the DEV gallery | Auth.js returns the same error for a lockout and for bad credentials, so the UI cannot tell them apart without touching auth. |
+| DEV-only screen gallery at `/dev/gallery?screen=…` with EXEMPLO data | Visual QA of every state against the reference PNGs without a backend; `notFound()` (404) in production builds. |
+
+**Limits.** Remaining visual differences are listed in the #18 PR (category label/instalments,
+EXEMPLO tag rendered as inline code, store name hidden in the header below 420 px). The
+`search_policies` done label now follows the design ("Política de trocas consultada").
+
+**Role of AI.** Grok Bot implemented the tokens, components, gallery and docs, and compared each
+screen against the reference PNG with Playwright at 375 and 1440 px. Dinorah approved the palette.
+

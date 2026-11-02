@@ -11,15 +11,16 @@ without changing stream, auth or i18n behaviour. Tokens and the store mark go in
 (`globals.css`, `public/`, fonts in `layout.tsx`). Then presentational classes on the chat
 surfaces that exist on `main`. Login form, Sign out and PT/EN wait for #44 → #13.
 
-Figma MCP was rate-limited; the first slice uses the brief plus a documented Empório palette
-(warm paper, rosewood, brass, Fraunces + Figtree). Re-read the file when quota allows.
+**Palette (updated 2026-11-01, DL-FE-002):** the approved Melody UI tokens (Inter, action
+`#E00B41`, brand `#FF385C` for the mark only, light + dark) replace the fallback palette
+(warm paper, rosewood, brass, Fraunces + Figtree) from DL-FE-001.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5, React 19.3, Node 24
 
 **Primary Dependencies**: existing Next.js 16.4, Tailwind v4, shadcn/ui, `ai@7` — no new runtime
-deps. Fonts via `next/font/google` (Fraunces, Figtree).
+deps. Font via `next/font/google` (Inter; Fraunces + Figtree were dropped in DL-FE-002).
 
 **Storage**: N/A
 
@@ -30,7 +31,7 @@ deps. Fonts via `next/font/google` (Fraunces, Figtree).
 **Constraints**: restyle only; Cache Components; constitution I (format, never compute); no
 hardcoded copy; do not edit `src/lib/chat/*`, `src/app/api/**`, auth, backend
 
-**Scale/Scope**: 2 routes, ~12 presentational files, tokens + one SVG
+**Scale/Scope**: 2 routes, ~12 presentational files, tokens + a `BrandMark` component
 
 ## Constitution Check
 
@@ -53,7 +54,7 @@ specs/008-figma-branding/
 └── tasks.md
 
 frontend/
-├── public/brand-mark.svg          # new store mark
+├── public/brand-mark.svg          # deleted in DL-FE-002; the mark is src/components/ui/brand-mark.tsx
 ├── src/app/globals.css            # brand tokens
 ├── src/app/layout.tsx             # fonts only (plus class hooks)
 ├── src/app/login/page.tsx         # placeholder layout (no form)
@@ -71,7 +72,7 @@ frontend/
 
 | Risk | Mitigation |
 |---|---|
-| Figma tokens differ from the fallback palette | Document fallback in DL-FE-001; re-align when MCP works |
+| Figma tokens differ from the fallback palette | Resolved: approved tokens applied (DL-FE-002) |
 | #44/#13 edit the same files | First code PR restyles `main` versions only; rebase later |
 | Cache Components / prerender | Do not add `export const dynamic`; keep login notice behind Suspense |
 | Tests couple to class names | Prefer roles/`data-testid`; change classes freely |

@@ -3,6 +3,7 @@
 import type { ChatStatus } from "ai";
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 
+import { MelodyRow } from "@/components/chat/melody-row";
 import { MessageView } from "@/components/chat/message-view";
 import { hasVisibleContent } from "@/lib/chat/parts";
 import type { ChatMessage } from "@/lib/chat/types";
@@ -14,6 +15,8 @@ type MessageListProps = {
   messages: ChatMessage[];
   status: ChatStatus;
   children?: ReactNode;
+  /** Rendered in Melody's column under the last answer (or in a new Melody row). */
+  answerFooter?: ReactNode;
 };
 
 function textOf(message: ChatMessage): string {
@@ -23,12 +26,13 @@ function textOf(message: ChatMessage): string {
     .trim();
 }
 
-export function MessageList({ messages, status, children }: MessageListProps) {
+export function MessageList({ messages, status, children, answerFooter }: MessageListProps) {
   const copy = useMessages();
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
   const busy = status === "submitted" || status === "streaming";
   const last = messages.at(-1);
+  const footerOnLast = last?.role === "assistant" && hasVisibleContent(last);
 
   // Announce whole answers once they finish, not every token (the log itself is aria-live off).
   const announcement = !busy && last?.role === "assistant" ? textOf(last) : "";
@@ -53,7 +57,7 @@ export function MessageList({ messages, status, children }: MessageListProps) {
       aria-label={copy.messages.logLabel}
       className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto"
     >
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-3.5 py-5 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
+      <div className="mx-auto mt-auto flex w-full max-w-(--size-content-max) flex-col gap-5 pt-5 pb-2 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] md:px-0 md:pt-8">
         {messages.map((message, index) =>
           // An assistant message with only `step-start` or empty text is not shown yet; the
           // typing indicator covers it.
@@ -62,9 +66,11 @@ export function MessageList({ messages, status, children }: MessageListProps) {
               key={message.id}
               message={message}
               streaming={busy && index === messages.length - 1}
+              footer={footerOnLast && index === messages.length - 1 ? answerFooter : undefined}
             />
           ),
         )}
+        {answerFooter && !footerOnLast && <MelodyRow>{answerFooter}</MelodyRow>}
         {children}
       </div>
       <div aria-live="polite" className="sr-only" data-testid="chat-announcer">

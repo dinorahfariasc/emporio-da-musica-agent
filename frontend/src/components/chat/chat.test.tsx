@@ -151,7 +151,7 @@ describe("Chat", () => {
     await waitFor(() => expect(screen.getByRole("textbox")).toBeEnabled());
     await waitFor(() => expect(screen.getByRole("button", { name: "Enviar" })).toBeInTheDocument());
     expect(screen.getByRole("log")).toHaveTextContent("Oi! Eu sou a Melody,");
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("chat-error")).toBeNull();
 
     // The customer can send again after stopping.
     await user.type(screen.getByRole("textbox"), "Outra pergunta{Enter}");
@@ -165,7 +165,7 @@ describe("Chat", () => {
 
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
     await waitFor(() => expect(screen.getByTestId("chat-announcer")).toHaveTextContent(ANSWER));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("chat-error")).toBeNull();
   });
 
   it("shows a retryable notice when the stream ends without finishing", async () => {
@@ -175,9 +175,10 @@ describe("Chat", () => {
 
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
 
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(messages.errors.fallback);
-    expect(within(alert).getByRole("button", { name: messages.errors.retry })).toBeInTheDocument();
+    // A stream that just stops is shown as a dropped connection under the partial answer.
+    const banner = await screen.findByTestId("chat-error");
+    expect(banner).toHaveTextContent(messages.errors.droppedTitle);
+    expect(within(banner).getByRole("button", { name: messages.errors.retry })).toBeInTheDocument();
     expect(screen.getByRole("log")).toHaveTextContent(ANSWER);
   });
 });
@@ -208,8 +209,8 @@ describe("Chat errors and limits", () => {
     render(<Chat fetch={fetch} />);
 
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(readHttpFixture("http-429-rate-limited").body.error.message);
+    const banner = await screen.findByTestId("chat-error");
+    expect(banner).toHaveTextContent(messages.errors.rateLimitedTitle);
     expect(screen.getByRole("textbox")).toBeDisabled();
 
     act(() => vi.advanceTimersByTime(30_000));
@@ -219,7 +220,7 @@ describe("Chat errors and limits", () => {
     await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(ANSWER));
     expect(fetch.requests).toHaveLength(2);
     expect(userBubbles()).toHaveLength(1);
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("chat-error")).toBeNull();
   });
 
   it("locks the chat for the session when the budget is exhausted", async () => {
@@ -227,8 +228,8 @@ describe("Chat errors and limits", () => {
     render(<Chat fetch={fixtureFetch("http-429-budget-exhausted")} />);
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
 
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(readHttpFixture("http-429-budget-exhausted").body.error.message);
+    const banner = await screen.findByTestId("chat-error");
+    expect(banner).toHaveTextContent(messages.errors.budgetTitle);
     expect(screen.getByRole("textbox")).toBeDisabled();
     expect(screen.queryByRole("button", { name: messages.errors.retry })).toBeNull();
   });
@@ -239,9 +240,9 @@ describe("Chat errors and limits", () => {
     render(<Chat fetch={fetch} />);
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
 
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(readHttpFixture("http-500").body.error.message);
-    await user.click(within(alert).getByRole("button", { name: messages.errors.retry }));
+    const banner = await screen.findByTestId("chat-error");
+    expect(banner).toHaveTextContent(readHttpFixture("http-500").body.error.message);
+    await user.click(within(banner).getByRole("button", { name: messages.errors.retry }));
 
     await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(ANSWER));
     expect(userBubbles()).toHaveLength(1);
@@ -255,12 +256,12 @@ describe("Chat errors and limits", () => {
     render(<Chat fetch={fixtureFetch("stream-error")} />);
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
 
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(
+    const banner = await screen.findByTestId("chat-error");
+    expect(banner).toHaveTextContent(
       "Tivemos um problema temporário para responder. Pode tentar de novo em instantes?",
     );
     expect(screen.getByRole("log")).toHaveTextContent("Deixa eu verificar isso pra você");
-    expect(within(alert).getByRole("button", { name: messages.errors.retry })).toBeInTheDocument();
+    expect(within(banner).getByRole("button", { name: messages.errors.retry })).toBeInTheDocument();
   });
 
   it("retries a stream error by replacing the partial answer", async () => {
@@ -269,8 +270,8 @@ describe("Chat errors and limits", () => {
     render(<Chat fetch={fetch} />);
     await user.type(screen.getByRole("textbox"), "Oi{Enter}");
 
-    const alert = await screen.findByRole("alert");
-    await user.click(within(alert).getByRole("button", { name: messages.errors.retry }));
+    const banner = await screen.findByTestId("chat-error");
+    await user.click(within(banner).getByRole("button", { name: messages.errors.retry }));
 
     await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(ANSWER));
     expect(screen.getByRole("log")).not.toHaveTextContent("Deixa eu verificar isso pra você");

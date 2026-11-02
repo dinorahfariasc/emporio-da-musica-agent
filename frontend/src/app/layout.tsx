@@ -1,21 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, Fraunces, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
+
 import { getMessages, locale } from "@/lib/i18n";
+import { LocaleProvider } from "@/lib/i18n/context";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-});
-
-const figtree = Figtree({
-  variable: "--font-figtree",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Inter is the approved typeface (DL-FE-002); weights 400/500/600/700 come from the variable font.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -35,11 +29,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang={locale}
-      className={`${fraunces.variable} ${figtree.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col">{children}</body>
+    // suppressHydrationWarning: the inline theme script sets data-theme before React hydrates.
+    <html lang={locale} className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Static inline script (no request data), so / and /login still prerender. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="flex min-h-full flex-col">
+        <LocaleProvider>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }
