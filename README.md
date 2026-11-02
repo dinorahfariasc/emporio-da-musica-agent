@@ -5,7 +5,8 @@ Grande/MS (Artefact AI Engineer take-home challenge, `challenge/challenge_brief.
 ("Melody") answers customers in Portuguese or English about the catalog, prices, order status,
 store policies and return/complaint requests, backed by the store's real data and policy manual.
 
-- **Production:** https://emporio-da-musica-agent.vercel.app
+- **Production:** https://emporio-da-musica-agent.vercel.app (currently down, see
+  [Run in production](#run-in-production); run it locally with Docker meanwhile)
 - **Backlog / scope:** [`docs/planning/backlog.md`](docs/planning/backlog.md)
 - **Decisions and AI usage, in full:** [`docs/decision-log.md`](docs/decision-log.md)
 - **Example conversations:** [`docs/conversations/`](docs/conversations/)
@@ -78,46 +79,95 @@ index.
 
 ## Run locally
 
-Requirements: Docker, [uv](https://docs.astral.sh/uv/), Node 24 with pnpm
+### With Docker (recommended)
+
+Requirements: Docker. One command starts Postgres (pgvector), the FastAPI backend and the Next.js
+frontend; more detail and troubleshooting in [`DOCKER.md`](DOCKER.md).
+
+```bash
+cp backend/.env.example backend/.env   # then set a real LLM provider and key (below)
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000 (login page)
+- Backend: http://localhost:8000/api/health
+- Postgres: `localhost:5433`, user/password/db `emporio`
+
+The chat needs a real model: in `backend/.env` set `LLM_PROVIDER=openrouter`,
+`ROUTER_PROVIDER=openrouter` and `OPENROUTER_API_KEY` (see [Environment variables](#environment-variables)).
+`LLM_PROVIDER=fake` is a scripted model for automated tests only: in the chat every message fails.
+The compose file already sets the database URL, the backend URL and dev-only secrets, so nothing
+else is needed locally.
+
+**Load the data** (first run, empty database) and **create a login** (there is no sign-up page by
+design; accounts come from a CLI):
+
+```bash
+cd backend && uv sync --group etl && \
+  DATABASE_URL=postgresql://emporio:emporio@localhost:5433/emporio uv run python -m etl
+cd ../frontend && DATABASE_URL_UNPOOLED=postgresql://emporio:emporio@localhost:5433/emporio \
+  CREATE_USER_PASSWORD='at-least-12-chars' pnpm tsx scripts/create-user.ts <username>
+```
+
+Passwords need 12+ characters. Without `CREATE_USER_PASSWORD` the script prompts for it (it is
+never taken from argv). Five wrong passwords lock the account for 15 minutes.
+
+### Without Docker
+
+Requirements: Docker (for Postgres only), [uv](https://docs.astral.sh/uv/), Node 24 with pnpm
 (`corepack enable pnpm`).
 
 ```bash
-# Database (Postgres 16 + pgvector on localhost:5433)
-docker compose up -d --wait
+docker compose up -d --wait db           # Postgres only, localhost:5433
 
-# Backend
 cd backend
-cp .env.example .env
-uv sync
+cp .env.example .env                     # DATABASE_URL=...@localhost:5433/emporio
+uv sync --group etl
 uv run pytest
-uv run uvicorn app.main:app --reload   # http://localhost:8000/api/health
+uv run uvicorn app.main:app --reload     # http://localhost:8000/api/health
 
-# Frontend (in another terminal)
-cd frontend
-cp .env.example .env.local             # BACKEND_URL=http://localhost:8000
+cd frontend                              # another terminal
+cp .env.example .env.local               # BACKEND_URL=http://localhost:8000, same SERVICE_JWT_SECRET
 pnpm install
-pnpm dev                               # http://localhost:3000/api/health
+pnpm dev                                 # http://localhost:3000
 ```
 
-No API keys are needed to run the tests or try the chat UI: providers default to deterministic
-fakes (`CHAT_MODE=mock` on the frontend replays fixed fixtures; the backend's fake LLM/embeddings
-providers are scripted but exercise the real tool/retrieval code paths).
+For UI work without a backend, `CHAT_MODE=mock` on the frontend replays fixed fixtures (ignored in
+production builds, which always use the backend).
 
-To use real models and embeddings locally, set in `backend/.env`:
+### Environment variables
+
+Templates: [`backend/.env.example`](backend/.env.example) and
+[`frontend/.env.example`](frontend/.env.example). Secrets are never committed.
+
+| Variable | Where | Local default | Production |
+|---|---|---|---|
+| `DATABASE_URL` | both | `postgresql://emporio:emporio@localhost:5433/emporio` (`@db:5432` inside Docker) | Neon pooled URL (Vercel Marketplace integration) |
+| `DATABASE_URL_UNPOOLED` | both | same as `DATABASE_URL`; required by `create-user.ts` | Neon direct URL, for ETL/DDL and the create-user CLI |
+| `SERVICE_JWT_SECRET` | both, **same value** | dev value in compose | random, 32+ chars; signs the frontend→backend token |
+| `AUTH_SECRET` | frontend | dev value in compose | random, 32+ chars (Auth.js sessions) |
+| `BACKEND_URL` | frontend | `http://localhost:8000` (`http://backend:8000` in Docker) | injected by the Vercel service binding (`vercel.json`) |
+| `CHAT_MODE` | frontend | `backend` (`mock` = fixtures, dev only) | always `backend` |
+| `ENVIRONMENT` | backend | `local` | `production` (also detected from `VERCEL_ENV`) |
+| `LLM_PROVIDER`, `ROUTER_PROVIDER` | backend | must be real for chatting (`openrouter`) | `openrouter` |
+| `OPENROUTER_API_KEY` | backend | your key | secret |
+| `ROUTER_MODEL`, `SPECIALIST_MODEL`, `GENERAL_MODEL` | backend | see below | see below |
+| `EMBEDDINGS_PROVIDER`, `GEMINI_API_KEY` | backend | `fake` is fine locally | `gemini` + key (`fake` is refused remotely) |
+| `RATE_LIMIT_PER_MINUTE`, `DAILY_TOKEN_BUDGET`, `BUDGET_TIMEZONE` | backend | 20, 200000, `America/Campo_Grande` | same |
+| `MCP_API_KEY` | backend | unset (`/mcp` disabled) | set to expose the MCP server |
+
+Models used (all through OpenRouter, one key):
 
 ```
-LLM_PROVIDER=openrouter
-ROUTER_PROVIDER=openrouter
-OPENROUTER_API_KEY=...
 ROUTER_MODEL=perplexity/pplx-decider-v1.2
 SPECIALIST_MODEL=openai/gpt-6-luna
 GENERAL_MODEL=deepseek/deepseek-v4.1-flash
-EMBEDDINGS_PROVIDER=gemini
-GEMINI_API_KEY=...
 ```
 
-then point the frontend at the backend (`CHAT_MODE=backend` or unset) and load the catalog/policy
-index (see [Data](#data) below).
+In production both apps **refuse to start** when a required variable is missing or a secret is
+shorter than 32 characters (fail-closed, spec 004 FR-015): the backend checks
+`SERVICE_JWT_SECRET`, `DATABASE_URL` and the provider key; the frontend checks `DATABASE_URL`,
+`BACKEND_URL`, `AUTH_SECRET` and `SERVICE_JWT_SECRET`.
 
 Run the scripted conversation scenarios (what the example conversations are built from):
 
@@ -131,15 +181,27 @@ uv run python -m evals --live     # real models, needs keys above
 
 One Vercel project using [Services](https://vercel.com/docs/services) (`vercel.json` at the repo
 root): the Next.js `frontend` is the only public service; the FastAPI `backend` is private and
-reached by the frontend through a service binding (`BACKEND_URL`). Postgres is Neon (São Paulo
-region), connected through the Vercel Marketplace, with `DATABASE_URL` (pooled, for the app) and
-`DATABASE_URL_UNPOOLED` (direct, for ETL/DDL).
+reached by the frontend through a service binding that injects `BACKEND_URL`. `/mcp` is routed
+straight to the backend. Postgres is Neon (São Paulo region), connected through the Vercel
+Marketplace, which provides `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
 
-Production environment variables (set in Vercel, not committed): `CHAT_MODE=backend`,
-`LLM_PROVIDER=openrouter`, `ROUTER_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, `ROUTER_MODEL`,
-`SPECIALIST_MODEL`, `GENERAL_MODEL`, `EMBEDDINGS_PROVIDER=gemini`, `GEMINI_API_KEY`,
-`DATABASE_URL`, `DATABASE_URL_UNPOOLED`. Deploys are triggered by the repository owner; env
-changes only take effect on the next redeploy.
+**Status: the production deploy is currently failing and fixing it is the next step.** Since the
+auth work (#44) the frontend refuses to start without its required config, and the deploy logs
+show `Refusing to start in production with missing required config: BACKEND_URL`. What is known
+to be missing or to check:
+
+1. `AUTH_SECRET` and `SERVICE_JWT_SECRET` are not set in the Vercel project yet (both services
+   need the same `SERVICE_JWT_SECRET`); the backend also needs `ENVIRONMENT=production` and the
+   provider variables above.
+2. `BACKEND_URL` comes from the service binding, so it should not be set by hand. The error
+   suggests the binding is not visible when Next.js runs its startup hook
+   (`src/instrumentation.ts`); to confirm on the next deploy, and if so the check should move to
+   request time, as the backend already does.
+3. After setting variables, redeploy: env changes only take effect on the next deploy. Then
+   create the evaluator's login against Neon with `scripts/create-user.ts`
+   (`DATABASE_URL_UNPOOLED` set to the Neon direct URL).
+
+Deploys are triggered by the repository owner.
 
 ## Data
 
@@ -179,6 +241,9 @@ to be justified:
 | Retrieval architecture | Postgres full-text (`pt_unaccent`) + pgvector, fused with RRF k=60; Gemini `gemini-embedding-001` embeddings, 768 dims | OR-semantics full-text keeps recall for natural-language questions without tuning; a prefix match on long lexemes fixes a stemmer gap the reference-query tests caught (DL-010) |
 | Prompt strategy | System prompt carries the store's current date/time and persona (Melody, manual §7.1/§7.2); tool outputs are the only source of facts, explicitly fenced as "FATOS SOMENTE DAS FERRAMENTAS" against prompt injection | Verified by the US5 safety scenarios (prompt extraction, invented discounts, fake employee) |
 | Conversation history persistence | Not implemented for P0 (each request carries its own history window from the client); durable server-side persistence is planned (P1, issue #12/S7) | The brief says to implement it only if it helps the UX; a stateless API was enough to ship P0 safely by the deadline |
+| Access control and cost limits | Username/password login (Auth.js, accounts only from a CLI, no sign-up), a short-lived HS256 token from the frontend to the backend, 20 requests/min and 200k tokens/day per account, fail-closed config checks | The agent runs on paid models behind a public URL; the brief's evaluator needs a login, not open access (spec 004, DL-BE-002, DL-FE-001) |
+| Stock answers | Tools return the exact `stock_quantity`; `get_product(quantity=N)` returns `enough_stock` computed in Python | The agent must say with certainty whether N units are available, never send the customer to check (DL-BE-003) |
+| Local runtime | Docker Compose with Postgres, backend and frontend; the backend reads `backend/.env` for the provider key | Whoever clones the repo runs everything with one command and one key |
 | Data handling | Deterministic ETL with documented correction rules per anomaly (`docs/data-quality-report.md`), not silent cleaning | The brief explicitly flags recorded anomalies; a customer-service agent must not paper over a bad date or a contradictory product record without a visible rule |
 
 ## AI-assistant workflow
@@ -247,10 +312,11 @@ on purpose"):
 
 - **No durable conversation history.** Each request sends its own window of prior turns; nothing
   is persisted server-side across page reloads. Planned as P1 (#12/S7, Postgres checkpointer).
-- **Orders are not bound to an authenticated user.** Until auth/limits (#10) land, anyone who knows
-  a chat id can see the orders verified inside it, though a per-order lock (5 failed attempts, 30
-  minutes) still stops guessing across chat ids. This is a known, documented residual risk, not an
-  oversight.
+- **Production deploy is down** (see [Run in production](#run-in-production)); the full stack runs
+  locally with Docker.
+- **Budget is soft under concurrency.** Two simultaneous requests can both pass the daily token
+  check before either records usage, so an account can briefly exceed 200k tokens; the per-minute
+  limit bounds the overshoot (documented in `specs/004-auth-limits-deploy/contracts/`).
 - **No human-in-the-loop confirmation before a write action** (`request_return`,
   `register_complaint`) beyond the model asking the customer in-conversation; a hard `interrupt`
   gate is planned (P1, #13/S9).
