@@ -44,6 +44,16 @@ rewrite, README section (DL-BE-001).
 **Merged:** #7 actions (PR 2 of 002) landed on `main` as #42 (return eligibility, action tools,
 US6 scenarios, DL-013).
 
+**Merged 2026-11-01 (later):** #44 auth/limits/deploy (spec 004) · #50 CI fix after #44 · #48 README
+draft · #49 brand tokens · #51 approved Melody UI · #52 Docker Compose · #53 compose loads
+`backend/.env`. **Open:** #54 exact stock quantity (DL-BE-003), README run/env/decisions update.
+
+**Production is DOWN since #44:** the frontend's fail-closed hook throws
+`missing required config: BACKEND_URL`. `AUTH_SECRET`/`SERVICE_JWT_SECRET` are not set in Vercel
+yet; `BACKEND_URL` comes from the service binding, which seems not visible to
+`src/instrumentation.ts`. Checklist in README "Run in production". Deferred by Dinorah; local
+Docker is the working path for now.
+
 **In flight (check `gh pr list` and the board for the truth):**
 - **Models (DL-012):** router `perplexity/pplx-decider-v1.2`, specialist `openai/gpt-6-luna`, general
   `deepseek/deepseek-v4.1-flash`, all through OpenRouter. Production env: `CHAT_MODE=backend`,
@@ -113,6 +123,9 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
   `git rebase --onto origin/main <old-base> <branch>` then `git push --force-with-lease`.
 - Vercel Services: the backend is **private**; reach it from Next.js route handlers via
   `BACKEND_URL` (binding). `/mcp` will need its own public rewrite (issue #8).
+- Docker: never bind-mount `./backend` over `/app` (the macOS `.venv` breaks `pydantic_core`
+  in Linux). `LLM_PROVIDER=fake` is test-only: in the chat every turn fails with `AssertionError`.
+- Local `uv run pytest` needs `uv sync --group etl` (tests import `etl/`, which needs `pypdf`).
 - Voyage was rejected (needs a card); embeddings are Gemini `gemini-embedding-001`, 768 dims.
 - rehype-harden matches `allowedLinkPrefixes` by **origin** (needs `defaultOrigin`); `"https://"`
   blocks every link. Use `["*"]` and re-check the href in the `a` renderer.
@@ -137,6 +150,11 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-11-01 — Docker, stock quantity, README
+- **Done:** Docker Compose for db + backend + frontend (#52, #53); end-to-end login + chat verified locally with OpenRouter. README: Docker quickstart, env-var table, production status, new decisions.
+- **Fixed:** compose forced the fake LLM (every turn failed); host bind mounts broke the container venv; agent could not state stock counts (#54, `get_product(quantity=N)` → `enough_stock`).
+- **Next:** fix the Vercel deploy (secrets + `BACKEND_URL` visibility at startup), then create the evaluator login on Neon.
 
 ### 2026-11-01 — #18 approved Melody UI (`feat/ui-melody`)
 - **Done:** approved tokens (Inter, `#E00B41`, light + dark), components, `/` and `/login` states, PT | EN with `en.ts`, DEV gallery `/dev/gallery`; DL-FE-002; 008 spec/plan/tasks updated. Gate green; `/` and `/login` still prerender.
