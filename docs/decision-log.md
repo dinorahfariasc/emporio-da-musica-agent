@@ -648,3 +648,61 @@ explain the rule before or alongside a handoff.
 
 **Role of AI.** Claude ran the conversations, proposed the fixes and re-ran them live. Dinorah
 approved doing all of them.
+
+## DL-FE-004 — Store home page with Melody in a side widget (#18, 2026-11-01)
+
+**Problem.** The front was a chat only. Dinorah asked for the store's home page (about, returns,
+hours, address, warranty, privacy…) following the store manual, with the chat on the side,
+taking part of the page and minimisable to a floating button. Spec `specs/009-store-home`.
+
+**Decision.** `/` is the public store page; Melody lives in a widget. Branch `feat/store-home`.
+
+| Choice | Why |
+|---|---|
+| `/` public through a `PUBLIC_PAGES` list in `src/lib/routes.ts`, checked in `src/proxy.ts` | Smallest change: auth logic, lockout, create-user, `/api/chat` protection and the backend stay as they are. |
+| Session read in the client (`SessionProvider` + `useSession`) | `/` stays a static prerender (Cache Components); signed out the widget shows Melody's intro and "Entrar para conversar" → `/login?callbackUrl=%2F`. |
+| Only public manual sections (§1, §1.1, §1.2, §2, §3, §4, §5, §6.1, §8, §9) | §7 and §10 are internal guidance; the internal tracking-code format is omitted. Text is copied, prices and deadlines are never computed. |
+| Phone and WhatsApp shown as separate channels | Dinorah: calls (67) 3341-4444 (`tel:`), messages (67) 3321-4500 (`wa.me/55…`). |
+| E-mail without accent (cover spelling) | The manual body has an accented variant; kept as an open question for the store. |
+| Widget state in `<html data-chat>` set by a static inline script, per-layout localStorage keys | No flash; default open on desktop, minimised on mobile; the panel is hidden with CSS, never unmounted, so `useChat` and any stream survive minimising. |
+| Container queries in the chat components (`@3xl:` instead of `md:`) | The same chat renders the phone layout inside the 400 px panel and the wide layout full-screen. |
+| Desktop panel is `complementary` with no focus trap; mobile sheet is a modal `dialog` with the page `inert` | Desktop users can keep reading the page; on mobile the sheet covers it, so focus must not leak behind. |
+| Unread dot on the FAB | Signals an answer that arrived while minimised. |
+| Background: own SVG staves + 14 floating notes in a fixed layer behind the page (round 2) | Dinorah asked for "notes floating over a staff". No images or dependencies; static SVG keeps `/` prerendered; transform-only animation, still under reduced motion. Opacity (light: lines 8 %, notes ≤ 16 %) and a ≤ 60 % mask keep secondary text ≥ 4.6:1 (light) / ≥ 6.5:1 (dark) even over a note. |
+| Card hover: −3 px lift, `--elevation-card`, accent edge, icon tint (round 2) | Highlights the key info without making static cards look clickable (no pointer cursor); hover only on pointer devices, `:focus-within` for keyboard. |
+| Chat open by default on mobile too; a saved "minimised" wins (round 3) | Dinorah: Melody must be open when the page loads. The sheet keeps a visible minimise button, so the store is one tap away. |
+| Maximise on desktop as a full-window modal overlay, not saved (round 3) | More room for long answers and cards; `inert` page as the focus trap; Esc restores then minimises; a reload returns to the side panel so the store is never hidden by surprise. |
+| Kept conversation (DL-FE-003) inside the widget | Melody's widget header shows "New chat" when signed in; the store's Sign out clears the saved conversation; a restored conversation does not light the FAB's unread dot. |
+| Section menu wraps to two rows next to the open panel | A cut-off scrolling row hid "Garantia"/"Privacidade"; anchors scroll a bit further (`scroll-mt`) to clear the taller header. |
+
+**Limits.** The manual's e-mail spelling and minimum-instalment conflicts are settled in DL-FE-005.
+Below 420 px the header store name is `sr-only`
+(DL-FE-002).
+
+**Role of AI.** Grok Bot implemented the page, widget, tests and docs and reviewed screenshots at
+375 and 1440 px. Dinorah defined the scope and the contact channels.
+
+
+## DL-FE-005 — Store manual inconsistencies: e-mail and minimum instalment (#18, 2026-11-02)
+
+**Problem.** The store manual v2.1 contradicts itself in two places that the public store page
+shows: (1) the e-mail is `contato@emporiodamusica.com.br` on the cover but spelled with an accent
+in the body; (2) the credit-card table in §3 says "parcela mínima de R$ 100,00", while §3.1 says
+the minimum instalment for 4x–6x is R$ 80,00.
+
+**Decision (Dinorah, 2026-11-02; to be confirmed by the store).**
+
+| Choice | Why |
+|---|---|
+| E-mail without accent: `contato@emporiodamusica.com.br` | Cover spelling; an accented address is error-prone to type and to route. |
+| Minimum instalment R$ 100,00, also for 4x–6x | Follows the §3 card table. The 4x–6x line in the PT and EN catalogs now says R$ 100,00; the other §3.1 conditions (up to 3x, 7x–12x, combined payment over R$ 2.000,00) are unchanged. A test keeps "R$ 80,00" out of the store copy. |
+| Phone and WhatsApp are distinct channels | Calls: (67) 3341-4444 (`tel:+556733414444`). Messages: WhatsApp (67) 3321-4500 (`wa.me/556733214500`). Shown separately in the contact section and the footer. |
+
+**Limits.** Front end only. The backend still follows §3.1 (`backend/etl/rules.py`: "§3.1 wins",
+R$ 80,00 for 4x–6x), so Melody's instalment answers can differ from the page until the store
+confirms and the backend rule is aligned in its own PR. The backend also lists (67) 3341-4444 as
+WhatsApp (`1.2-vs-7-whatsapp`); the page treats it as the phone line and (67) 3321-4500 as WhatsApp.
+
+**Role of AI.** Grok Bot found the inconsistencies while copying the manual and applied the
+decision. Dinorah made the decision.
+
