@@ -126,6 +126,213 @@ export const en: Messages = {
     noAccount: "No account? Accounts are created by the store team.",
     signOut: "Sign out",
   },
+  store: {
+    skipToContent: "Skip to content",
+    nav: {
+      label: "Page sections",
+      menu: "Open menu",
+      closeMenu: "Close menu",
+      home: "Home",
+      about: "About us",
+      hours: "Opening hours",
+      contact: "Address and contact",
+      payment: "Payment",
+      returns: "Exchanges and returns",
+      shipping: "Shipping and delivery",
+      promotions: "Promotions",
+      warranty: "Warranty",
+      privacy: "Privacy",
+    },
+    signIn: "Sign in",
+    hero: {
+      eyebrow: "Musical instruments in Campo Grande – MS",
+      title: "Your music starts here.",
+      lead: "A store specialised in musical instruments for beginner, intermediate and professional musicians.",
+      chatCta: "Talk to Melody",
+      visitCta: "Hours and address",
+      highlights: ["Since 2008", "Over 15 years in business", "Musical instruments only"],
+    },
+    about: {
+      title: "About us",
+      paragraphs: [
+        "Empório da Música is a store specialised in musical instruments, founded in 2008 in Campo Grande, Mato Grosso do Sul. With over 15 years in the market, we are a regional reference in selling instruments to beginner, intermediate and professional musicians.",
+        "Our catalogue brings together instruments from Brazilian and international brands: acoustic guitars, electric guitars, basses, drums, keyboards and ukuleles.",
+      ],
+      onlyInstrumentsTitle: "Musical instruments only",
+      onlyInstruments:
+        "We work exclusively with musical instruments — we do not sell accessories such as strings, picks, cables, cases, pedals or amplifiers.",
+      missionTitle: "Mission",
+      mission:
+        "To democratise access to quality musical instruments in Brazil's Centre-West region, offering specialised service and competitive prices, and contributing to the cultural and musical development of the community.",
+    },
+    hours: {
+      title: "Opening hours",
+      intro:
+        "In-store service. WhatsApp follows the same hours, with automatic replies outside business hours.",
+      dayLabel: "Day",
+      timeLabel: "Hours",
+      rows: [
+        { day: "Monday to Friday", time: "09:00 to 18:00" },
+        { day: "Saturday", time: "09:00 to 13:00" },
+        { day: "Sundays and public holidays", time: "Closed" },
+      ],
+      note: "On special dates (Black Friday, the store's anniversary, Christmas), hours may be extended. Changes are announced in advance on social media and on WhatsApp.",
+    },
+    contact: {
+      title: "Address and contact",
+      addressLabel: "Address",
+      postalCode: "CEP {code}",
+      phoneLabel: "Phone (calls)",
+      whatsappLabel: "WhatsApp (messages)",
+      emailLabel: "E-mail",
+    },
+    payment: {
+      title: "Payment methods",
+      intro: "We accept the following payment methods for in-store and online purchases:",
+      methods: [
+        { name: "PIX", terms: "Paid in full", note: "5% off the list price" },
+        { name: "Debit card", terms: "Paid in full", note: "All card brands accepted" },
+        { name: "Credit card", terms: "Up to 12 interest-free instalments", note: "Minimum instalment of R$ 100,00" },
+        { name: "Bank slip (boleto)", terms: "Paid in full", note: "Clears within 3 business days" },
+      ],
+      installmentsTitle: "Instalment rules",
+      installments: [
+        "Up to 3 instalments: interest-free, no minimum instalment (except below R$ 50,00).",
+        "4 to 6 instalments: interest-free, minimum instalment of R$ 100,00.",
+        "7 to 12 instalments: interest-free, minimum instalment of R$ 100,00.",
+        "Combining payment methods (e.g. PIX + card): allowed for purchases over R$ 2.000,00.",
+      ],
+    },
+    returns: {
+      title: "Exchanges and returns",
+      intro:
+        "We follow the Brazilian Consumer Protection Code (Law No. 8,078/90) and offer clear conditions for exchanges and returns.",
+      groups: [
+        {
+          title: "Right of withdrawal (online purchases)",
+          items: [
+            "You can request a return within 7 (seven) calendar days of receiving the product, with no need to give a reason.",
+            "The product must be in its original packaging, with no signs of use, and with all accessories and manuals.",
+            "The refund is made to the original payment method within 10 business days.",
+            "The store pays the return shipping when you exercise your right of withdrawal.",
+          ],
+        },
+        {
+          title: "Exchanges for defects",
+          items: [
+            "Products with a manufacturing defect can be exchanged within 30 (thirty) calendar days of purchase.",
+            "After 30 days, the warranty must be claimed directly with the manufacturer. Empório da Música can help with the process on request.",
+            "Damage caused by misuse, drops, exposure to excessive humidity or unauthorised modifications is not covered.",
+          ],
+        },
+        {
+          title: "Exchanges by preference",
+          items: [
+            "Exchanges by preference (colour, model, size) are allowed within 7 days, subject to the availability of the desired product.",
+            "The product must be in perfect condition and in its original packaging.",
+            "Price differences are charged or refunded as the case may be.",
+          ],
+        },
+        {
+          title: "Items not eligible for exchange",
+          items: [
+            "Instruments with personalisation or custom adjustments (setup, special regulation).",
+            "Products bought in clearance sales with an explicit “final sale” notice.",
+            "Wind instrument mouthpieces, for hygiene reasons.",
+          ],
+        },
+      ],
+    },
+    shipping: {
+      title: "Shipping and delivery",
+      localTitle: "Campo Grande metropolitan area",
+      local: [
+        "Free shipping on orders over R$ 500,00.",
+        "For orders under R$ 500,00, a flat fee of R$ 35,00.",
+        "Delivery time: 1 to 3 business days.",
+        "Delivered by our own motorbike courier. We will call you before delivery.",
+      ],
+      otherTitle: "Other cities",
+      otherIntro:
+        "We ship with Correios (PAC and SEDEX) and the carrier Jadlog outside the Campo Grande metropolitan area.",
+      estimateLabel: "Estimated time",
+      trackingLabel: "Tracking",
+      insuranceLabel: "Insurance",
+      carriers: [
+        { name: "PAC (Correios)", estimate: "5 to 12 business days", tracking: "Yes", insurance: "Included" },
+        { name: "SEDEX (Correios)", estimate: "2 to 5 business days", tracking: "Yes", insurance: "Included" },
+        { name: "Jadlog (.package)", estimate: "3 to 8 business days", tracking: "Yes", insurance: "Included" },
+      ],
+      notes: [
+        "Shipping is calculated automatically from the destination CEP, weight and dimensions of the product. Large instruments (acoustic drum kits, digital pianos, double basses) may need special shipping with an individual quote.",
+        "All shipments include insurance against loss and damage in transit. If the package arrives damaged, refuse delivery and contact the store immediately.",
+        "The tracking code is sent automatically by e-mail and WhatsApp as soon as the order ships, and can be checked on the Correios or Jadlog website.",
+      ],
+    },
+    promotions: {
+      title: "Promotions",
+      intro: "We run promotions throughout the year. The main campaigns include:",
+      campaigns: [
+        { name: "Store anniversary", when: "August", detail: "10% to 25% off selected items." },
+        { name: "Black Friday", when: "November", detail: "15% to 30% off the whole catalogue." },
+        { name: "Back to school", when: "February", detail: "Special discounts on instruments for students." },
+        { name: "Stock clearance", when: "Occasional", detail: "Occasional promotions to renew the catalogue." },
+        { name: "Musician's Week", when: "November", detail: "Promotions in the week of Musician's Day (22 November)." },
+      ],
+      rulesTitle: "Rules",
+      rules: [
+        "Promotions cannot be combined. The PIX discount (5%) does not apply to prices already on promotion.",
+        "Promotions are subject to stock availability. Products that sell out during a promotion do not give the right to a rain check (price reservation).",
+      ],
+    },
+    warranty: {
+      title: "Warranty",
+      legalTitle: "Legal warranty",
+      legal:
+        "Under the Brazilian Consumer Protection Code, all products have a 90 (ninety) day legal warranty against manufacturing defects, counted from the date of receipt.",
+      makerTitle: "Manufacturer's warranty",
+      maker:
+        "In addition to the legal warranty, most manufacturers offer their own warranty, which can range from 6 months to 2 years. Specific terms and conditions are in the warranty certificate that comes with each product.",
+      excludedTitle: "What the warranty does not cover",
+      excluded: [
+        "Natural wear of parts (frets, strings, felts, wind instrument reeds).",
+        "Damage from misuse, drops, or exposure to extreme weather conditions.",
+        "Modifications or repairs carried out by unauthorised third parties.",
+        "Cosmetic damage that does not affect how the instrument works.",
+      ],
+    },
+    privacy: {
+      title: "Privacy and data protection",
+      intro:
+        "Empório da Música complies with Brazil's General Data Protection Law (LGPD — Law No. 13,709/2018). Personal data collected during service (name, phone, e-mail, address) is used exclusively for:",
+      uses: [
+        "Processing and delivering orders.",
+        "Communicating order status and tracking.",
+        "Sending promotions and news (with your explicit consent).",
+        "Meeting legal and tax obligations.",
+      ],
+      sharing: "Customer data is not shared with third parties for marketing purposes.",
+      deletion: "You can ask for your data to be deleted at any time via WhatsApp or e-mail.",
+    },
+    footer: {
+      contactTitle: "Contact",
+      sectionsTitle: "On this page",
+      legalNameLabel: "Company name",
+      cnpjLabel: "CNPJ",
+    },
+  },
+  widget: {
+    open: "Open chat with Melody",
+    openUnread: "Open chat with Melody (new message)",
+    minimize: "Minimise chat",
+    maximize: "Maximise chat",
+    restore: "Restore chat size",
+    panelLabel: "Chat with Melody",
+    title: "Melody",
+    subtitle: "The store's virtual assistant",
+    signInCta: "Sign in to chat",
+    loading: "Loading the chat…",
+  },
   markdown: {
     close: "Close",
     copyLink: "Copy link",

@@ -9,7 +9,7 @@ type ProductCardsProps = { products: Product[] };
 export function ProductCards({ products }: ProductCardsProps) {
   if (products.length === 0) return null;
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 @3xl:grid-cols-2">
       {products.map((product, index) => (
         <ProductCard key={product.id} product={product} index={index} />
       ))}

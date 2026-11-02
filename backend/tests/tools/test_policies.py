@@ -16,7 +16,8 @@ async def test_store_info_uses_the_official_contact_data(tool_ctx):
     info = await get_store_info(tool_ctx)
 
     assert info.address == "Rua 14 de Maio, 3200 — Centro, Campo Grande - MS, 79202-333"
-    assert info.phone_whatsapp == "(67) 3341-4444"
+    assert info.phone == "(67) 3341-4444"
+    assert info.whatsapp == "(67) 3321-4500"
     assert info.email == "contato@emporiodamusica.com.br"
 
 

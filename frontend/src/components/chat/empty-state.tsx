@@ -5,24 +5,25 @@ import { useMessages } from "@/lib/i18n/context";
 
 type EmptyStateProps = { onPick: (text: string) => void };
 
-// Mobile: left-aligned block sitting just above the composer. Desktop: centred column.
+// Narrow (phone, side panel): left-aligned block just above the composer. Wide container
+// (>= 768 px): centred column. Container queries, so the chat adapts to the widget width.
 export function EmptyState({ onPick }: EmptyStateProps) {
   const { emptyState } = useMessages();
   return (
-    <div className="mx-auto flex w-full max-w-(--size-content-max) flex-1 flex-col justify-end px-4 pt-5 pb-2 md:justify-center md:px-0 md:pt-8">
-      <div className="mb-2 flex flex-col gap-6 md:mb-0 md:items-center md:gap-8 md:text-center">
-        <div className="flex flex-col gap-3 md:items-center md:gap-8">
-          <MelodyAvatar className="size-14 md:size-[72px]" iconClassName="size-7 md:size-9" />
+    <div className="mx-auto flex w-full max-w-(--size-content-max) flex-1 flex-col justify-end px-4 pt-5 pb-2 @3xl:justify-center @3xl:px-0 @3xl:pt-8">
+      <div className="mb-2 flex flex-col gap-6 @3xl:mb-0 @3xl:items-center @3xl:gap-8 @3xl:text-center">
+        <div className="flex flex-col gap-3 @3xl:items-center @3xl:gap-8">
+          <MelodyAvatar className="size-14 @3xl:size-[72px]" iconClassName="size-7 @3xl:size-9" />
           <div>
-            <h1 className="t-title-l md:t-display">{emptyState.greeting}</h1>
-            <p className="t-body-l mt-3 text-secondary-text md:mx-auto md:max-w-[560px]">
+            <h2 className="t-title-l @3xl:t-display">{emptyState.greeting}</h2>
+            <p className="t-body-l mt-3 text-secondary-text @3xl:mx-auto @3xl:max-w-[560px]">
               {emptyState.intro}
             </p>
           </div>
         </div>
-        <div className="md:max-w-[640px]">
-          <h2 className="t-label-s mb-2.5 md:sr-only">{emptyState.suggestionsLabel}</h2>
-          <ul className="flex flex-wrap gap-2 md:justify-center">
+        <div className="@3xl:max-w-[640px]">
+          <h3 className="t-label-s mb-2.5 @3xl:sr-only">{emptyState.suggestionsLabel}</h3>
+          <ul className="flex flex-wrap gap-2 @3xl:justify-center">
             {emptyState.suggestions.map((suggestion) => (
               <li key={suggestion}>
                 <button

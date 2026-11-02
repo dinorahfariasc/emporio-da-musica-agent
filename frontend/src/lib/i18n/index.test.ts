@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { format, getMessages } from "@/lib/i18n";
+import { STORE_INFO } from "@/lib/store-info";
 
 const CONTRACT_TOOLS = [
   "search_products",
@@ -45,5 +46,38 @@ describe("i18n", () => {
         ? Object.entries(value).flatMap(([k, v]) => keys(v, `${prefix}${k}.`))
         : [prefix];
     expect(keys(getMessages("en")).sort()).toEqual(keys(getMessages("pt-BR")).sort());
+  });
+
+  it("translates the store page and widget copy", () => {
+    const pt = getMessages("pt-BR");
+    const en = getMessages("en");
+    expect(pt.store.hero.title).toBe("Sua música começa aqui.");
+    expect(en.store.hero.title).not.toBe(pt.store.hero.title);
+    expect(en.widget.signInCta).not.toBe(pt.widget.signInCta);
+    expect(en.store.returns.groups.map((g) => g.items.length)).toEqual(
+      pt.store.returns.groups.map((g) => g.items.length),
+    );
+  });
+
+  it("shows only the store's decided contact and instalment facts (DL-FE-005)", () => {
+    for (const locale of ["pt-BR", "en"] as const) {
+      const copy = JSON.stringify(getMessages(locale).store);
+      expect(copy).not.toContain("R$ 80,00");
+      expect(copy).toContain("R$ 100,00");
+    }
+    expect(STORE_INFO.email.display).toBe("contato@emporiodamusica.com.br");
+  });
+
+  it("describes the catalog the store actually sells (65 products, six categories)", () => {
+    const pt = getMessages("pt-BR").store;
+    const en = getMessages("en").store;
+    for (const copy of [pt.hero, pt.about, en.hero, en.about].map((part) => JSON.stringify(part))) {
+      expect(copy).not.toMatch(/300|sopro|orquestr|wind instruments|orchestral/i);
+    }
+    expect(JSON.stringify(pt.about)).toMatch(/violões.*guitarras.*baixos.*baterias.*teclados.*ukuleles/);
+  });
+
+  it("calls the store \"a Empório\" everywhere", () => {
+    expect(JSON.stringify(getMessages("pt-BR"))).not.toContain("do Empório");
   });
 });

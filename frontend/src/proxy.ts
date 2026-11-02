@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 
 import { isPublic, safeCallbackPath } from "@/lib/auth/request-guards";
+import { isPublicPage } from "@/lib/routes";
 import { auth } from "../auth";
 
 const UNAUTHORIZED_BODY = {
@@ -27,7 +28,8 @@ export default auth((request) => {
     return NextResponse.next();
   }
 
-  if (isPublic(pathname)) {
+  // The store home is public (spec 009); its chat widget asks for sign-in itself.
+  if (isPublic(pathname) || isPublicPage(pathname)) {
     return NextResponse.next();
   }
 

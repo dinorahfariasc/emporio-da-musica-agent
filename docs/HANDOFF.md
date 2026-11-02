@@ -63,6 +63,7 @@ Docker is the working path for now.
 - **#5 T032 done (2026-11-01):** Neon seeded with Gemini in 7.24 s; the six store-table row counts and checksums match local. Re-seed only if the data or the embedding provider changes.
 - **#8 MCP merged as #43.** Production needs `MCP_API_KEY` (set in Vercel; takes effect on the next redeploy).
 - **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0), **#18 Figma branding** (`specs/008-figma-branding`, `DL-FE-001` → `DL-FE-002`: approved Melody UI implemented on `feat/ui-melody`, uncommitted, gate green).
+- **#18 store home (spec 009, DL-FE-004):** `/` is now the public store page with Melody in a side widget, on `feat/store-home`, PR open (see `gh pr list`), gate green. Only `src/proxy.ts` changed on the auth side (public `/`).
 - **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap). #18 login-form / PT-EN / Sign out wait for #44 → #13 on `main`.
 
 **Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
@@ -151,10 +152,24 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-02 — #18 store home PR
+- **Done:** DL-FE-005 assumptions applied (e-mail without accent, minimum instalment R$ 100,00, phone and WhatsApp distinct); gate green; `feat/store-home` pushed and PR opened.
+- **Next:** store confirms DL-FE-005; if confirmed, align the backend policy text (4x–6x minimum) with the page.
+
 ### 2026-11-01 — Review against the brief
 - **Done:** 11 live conversations against the brief; five recorded as the example conversations (`docs/conversations/`, replacing the fake-mode placeholders). README: interface row, history persistence, Assumptions, Access for evaluators.
 - **Fixed:** prompt (persona greeting, alternatives when out of stock, defect rules before handoff, no preamble) #56; history in `localStorage` + New chat + one card per product #57.
 - **Next:** #56 and #57 both append to `docs/decision-log.md` — rebase the second one. Then the Vercel deploy.
+
+### 2026-11-01 — #18 store home (`feat/store-home`, spec 009)
+- **Done:** `/` is a public, static store page (about, hours, contact, payment, returns, shipping, promotions, warranty, privacy from manual v2.1, PT/EN); Melody moved to a side panel (≥ 1024 px) / full-screen sheet (mobile) that minimises to a FAB with an unread dot; state in `<html data-chat>` + localStorage. DL-FE-004.
+- **Auth:** only `src/proxy.ts` (+ `src/lib/routes.ts`) lets `/` through; signed out, the widget links to `/login?callbackUrl=%2F`. `/api/chat`, `src/lib/auth/*` and backend untouched.
+- **Gallery:** `/dev/gallery?screen=<chat screen>&frame=widget` and `screen=widget-signin`.
+- **Assumptions (DL-FE-005, Dinorah 2026-11-02, to be confirmed by the store):** e-mail without accent; minimum instalment R$ 100,00 (also 4x–6x); phone (67) 3341-4444 and WhatsApp (67) 3321-4500 are distinct channels. Melody's backend knowledge may still say R$ 80,00 for 4x–6x.
+- **Rebased on main (#56–#58):** the kept conversation (DL-FE-003) works in the widget: "New chat" in Melody's header, Sign out clears it, a restored conversation is not "unread".
+- **Round 3:** chat open by default on desktop and mobile (saved "minimised" wins); desktop maximise/restore (full-window modal, Esc restores, not saved, same chat instance).
+- **Round 2:** music-staff background (`music-staff-background.tsx`, `.staff-bg` in `globals.css`), card hovers (`.store-card`), menu wraps next to the panel, e-mail wraps after "@". Do not run `pnpm build` while `pnpm dev` is running in the same folder: it replaces `.next` and the dev server serves the page without CSS until restarted.
+- **Next:** store confirms the DL-FE-005 assumptions.
 
 ### 2026-11-01 — Docker, stock quantity, README
 - **Done:** Docker Compose for db + backend + frontend (#52, #53); end-to-end login + chat verified locally with OpenRouter. README: Docker quickstart, env-var table, production status, new decisions.
