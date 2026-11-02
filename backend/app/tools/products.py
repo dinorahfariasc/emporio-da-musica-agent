@@ -29,6 +29,7 @@ class ProductView(BaseModel):
     discount_percent: int | None
     availability: p.Availability
     is_sellable: bool
+    stock_quantity: int
     specs: dict[str, str]
     description: str | None
 
@@ -46,11 +47,24 @@ class Candidate(BaseModel):
 class ProductLookup(BaseModel):
     product: ProductView | None = None
     candidates: list[Candidate] = []
+    requested_quantity: int | None = None
+    enough_stock: bool | None = None
+
+
+def _lookup(view: ProductView, quantity: int | None) -> ProductLookup:
+    if quantity is None:
+        return ProductLookup(product=view)
+    return ProductLookup(
+        product=view,
+        requested_quantity=quantity,
+        enough_stock=view.is_sellable and view.stock_quantity >= quantity,
+    )
 
 
 _SELECT = """
     SELECT p.product_id, p.name, c.name AS category, p.category_id, p.price_brl,
            p.promo_price_brl, p.effective_discount_percent, p.availability, p.is_sellable,
+           p.stock_quantity,
            p.specs, p.description, p.description_trusted
     FROM products p JOIN categories c USING (category_id)
 """
@@ -68,6 +82,7 @@ def _view(row: dict) -> ProductView:
         discount_percent=row["effective_discount_percent"] if discounted else None,
         availability=row["availability"],
         is_sellable=row["is_sellable"],
+        stock_quantity=row["stock_quantity"],
         specs=row["specs"],
         # Untrusted descriptions contradict the name/specs (DL-001): never shown.
         description=row["description"] if row["description_trusted"] else None,
@@ -130,9 +145,14 @@ _TOKEN = re.compile(r"\w+")
 
 @tool
 async def get_product(
-    ctx: ToolContext, product_id: int | None = None, name: str | None = None
+    ctx: ToolContext,
+    product_id: int | None = None,
+    name: str | None = None,
+    quantity: Annotated[int, Field(ge=1)] | None = None,
 ) -> ProductLookup:
-    """Get one product by id or name. An ambiguous name returns candidates instead."""
+    """Get one product by id or name, with its stock quantity. Pass `quantity` when the customer
+    asks for several units: `enough_stock` says whether that many can be sold right now. An
+    ambiguous name returns candidates instead."""
     if product_id is None and not (name or "").strip():
         raise ToolError("invalid_input", "give product_id or name")
     async with ctx.pool.connection() as conn:
@@ -141,14 +161,14 @@ async def get_product(
             if not views:
                 raise ToolError("not_found")
             product_cards(ctx, views)
-            return ProductLookup(product=views[0])
+            return _lookup(views[0], quantity)
         result = await _search_products(conn, ctx.embedder, name or "", limit=5)
         views = await views_by_ids(conn, [h.product_id for h in result.hits])
     wanted = {t.casefold() for t in _TOKEN.findall(name or "")}
     matching = [v for v in views if wanted <= {t.casefold() for t in _TOKEN.findall(v.name)}]
     if len(matching) == 1:
         product_cards(ctx, matching)
-        return ProductLookup(product=matching[0])
+        return _lookup(matching[0], quantity)
     if not views:
         raise ToolError("not_found")
     pool = matching or views

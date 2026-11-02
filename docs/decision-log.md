@@ -599,3 +599,19 @@ EXEMPLO tag rendered as inline code, store name hidden in the header below 420 p
 **Role of AI.** Grok Bot implemented the tokens, components, gallery and docs, and compared each
 screen against the reference PNG with Playwright at 375 and 1440 px. Dinorah approved the palette.
 
+
+## DL-BE-003 — Exact stock quantity in get_product (2026-11-01)
+
+**Problem.** Asked for 5 units of a guitar with 6 in stock, Melody answered "check the stock with
+the store". The tools only returned `availability` (`in_stock`/`out_of_stock`), never the count,
+although `products.stock_quantity` exists.
+
+**Decision.** `ProductView` now carries `stock_quantity`. `get_product` takes an optional
+`quantity`; with it the result adds `requested_quantity` and `enough_stock`
+(`is_sellable and stock_quantity >= quantity`), computed in Python, so the model never compares
+numbers itself (constitution: stock is deterministic). The system prompt tells the agent to call
+`get_product` with `quantity` and answer with certainty instead of sending the customer to the
+store.
+
+**Role of AI.** Claude found the gap, wrote the failing tests first and checked the live answer
+for 5 and 10 units. Dinorah reported the bad answer.

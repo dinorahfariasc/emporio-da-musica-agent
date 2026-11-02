@@ -17,7 +17,7 @@ All tools are `async def` functions in `backend/app/tools/`. The rules below app
 | Tool | Inputs | Output (to the model) | Notes |
 |---|---|---|---|
 | `search_products` | `query: str`, `category_id?: int`, `max_price_brl?: Decimal`, `only_sellable: bool = True`, `limit: int ≤ 10` | `ProductView[]` + `count` | Hybrid search (001). The budget is compared with the current price (`promo_price_brl`). |
-| `get_product` | `product_id?: int` or `name?: str` | `ProductView` or `candidates[]` (name ambiguity) | Name matching through `search_products` (limit 5). Several close candidates are returned as a list (edge case). |
+| `get_product` | `product_id?: int` or `name?: str`, `quantity?: int ≥ 1` | `ProductView` (with `stock_quantity`) or `candidates[]` (name ambiguity); with `quantity`, also `requested_quantity` and `enough_stock` | Name matching through `search_products` (limit 5). Several close candidates are returned as a list (edge case). `enough_stock = is_sellable and stock_quantity >= quantity`, computed in Python. |
 | `find_similar_products` | `product_id?: int`, `description?: str`, `max_price_brl?`, `limit ≤ 5` | `ProductView[]` (sellable only, same category when `product_id` is given) | With `product_id`: `similar_to_product`. With text: `search_products`. Never offers non-sellable products (FR-011). |
 | `get_active_promotions` | `category_id?` | `ProductView[]` with an active promotion | Only `is_active` promotions, through `effective_promotion`. |
 | `calculate_payment_options` | `product_id?: int` or `amount_brl?: Decimal` | `PaymentOptions` | R8 rules. |

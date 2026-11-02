@@ -32,6 +32,26 @@ async def test_get_product_by_name_without_promo(tool_ctx):
     assert lookup.product.promo_price_brl is None
 
 
+async def test_product_exposes_its_stock_quantity(tool_ctx):
+    product = (await get_product(tool_ctx, product_id=107)).product
+
+    assert product.stock_quantity == 6
+
+
+@pytest.mark.parametrize(("quantity", "enough"), [(5, True), (6, True), (7, False)])
+async def test_requested_quantity_is_checked_against_stock(tool_ctx, quantity, enough):
+    lookup = await get_product(tool_ctx, product_id=107, quantity=quantity)
+
+    assert lookup.requested_quantity == quantity
+    assert lookup.enough_stock is enough
+
+
+async def test_unsellable_product_never_has_enough_stock(tool_ctx):
+    lookup = await get_product(tool_ctx, product_id=113, quantity=1)
+
+    assert lookup.enough_stock is False
+
+
 async def test_promoted_product_shows_both_prices(tool_ctx):
     product = (await get_product(tool_ctx, product_id=121)).product
 
