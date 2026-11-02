@@ -294,6 +294,10 @@ decision-log entry with the reasoning):
   because the deployed agent runs on paid models behind a public URL.
 - **Stock answers are exact:** the agent states the quantity on hand and whether N units can be
   sold, from the database (DL-BE-003).
+- **"Coming soon" means pre-sale:** such a product is offered normally (price, payment options)
+  with a clear note that it has no immediate delivery and arrives soon; no arrival date is
+  invented. Buying it is a purchase delivered later, not a reservation (the manual has none).
+  This is why product 130 in orders 3 and 14 is not treated as an anomaly (DL-BE-006).
 
 ## AI-assistant workflow
 

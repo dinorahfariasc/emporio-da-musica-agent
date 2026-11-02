@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from app.retrieval import ProductFilters, search_products, similar_to_product
 
-NOT_SELLABLE = {96, 113, 130, 136}
+NOT_SELLABLE = {96, 113, 136}
 
 
 async def test_exact_model_ranks_first(conn, embedder):

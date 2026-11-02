@@ -1,6 +1,9 @@
 """Payment options for a product or a raw amount (FR-006); the rules live in app.policies."""
 
 from decimal import Decimal
+from typing import Annotated
+
+from pydantic import Field
 
 from app.policies.payments import PaymentOptions, payment_options
 from app.tools.context import ToolContext, ToolError
@@ -10,9 +13,13 @@ from app.tools.registry import tool
 
 @tool
 async def calculate_payment_options(
-    ctx: ToolContext, product_id: int | None = None, amount_brl: Decimal | None = None
+    ctx: ToolContext,
+    product_id: int | None = None,
+    amount_brl: Decimal | None = None,
+    quantity: Annotated[int, Field(ge=1)] = 1,
 ) -> PaymentOptions:
-    """Compute PIX and installment options for a product (uses its current price) or an amount."""
+    """Compute PIX and installment options for a product (uses its current price, times
+    `quantity` units) or an amount."""
     if product_id is None and amount_brl is None:
         raise ToolError("invalid_input", "give product_id or amount_brl")
     if product_id is None:
@@ -25,4 +32,5 @@ async def calculate_payment_options(
         raise ToolError("not_found")
     product_cards(ctx, views)
     view = views[0]
-    return payment_options(view.price_brl, view.promo_price_brl)
+    promo = view.promo_price_brl * quantity if view.promo_price_brl is not None else None
+    return payment_options(view.price_brl * quantity, promo)

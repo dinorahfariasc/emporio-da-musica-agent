@@ -19,6 +19,8 @@ RULES = [
     "(67) 3321-4500",  # manual conflicts resolved as on the store page (DL-FE-005)
     "R$ 100,00",
     "não está à venda, mesmo",  # unsellable stays unsellable when the customer insists
+    "sem pronta entrega",  # coming_soon is offered, arriving soon (DL-BE-006)
+    "calculate_payment_options com `quantity`",  # totals for several units come from Python
     "Não prometa reservas",
     "find_my_orders",  # "sou fulano": the customer is found by e-mail or phone, never by name
 ]

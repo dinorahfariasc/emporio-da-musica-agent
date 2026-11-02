@@ -49,7 +49,7 @@ per-table checksums and the rule-specific facts listed below.
 4. **Given** product 96 (two inactive promotions, 18% and 40%, and stock 0), **When** loaded, **Then** it has no effective promotion and is unavailable.
 5. **Given** the real promotions, **When** effective promotions are resolved, **Then** exactly four products have one: 90 (18%), 94 (8%), 121 (20%) and 127 (10%). **Given** a fixture with two active promotions on one product, **Then** the largest applies.
 6. **Given** products 113 and 136 (`discontinued`, 136 with 13 units), **When** loaded, **Then** both are not sellable regardless of stock.
-7. **Given** product 130 (`coming_soon`, referenced by orders 3 and 14), **When** loaded, **Then** it is marked "coming soon" and not sellable, and the order references are kept and flagged.
+7. **Given** product 130 (`coming_soon`, referenced by orders 3 and 14), **When** loaded, **Then** it is marked "coming soon" and sellable on pre-sale without immediate delivery, and the order references are kept (not flagged, as a pre-sale order is legitimate). *Amended 2026-11-02, DL-BE-006; it was "not sellable and flagged".*
 8. **Given** customer text in different Unicode forms (a fixture with "Ponta Porã" both decomposed and composed), **When** loaded, **Then** all text is stored in NFC and both values compare equal. **Given** a CRLF file whose last row has no trailing newline, **Then** no value carries a trailing `\r`.
 9. **Given** customers 11 and 43 sharing `bruno.martins@jmail.com`, **When** loaded, **Then** both customers are kept and the shared email is flagged.
 10. **Given** order 1 (with tracking code and delivery date) and order 9 (both empty), **When** loaded, **Then** order 1 keeps its values and order 9 stores NULL for both.
@@ -165,7 +165,7 @@ against production with confirmation (succeeds).
 - **FR-006**: Name vs description: name is authoritative; descriptions of products 135–144 are marked untrusted and excluded from customer-facing text and from search indexing.
 - **FR-007**: Specs vs description: specs are authoritative.
 - **FR-008**: Promotions: only active promotions apply; when several are active for one product, the largest discount is the effective one. The system MUST expose the effective promotion and the resulting promotional price per product through one shared helper and stored columns, so tools never recompute it.
-- **FR-009**: Sellability: `discontinued` is never sellable; `active` with stock 0 is unavailable; `coming_soon` is shown as coming soon and not sellable. The system MUST expose a derived availability per product.
+- **FR-009**: Sellability: `discontinued` is never sellable; `active` with stock 0 is unavailable; `coming_soon` is sellable on pre-sale and not ready to ship (it is delivered when it arrives; DL-BE-006, amended 2026-11-02). The system MUST expose a derived availability per product.
 - **FR-010**: Customers sharing an email are kept and flagged.
 - **FR-011**: The three known policy conflicts (contact numbers, email spelling, installment table) and the missing purchase channel on orders (the withdrawal right applies only to online purchases) MUST be recorded as anomalies with the authoritative value per DL-002.
 

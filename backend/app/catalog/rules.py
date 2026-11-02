@@ -26,6 +26,11 @@ def availability(status: str, stock_quantity: int) -> Availability:
 
 
 def is_sellable(status: str, stock_quantity: int) -> bool:
+    """In stock, or coming soon: sold now on pre-sale, delivered when it arrives (DL-BE-006)."""
+    return availability(status, stock_quantity) in ("in_stock", "coming_soon")
+
+
+def ready_to_ship(status: str, stock_quantity: int) -> bool:
     return availability(status, stock_quantity) == "in_stock"
 
 

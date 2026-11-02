@@ -10,7 +10,7 @@ from app.tools.products import (
     search_products,
 )
 
-NOT_SELLABLE = {96, 113, 130, 136}
+NOT_SELLABLE = {96, 113, 136}
 
 
 async def test_violao_under_1000_only_sellable_violoes(tool_ctx):
@@ -60,12 +60,21 @@ async def test_promoted_product_shows_both_prices(tool_ctx):
     assert product.discount_percent == 20
 
 
-@pytest.mark.parametrize(("pid", "availability"), [(136, "discontinued"), (130, "coming_soon")])
-async def test_unavailable_products_are_flagged(tool_ctx, pid, availability):
-    product = (await get_product(tool_ctx, product_id=pid)).product
+async def test_discontinued_product_is_flagged_and_not_sellable(tool_ctx):
+    product = (await get_product(tool_ctx, product_id=136)).product
 
-    assert product.availability == availability
+    assert product.availability == "discontinued"
     assert not product.is_sellable
+    assert not product.ready_to_ship
+
+
+async def test_coming_soon_product_is_sold_without_immediate_delivery(tool_ctx):
+    lookup = await get_product(tool_ctx, product_id=130, quantity=1)
+
+    assert lookup.product.availability == "coming_soon"
+    assert lookup.product.is_sellable
+    assert not lookup.product.ready_to_ship
+    assert lookup.enough_stock is None  # nothing on hand to count: it ships when it arrives
 
 
 async def test_untrusted_description_is_hidden_and_name_wins(tool_ctx):

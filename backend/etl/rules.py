@@ -41,12 +41,12 @@ ANOMALY_TYPES: dict[str, AnomalyType] = {
     "coming_soon": AnomalyType(
         "product",
         "Product not launched yet.",
-        "Not sellable; shown as coming soon (DL-002).",
+        "Sold on pre-sale without immediate delivery; shown as coming soon (DL-BE-006).",
     ),
     "not_on_sale_in_order": AnomalyType(
         "order",
-        "Order contains a product that is not on sale (discontinued or coming soon); "
-        "a product that is only out of stock does not count.",
+        "Order contains a discontinued product; a product that is out of stock or coming soon "
+        "(pre-sale, DL-BE-006) does not count.",
         "Kept as historical data; flagged on the order item.",
     ),
     "duplicate_promotions": AnomalyType(
@@ -157,13 +157,13 @@ def apply_rules(ds: Dataset) -> Derived:
         promos_by_product[promo.product_id].append(promo)
 
     products = []
-    offered: dict[int, bool] = {}  # status is active; a stock-out does not count
+    offered: dict[int, bool] = {}  # active or pre-sale; a stock-out does not count
     prices: dict[int, Decimal] = {}
     for p in sorted(ds.products, key=lambda p: p.product_id):
         effective = effective_promotion(promos_by_product[p.product_id])
         discount = effective.discount_percent if effective else 0
         avail = availability(p.status, p.stock_quantity)
-        offered[p.product_id] = p.status == "active"
+        offered[p.product_id] = p.status in ("active", "coming_soon")
         prices[p.product_id] = p.price_brl
         products.append(
             {
