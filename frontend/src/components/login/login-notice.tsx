@@ -1,18 +1,20 @@
 "use client";
 
+import { Clock } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Banner } from "@/components/ui/banner";
 import { useMessages } from "@/lib/i18n/context";
 
+// Shown when the proxy sent the customer back here because the session expired.
 export function LoginNotice() {
   const messages = useMessages();
   const reason = useSearchParams().get("reason");
   if (reason !== "expired") return null;
 
   return (
-    <Alert className="rounded-2xl border-border/70 bg-banner text-banner-foreground">
-      <AlertDescription className="text-banner-foreground">{messages.login.sessionExpired}</AlertDescription>
-    </Alert>
+    <Banner kind="info" icon={<Clock />} title={messages.login.sessionExpired}>
+      {messages.login.sessionExpiredDetail}
+    </Banner>
   );
 }

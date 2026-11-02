@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import { MessageView } from "@/components/chat/message-view";
 import type { ChatMessage } from "@/lib/chat/types";
+import { getMessages } from "@/lib/i18n";
 import { assembleMessage } from "@/test/fixtures";
+
+const messages = getMessages();
 
 function assistant(text: string): ChatMessage {
   return { id: "m1", role: "assistant", parts: [{ type: "text", text, state: "done" }] };
@@ -51,7 +54,9 @@ describe("MessageView", () => {
     ].join("\n\n");
     const { container } = render(<MessageView message={assistant(hostile)} />);
 
-    expect(container.querySelector("img, iframe, script, svg")).toBeNull();
+    // Scoped to the answer bubble: the Melody avatar renders its own decorative icon.
+    const answer = screen.getByTestId("assistant-text");
+    expect(answer.querySelector("img, iframe, script, svg")).toBeNull();
     expect(container).not.toHaveTextContent(/blocked/i);
     const hrefs = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href"));
     expect(hrefs).toEqual([
@@ -71,7 +76,7 @@ describe("MessageView", () => {
 
     const status = screen.getByRole("status");
     expect(status).toHaveAttribute("data-state", "done");
-    expect(status).toHaveTextContent("Buscando no catálogo…");
+    expect(status).toHaveTextContent(messages.toolsDone.search_products);
     const cards = screen.getAllByRole("article");
     expect(cards).toHaveLength(2);
     const text = screen.getByText(/Encontrei estas opções/);

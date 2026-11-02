@@ -8,9 +8,9 @@ const messages = getMessages();
 
 describe("ToolStatus", () => {
   it.each([
-    ["running", "Buscando no catálogo…"],
-    ["done", `Buscando no catálogo… ${messages.toolState.done}`],
-    ["failed", `Buscando no catálogo… ${messages.toolState.failed}`],
+    ["running", messages.tools.search_products],
+    ["done", messages.toolsDone.search_products],
+    ["failed", messages.toolState.failed],
   ] as const)("renders the %s state with its announced text", (state, name) => {
     render(<ToolStatus toolName="search_products" state={state} />);
     const status = screen.getByRole("status");
@@ -20,7 +20,7 @@ describe("ToolStatus", () => {
 
   it("falls back for unknown tools and never shows the technical name", () => {
     const { container } = render(<ToolStatus toolName="drop_tables" state="running" />);
-    expect(screen.getByText("Consultando…")).toBeInTheDocument();
+    expect(screen.getByText(messages.tools.fallback)).toBeInTheDocument();
     expect(container.innerHTML).not.toContain("drop_tables");
   });
 

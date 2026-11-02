@@ -1,14 +1,20 @@
 // Server-safe: client components read copy with `useMessages` from "./context".
+import { en } from "./en";
 import { ptBR, type Messages } from "./pt-BR";
 
 export type { Messages };
 
-export const locale = "pt-BR";
+export type LocaleCode = "pt-BR" | "en";
 
-const catalogs: Record<string, Messages> = { "pt-BR": ptBR };
+// pt-BR first: the site and the agent persona default to Portuguese.
+export const locale: LocaleCode = "pt-BR";
+
+export const SUPPORTED_LOCALES: readonly LocaleCode[] = ["pt-BR", "en"];
+
+const catalogs: Record<LocaleCode, Messages> = { "pt-BR": ptBR, en };
 
 export function getMessages(target: string = locale): Messages {
-  return catalogs[target] ?? ptBR;
+  return Object.hasOwn(catalogs, target) ? catalogs[target as LocaleCode] : ptBR;
 }
 
 export function format(template: string, vars: Record<string, string | number>): string {

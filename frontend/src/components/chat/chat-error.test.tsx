@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChatError } from "@/components/chat/chat-error";
-import { getMessages } from "@/lib/i18n";
+import { format, getMessages } from "@/lib/i18n";
 
 const messages = getMessages();
 
@@ -27,17 +27,20 @@ describe("ChatError", () => {
       />,
     );
 
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("Muitas mensagens.");
-    expect(alert).toHaveTextContent("Você poderá enviar em 3s");
-    expect(screen.queryByRole("button")).toBeNull();
+    const banner = screen.getByRole("status");
+    expect(banner).toHaveTextContent(messages.errors.rateLimitedTitle);
+    expect(banner).toHaveTextContent("0:03");
+    const waiting = screen.getByRole("button", {
+      name: format(messages.errors.retryIn, { seconds: 3 }),
+    });
+    expect(waiting).toBeDisabled();
 
     act(() => vi.advanceTimersByTime(1000));
-    expect(alert).toHaveTextContent("Você poderá enviar em 2s");
+    expect(banner).toHaveTextContent("0:02");
 
     act(() => vi.advanceTimersByTime(2000));
     expect(onExpire).toHaveBeenCalledOnce();
-    expect(alert).not.toHaveTextContent("Você poderá enviar em");
+    expect(banner).toHaveTextContent(messages.errors.rateLimitedReady);
     await user.click(screen.getByRole("button", { name: messages.errors.retry }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
@@ -50,7 +53,7 @@ describe("ChatError", () => {
         onExpire={vi.fn()}
       />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("Limite diário atingido.");
+    expect(screen.getByRole("status")).toHaveTextContent(messages.errors.budgetTitle);
     expect(screen.queryByRole("button")).toBeNull();
   });
 
@@ -64,7 +67,7 @@ describe("ChatError", () => {
         onExpire={vi.fn()}
       />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("Algo deu errado.");
+    expect(screen.getByRole("status")).toHaveTextContent("Algo deu errado.");
     await user.click(screen.getByRole("button", { name: messages.errors.retry }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
@@ -73,7 +76,7 @@ describe("ChatError", () => {
     const { container } = render(
       <ChatError error={{ kind: "retryable", message: "" }} onRetry={vi.fn()} onExpire={vi.fn()} />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent(messages.errors.fallback);
+    expect(screen.getByRole("status")).toHaveTextContent(messages.errors.fallback);
     expect(container).not.toHaveTextContent(/429|500|rate_limited|retryable/);
   });
 });

@@ -11,7 +11,7 @@ describe("LoginNotice", () => {
   it("explains an expired session", () => {
     params.value = new URLSearchParams("reason=expired&callbackUrl=/");
     render(<LoginNotice />);
-    expect(screen.getByRole("alert")).toHaveTextContent(getMessages().login.sessionExpired);
+    expect(screen.getByRole("status")).toHaveTextContent(getMessages().login.sessionExpired);
   });
 
   it("renders nothing without a reason", () => {

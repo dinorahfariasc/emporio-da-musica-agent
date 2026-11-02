@@ -45,7 +45,7 @@ const components: Components = {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-medium break-all text-primary underline underline-offset-3"
+        className="font-semibold break-all text-link no-underline hover:underline underline-offset-3"
       >
         {children}
       </a>
@@ -60,10 +60,13 @@ export function Markdown({ children, streaming = false }: MarkdownProps) {
   const messages = useMessages();
   return (
     <Streamdown
-      className="min-w-0 break-words [&_a]:text-primary [&_h1]:font-heading [&_h2]:font-heading [&_h3]:font-heading [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto"
+      // `.b-mel`: 16/24 body, 8 px between blocks, links in text/link 600; the streaming caret
+      // is Streamdown's block caret tinted accent/brand. Wide tables and code scroll inside.
+      className="min-w-0 space-y-2 break-words [&_a]:text-link [&_li]:py-0 [&_ol]:list-outside [&_ol]:pl-5 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_strong]:font-semibold [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_ul]:list-outside [&_ul]:pl-5 [&>*:last-child]:after:text-brand"
       mode={streaming ? "streaming" : "static"}
       parseIncompleteMarkdown={streaming}
       isAnimating={streaming}
+      caret="block"
       rehypePlugins={rehypePlugins}
       components={components}
       controls={false}

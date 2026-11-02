@@ -1,35 +1,42 @@
 "use client";
 
-import { BrandMark } from "@/components/ui/brand-mark";
-import { Button } from "@/components/ui/button";
+import { MelodyAvatar } from "@/components/ui/brand-mark";
 import { useMessages } from "@/lib/i18n/context";
 
 type EmptyStateProps = { onPick: (text: string) => void };
 
+// Mobile: left-aligned block sitting just above the composer. Desktop: centred column.
 export function EmptyState({ onPick }: EmptyStateProps) {
-  const messages = useMessages();
+  const { emptyState } = useMessages();
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-7 px-3 py-10 text-center">
-      <BrandMark className="size-14 rounded-2xl" size={56} />
-      <p className="font-heading max-w-md text-2xl leading-snug font-medium text-balance">
-        {messages.emptyState.greeting}
-      </p>
-      <ul
-        aria-label={messages.emptyState.suggestionsLabel}
-        className="grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-2"
-      >
-        {messages.emptyState.suggestions.map((suggestion) => (
-          <li key={suggestion}>
-            <Button
-              variant="outline"
-              className="h-auto min-h-11 w-full justify-start rounded-2xl border-border/90 bg-card/80 px-3.5 py-2.5 text-left text-sm whitespace-normal shadow-sm hover:border-primary/30 hover:bg-secondary/60"
-              onClick={() => onPick(suggestion)}
-            >
-              {suggestion}
-            </Button>
-          </li>
-        ))}
-      </ul>
+    <div className="mx-auto flex w-full max-w-(--size-content-max) flex-1 flex-col justify-end px-4 pt-5 pb-2 md:justify-center md:px-0 md:pt-8">
+      <div className="mb-2 flex flex-col gap-6 md:mb-0 md:items-center md:gap-8 md:text-center">
+        <div className="flex flex-col gap-3 md:items-center md:gap-8">
+          <MelodyAvatar className="size-14 md:size-[72px]" iconClassName="size-7 md:size-9" />
+          <div>
+            <h1 className="t-title-l md:t-display">{emptyState.greeting}</h1>
+            <p className="t-body-l mt-3 text-secondary-text md:mx-auto md:max-w-[560px]">
+              {emptyState.intro}
+            </p>
+          </div>
+        </div>
+        <div className="md:max-w-[640px]">
+          <h2 className="t-label-s mb-2.5 md:sr-only">{emptyState.suggestionsLabel}</h2>
+          <ul className="flex flex-wrap gap-2 md:justify-center">
+            {emptyState.suggestions.map((suggestion) => (
+              <li key={suggestion}>
+                <button
+                  type="button"
+                  onClick={() => onPick(suggestion)}
+                  className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border bg-canvas px-4 py-2.5 text-left text-sm leading-5 font-medium text-primary-text transition-colors active:border-strong active:bg-subtle"
+                >
+                  {suggestion}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
