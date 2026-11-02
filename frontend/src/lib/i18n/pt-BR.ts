@@ -6,6 +6,7 @@ export const ptBR = {
     tagline: "Atendimento com a Melody",
     title: "Melody · Empório da Música",
     description: "Assistente virtual da Empório da Música",
+    newChat: "Nova conversa",
   },
   theme: {
     toDark: "Ativar tema escuro",

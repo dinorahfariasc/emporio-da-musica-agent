@@ -24,6 +24,7 @@ export type ChatViewProps = {
   busy: boolean;
   onSend: (text: string) => boolean;
   onStop: () => void;
+  onNewChat?: () => void;
 };
 
 // Presentational chat screen shared by the live chat and the dev gallery.
@@ -39,10 +40,11 @@ export function ChatView({
   busy,
   onSend,
   onStop,
+  onNewChat,
 }: ChatViewProps) {
   return (
     <div className="flex h-dvh flex-col bg-canvas">
-      <ChatHeader />
+      <ChatHeader onNewChat={onNewChat} />
       {messages.length === 0 ? (
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <EmptyState onPick={onSend} />

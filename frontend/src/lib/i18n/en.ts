@@ -8,6 +8,7 @@ export const en: Messages = {
     tagline: "Chat with Melody",
     title: "Melody · Empório da Música",
     description: "Empório da Música's virtual assistant",
+    newChat: "New chat",
   },
   theme: {
     toDark: "Switch to dark theme",

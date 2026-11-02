@@ -1,18 +1,19 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LogOut, SquarePen } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 import { LanguageSwitch } from "@/components/chat/language-switch";
 import { ThemeToggle } from "@/components/chat/theme-toggle";
 import { Logo } from "@/components/ui/brand-mark";
 import { Button } from "@/components/ui/button";
+import { clearHistory } from "@/lib/chat/history";
 import { useMessages } from "@/lib/i18n/context";
 
 // `.header` (64 px, mobile) / `.header.desk` (80 px, 40 px gutters). Mobile hides the logo
 // subtitle and shows Sign out as a 44 px icon button; desktop shows the label. The theme toggle
 // sits between PT|EN and Sign out.
-export function ChatHeader() {
+export function ChatHeader({ onNewChat }: { onNewChat?: () => void }) {
   const { app, login } = useMessages();
   // Mobile: 10 px right gutter (the 44 px icon buttons carry their own whitespace). Below 420 px
   // the store name, PT|EN, theme and Sign out do not all fit, so the name is visually hidden
@@ -26,13 +27,29 @@ export function ChatHeader() {
         subtitleClassName="hidden md:block"
       />
       <div className="flex shrink-0 items-center md:gap-2">
+        {onNewChat ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-11 rounded-full px-0"
+            aria-label={app.newChat}
+            title={app.newChat}
+            onClick={onNewChat}
+          >
+            <SquarePen aria-hidden className="size-5 md:size-[18px]" />
+          </Button>
+        ) : null}
         <LanguageSwitch />
         <ThemeToggle />
         <Button
           variant="ghost"
           size="sm"
           className="size-11 rounded-full px-0 no-underline md:w-auto md:rounded-md md:px-4"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => {
+            // A shared browser must not show the next person this conversation.
+            clearHistory();
+            void signOut({ callbackUrl: "/login" });
+          }}
         >
           <LogOut aria-hidden className="size-5 md:size-[18px]" />
           <span className="sr-only md:not-sr-only">{login.signOut}</span>
