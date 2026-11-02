@@ -34,40 +34,47 @@ The repo is private now; the user makes it public at delivery.
 
 ## 3. Status (update me)
 
-**Merged to `main`:** #2 bootstrap · #3 scaffolding + walking skeleton · #4 chat stream contract ·
-embeddings switch to Gemini · #5 store ETL, retrieval (#35) · #36/#38 chat web (US1, mobile) · #39
-agent-core plan · **#40 agent core (PR 1 of 002)**: router, `create_agent`, stream adapter,
-`POST /api/chat`, 8 read tools, 20 fake scenarios, OpenRouter provider, review fixes (DL-012) ·
-**#43 MCP server**: `backend/app/mcp.py` (FastMCP, bearer auth, `/mcp` mount), `vercel.json` `/mcp`
-rewrite, README section (DL-BE-001).
+_Last updated 2026-11-02._
 
-**Merged:** #7 actions (PR 2 of 002) landed on `main` as #42 (return eligibility, action tools,
-US6 scenarios, DL-013).
+**On `main` (all P0 merged):** data foundation (#35) · chat web (#36–#38) · agent core (#40) ·
+actions (#42) · MCP (#43) · auth, limits, deploy config (#44) · CI fix (#50) · README and
+deliverables (#48, #55, #58) · branding and approved Melody UI (#46, #49, #51) · Docker Compose
+(#52, #53) · exact stock (#54) · prompt fixes (#56) · history in the browser (#57) · store home
+with the Melody widget (#59) · customer lookup by contact, order context, sale calendar,
+pre-sale for coming-soon products, totals for several units in Python (#60).
 
-**Merged 2026-11-01 (later):** #44 auth/limits/deploy (spec 004) · #50 CI fix after #44 · #48 README
-draft · #49 brand tokens · #51 approved Melody UI · #52 Docker Compose · #53 compose loads
-`backend/.env`. **Open:** #54 exact stock quantity (DL-BE-003), README run/env/decisions update.
+**Issues:** closed #5, #6, #13, #18 (2026-11-02, each with a comment linking its PRs and any
+criterion superseded by a later decision). Open: #11 (tag `v1.0-submission` at the deadline,
+working production), #12 (server-side history; browser history done in #57), P1/P2 #14, #15,
+#16, #17, #19, #21, #23.
 
-**Production is DOWN since #44:** the frontend's fail-closed hook throws
+**Production (Vercel) is DOWN since #44:** the frontend's fail-closed hook throws
 `missing required config: BACKEND_URL`. `AUTH_SECRET`/`SERVICE_JWT_SECRET` are not set in Vercel
 yet; `BACKEND_URL` comes from the service binding, which seems not visible to
 `src/instrumentation.ts`. Checklist in README "Run in production". Deferred by Dinorah; local
-Docker is the working path for now.
+Docker is the working path.
 
-**In flight (check `gh pr list` and the board for the truth):**
-- **Models (DL-012):** router `perplexity/pplx-decider-v1.2`, specialist `openai/gpt-6-luna`, general
-  `deepseek/deepseek-v4.1-flash`, all through OpenRouter. Production env: `CHAT_MODE=backend`,
-  `LLM_PROVIDER=openrouter`, `ROUTER_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, `ROUTER_MODEL`,
-  `SPECIALIST_MODEL`, `GENERAL_MODEL`, `GEMINI_API_KEY`, `EMBEDDINGS_PROVIDER=gemini`; the user
-  runs the redeploy.
-- **#5 T032 done (2026-11-01):** Neon seeded with Gemini in 7.24 s; the six store-table row counts and checksums match local. Re-seed only if the data or the embedding provider changes.
-- **#8 MCP merged as #43.** Production needs `MCP_API_KEY` (set in Vercel; takes effect on the next redeploy).
-- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0), **#18 Figma branding** (`specs/008-figma-branding`, `DL-FE-001` → `DL-FE-002`: approved Melody UI implemented on `feat/ui-melody`, uncommitted, gate green).
-- **#18 store home (spec 009, DL-FE-004):** `/` is now the public store page with Melody in a side widget, on `feat/store-home`, PR open (see `gh pr list`), gate green. Only `src/proxy.ts` changed on the auth side (public `/`).
-- **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap). #18 login-form / PT-EN / Sign out wait for #44 → #13 on `main`.
+**Pending on Neon (Dinorah runs it, needs the Neon and Gemini credentials):** re-seed after #60 so
+product 130 is sellable on pre-sale: `cd backend && uv run python -m etl --yes` with
+`DATABASE_URL_UNPOOLED` (Neon direct URL), `EMBEDDINGS_PROVIDER=gemini` and `GEMINI_API_KEY`.
+Vectors are cached, so it costs no embedding calls.
 
-**Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
-all P0 is in production.
+**Models (DL-012):** router `perplexity/pplx-decider-v1.2`, specialist `openai/gpt-6-luna`,
+general `deepseek/deepseek-v4.1-flash`, all through OpenRouter.
+
+**Rules decided since the brief (see the decision log):** WhatsApp (67) 3321-4500 separate from
+the phone (67) 3341-4444 and a R$ 100,00 minimum instalment from 4x (DL-FE-005); coming-soon =
+pre-sale, no immediate delivery, no date, no reservation (DL-BE-006); a name alone never unlocks
+orders, only the e-mail or phone on file (DL-BE-005).
+
+**Next:** spec `010-semantic-recommendations` (style not in the catalog → top 3 similar with
+shared/different traits, or a friendly tour of the catalog when nothing is close). Needs real
+embeddings locally (`EMBEDDINGS_PROVIDER=gemini` + `GEMINI_API_KEY` in `backend/.env`) to
+calibrate the similarity thresholds; the local Docker index uses the fake embedder. Then the
+Vercel deploy.
+
+**Local testing:** `docker compose up --build` (README). Test accounts `probe`, `probe2`, `probe3`
+exist only in the local Docker database (for scripted batches; each has the 200k tokens/day cap).
 
 ## 3b. UI track (Figma ready) — read before touching `frontend/`
 
@@ -155,6 +162,11 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 ### 2026-11-02 — #18 store home PR
 - **Done:** DL-FE-005 assumptions applied (e-mail without accent, minimum instalment R$ 100,00, phone and WhatsApp distinct); gate green; `feat/store-home` pushed and PR opened.
 - **Next:** store confirms DL-FE-005; if confirmed, align the backend policy text (4x–6x minimum) with the page.
+
+### 2026-11-02 — Pre-sale, issues, handoff
+- **Done:** #60 merged with coming-soon pre-sale (DL-BE-006) and `calculate_payment_options(quantity)`. Issues #5, #6, #13, #18 closed with PR links; progress comments on #11 and #12. Status section rewritten.
+- **Pending:** Neon re-seed (Dinorah, credentials). Vercel deploy still down.
+- **Next:** spec 010 semantic recommendations.
 
 ### 2026-11-02 — Hard-case batch, customer lookup, #59 review
 - **Done:** #59 review fixes (Melody aligned with the page on WhatsApp/instalments, mobile minimised, catalog copy). `find_my_orders` (contact-based lookup, name only disambiguates), order region/age/payment, sale-calendar answers (DL-BE-005).
