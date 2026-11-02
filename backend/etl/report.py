@@ -14,7 +14,10 @@ DL001_TRACEABILITY: list[tuple[str, str]] = [
     ("96 active with zero stock", "`out_of_stock_active`"),
     ("113 discontinued", "`discontinued`"),
     ("136 discontinued with 13 units", "`discontinued`"),
-    ("130 coming_soon yet present in orders", "`coming_soon` + `not_on_sale_in_order`"),
+    (
+        "130 coming_soon yet present in orders",
+        "`coming_soon` (pre-sale since DL-BE-006, so not an anomaly in orders)",
+    ),
     ("Duplicate promotions per product (96: 18% and 40%)", "`duplicate_promotions`"),
     ("Only 4 promotions active", "`active_promotions`"),
     ("Promotions have no validity dates", "`no_promotion_validity_dates`"),

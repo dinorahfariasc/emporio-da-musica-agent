@@ -68,7 +68,7 @@ assistants that execute tasks, AI in production).
 - Name × description: the **name** wins; contradictory descriptions are not shown.
 - Specs × description: **specs** win.
 - Promotions: only `is_active=1`; if several are active, the largest applies.
-- `discontinued` is not for sale; zero stock = unavailable (suggest alternatives); `coming_soon` = "coming soon".
+- `discontinued` is not for sale; zero stock = unavailable (suggest alternatives); `coming_soon` = "coming soon". *(Superseded 2026-11-02 by DL-BE-006: `coming_soon` is sold on pre-sale.)*
 - Official contact: §1.2 (67) 3341-4444; email without accent; conflict documented.
 - Installments: §3.1 overrides the table.
 - Text normalized to Unicode NFC.
@@ -711,3 +711,47 @@ This supersedes the WhatsApp and instalment choices of DL-001 (`backend/etl/rule
 **Role of AI.** Grok Bot found the inconsistencies while copying the manual and applied the
 decision. Dinorah made the decision.
 
+
+## DL-BE-005 — Customer lookup by contact, order context, sale calendar, firmer answers (2026-11-02)
+
+**Problem.** A batch of hard conversations showed: Melody apologised and wavered when a customer
+insisted that a discontinued bass with 13 units in the database could be sold; it offered to
+"reserve" an unreleased product (the manual has no reservations; §6.2 even denies price
+reservations). Two new needs: a customer who says "sou a Fernanda…" without an order number, and
+"when is the best time to buy?".
+
+**Decision.**
+
+| Choice | Why |
+|---|---|
+| New tool `find_my_orders(contact, full_name?)` | Lists the customer's orders from the e-mail or phone on file and verifies all of them for the conversation. A name alone is never proof (anyone knows a name); it only disambiguates `bruno.martins@jmail.com`, shared by customers 11 and 43. Wrong contacts count against the existing conversation lock (3). |
+| `OrderStatusView` gains `payment_method`, `shipping_region`, `order_age_days` | "Is it shipped? How long?" needs the region (§5.1 Campo Grande vs §5.2 carriers) and how old the order is, computed in Python. There is no status timestamp, so the age is from the order date and the prompt says so. |
+| Status meanings in the prompt (`pending` = waiting for payment confirmation, `confirmed` = paid, waiting to ship) | The data has no payment status; this is the reading of the order statuses (README Assumptions). |
+| `promotions` intent can call `search_policies` | The sale calendar lives in §6.1; it compares ranges and never promises a future discount. |
+| Unsellable stays unsellable; no reservations | Prompt rules; the agent keeps a correct answer when challenged, without apologising. |
+| `search_policies` done label "Políticas da loja consultadas" | It said "Política de trocas consultada" for any manual lookup (hours, payment…). |
+
+**Role of AI.** Claude ran the batches, designed the lookup with the privacy rule, wrote the tests
+first and re-ran every case live. Dinorah asked for the scenarios.
+
+## DL-BE-006 — "Coming soon" products are sold on pre-sale (2026-11-02)
+
+**Decision (Dinorah).** A `coming_soon` product is offered normally, with price and payment
+options, and Melody says it has no immediate delivery: it arrives soon. This supersedes the
+DL-002 rule "coming soon = not for sale" and amends 001 FR-009 / acceptance 7 and 002 FR-008 /
+scenario 6.
+
+| Choice | Why |
+|---|---|
+| `is_sellable` is true for `coming_soon`; new `ready_to_ship` (true only for `in_stock`) | Sellable and deliverable now are different facts; both stay deterministic in `app/catalog/rules.py`. Searches with `only_sellable` and alternatives now include pre-sale products. |
+| `get_product(quantity=N)` returns `enough_stock = null` for a pre-sale product | Nothing on hand is counted: it ships when it arrives. The `stock_quantity` of product 130 (2) is not quoted. |
+| No arrival date, no reservation | The data has no launch date, and the manual has no reservations; buying on pre-sale is a purchase delivered later. |
+| `calculate_payment_options(product_id, quantity)` | A live test for 2 units showed the model multiplying the price itself (R$ 1.749 × 2) before calling the tool; totals for several units now come from Python like every other price. |
+| Product 130 in orders 3 and 14 is no longer an anomaly | Pre-sale orders are legitimate; `not_on_sale_in_order` now counts discontinued products only (0 today). `docs/data-quality-report.md` regenerated. |
+
+**Deploy note.** `is_sellable` is stored by the ETL, so production needs a re-seed after merge:
+`cd backend && uv run python -m etl --yes` against Neon (`DATABASE_URL_UNPOOLED`). Until then,
+production still treats product 130 as not for sale.
+
+**Role of AI.** Claude mapped every place that depended on the old rule, wrote the tests first
+and re-seeded the local database. Dinorah made the decision.

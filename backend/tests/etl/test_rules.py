@@ -51,7 +51,8 @@ def test_availability_of_the_flagged_products(payload, anomalies):
     assert products[113]["availability"] == "discontinued"
     assert products[136]["availability"] == "discontinued"
     assert products[130]["availability"] == "coming_soon"
-    assert not any(products[i]["is_sellable"] for i in (96, 113, 130, 136))
+    assert not any(products[i]["is_sellable"] for i in (96, 113, 136))
+    assert products[130]["is_sellable"]  # pre-sale (DL-BE-006)
     assert set(anomalies["discontinued"]) == {"product 113", "product 136"}
     assert set(anomalies["out_of_stock_active"]) == {"product 96"}
     assert set(anomalies["coming_soon"]) == {"product 130"}
@@ -69,15 +70,15 @@ def test_only_four_real_promotions_are_effective(payload, anomalies):
     assert set(anomalies["duplicate_promotions"]) == {"product 93", "product 96", "product 99"}
 
 
-def test_coming_soon_product_in_orders_is_flagged(payload, anomalies):
+def test_a_pre_sale_product_in_orders_is_not_an_anomaly(payload, anomalies):
     flagged = {
         (i["order_id"], i["product_id"])
         for i in payload.tables["order_items"]
         if i["product_not_on_sale"]
     }
 
-    assert flagged == {(3, 130), (14, 130)}
-    assert set(anomalies["not_on_sale_in_order"]) == {"order 3", "order 14"}
+    assert flagged == set()  # orders 3 and 14 hold product 130, sold on pre-sale
+    assert not anomalies.get("not_on_sale_in_order")
 
 
 def test_shared_email_is_flagged_and_masked(payload, anomalies):

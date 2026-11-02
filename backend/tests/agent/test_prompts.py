@@ -18,7 +18,22 @@ RULES = [
     "Não anuncie o que vai fazer",  # no preamble glued to the answer
     "(67) 3321-4500",  # manual conflicts resolved as on the store page (DL-FE-005)
     "R$ 100,00",
+    "não está à venda, mesmo",  # unsellable stays unsellable when the customer insists
+    "sem pronta entrega",  # coming_soon is offered, arriving soon (DL-BE-006)
+    "calculate_payment_options com `quantity`",  # totals for several units come from Python
+    "Não prometa reservas",
+    "find_my_orders",  # "sou fulano": the customer is found by e-mail or phone, never by name
 ]
+
+
+@pytest.mark.parametrize("status", ["pending", "confirmed", "shipped", "delivered", "cancelled"])
+def test_every_order_status_is_explained(status):
+    assert f"`{status}`" in INTENT_BLOCKS["order_status"]
+
+
+def test_best_time_to_buy_uses_the_campaign_calendar():
+    block = INTENT_BLOCKS["promotions"]
+    assert "search_policies" in block and "§6.1" in block
 
 
 def test_greeting_block_introduces_melody():

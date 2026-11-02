@@ -29,6 +29,8 @@ class ProductView(BaseModel):
     discount_percent: int | None
     availability: p.Availability
     is_sellable: bool
+    # False for coming_soon: sold on pre-sale, ships when it arrives (DL-BE-006).
+    ready_to_ship: bool
     stock_quantity: int
     specs: dict[str, str]
     description: str | None
@@ -57,7 +59,10 @@ def _lookup(view: ProductView, quantity: int | None) -> ProductLookup:
     return ProductLookup(
         product=view,
         requested_quantity=quantity,
-        enough_stock=view.is_sellable and view.stock_quantity >= quantity,
+        # A pre-sale item has nothing on hand to count against: it ships when it arrives.
+        enough_stock=None
+        if view.is_sellable and not view.ready_to_ship
+        else view.is_sellable and view.stock_quantity >= quantity,
     )
 
 
@@ -82,6 +87,7 @@ def _view(row: dict) -> ProductView:
         discount_percent=row["effective_discount_percent"] if discounted else None,
         availability=row["availability"],
         is_sellable=row["is_sellable"],
+        ready_to_ship=row["availability"] == "in_stock",
         stock_quantity=row["stock_quantity"],
         specs=row["specs"],
         # Untrusted descriptions contradict the name/specs (DL-001): never shown.

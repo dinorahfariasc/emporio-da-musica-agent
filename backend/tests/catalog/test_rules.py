@@ -9,6 +9,7 @@ from app.catalog.rules import (
     effective_promotion,
     is_sellable,
     promo_price,
+    ready_to_ship,
 )
 from etl.models import PromotionRow
 from etl.sources import read_csv
@@ -28,7 +29,20 @@ FIXTURES = Path(__file__).parents[1] / "fixtures"
 )
 def test_availability(status, stock, expected):
     assert availability(status, stock) == expected
-    assert is_sellable(status, stock) is (expected == "in_stock")
+
+
+@pytest.mark.parametrize(
+    ("status", "stock", "sellable", "ready"),
+    [
+        ("active", 5, True, True),
+        ("active", 0, False, False),
+        ("coming_soon", 2, True, False),  # pre-sale: sold now, delivered when it arrives
+        ("discontinued", 13, False, False),
+    ],
+)
+def test_coming_soon_is_sellable_without_immediate_delivery(status, stock, sellable, ready):
+    assert is_sellable(status, stock) is sellable
+    assert ready_to_ship(status, stock) is ready
 
 
 def _fixture_promotions() -> list[PromotionRow]:

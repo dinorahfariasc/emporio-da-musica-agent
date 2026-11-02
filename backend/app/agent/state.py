@@ -182,3 +182,44 @@ async def confirm_success(
             (ORDER_LOCK_AT, order_id),
         )
     await conn.commit()
+
+
+async def reserve_contact_attempt(
+    conn: psycopg.AsyncConnection, user_id: str, conversation_id: str
+) -> Reservation:
+    """Like `reserve_attempt`, for a lookup by contact (no order id yet): counts against the
+    conversation only, before the contact is compared. `verify_orders` gives it back."""
+    check_conversation_id(conversation_id)
+    await _ensure_once(conn)
+    async with conn.transaction():
+        await conn.execute(
+            "INSERT INTO conversation_state (user_id, conversation_id) VALUES (%s, %s) "
+            "ON CONFLICT DO NOTHING",
+            (user_id, conversation_id),
+        )
+        cur = await conn.execute(
+            "UPDATE conversation_state SET failed_attempts = failed_attempts + 1, "
+            "locked = failed_attempts + 1 >= %s, updated_at = now() "
+            "WHERE user_id = %s AND conversation_id = %s AND NOT locked "
+            "RETURNING failed_attempts",
+            (CONVERSATION_LOCK_AT, user_id, conversation_id),
+        )
+        allowed = await cur.fetchone() is not None
+    await conn.commit()
+    return Reservation(allowed, None if allowed else "locked")
+
+
+async def verify_orders(
+    conn: psycopg.AsyncConnection, user_id: str, conversation_id: str, order_ids: list[int]
+) -> None:
+    """A contact matched: unlock all of that customer's orders and give the attempt back."""
+    check_conversation_id(conversation_id)
+    async with conn.transaction():
+        await conn.execute(
+            "UPDATE conversation_state SET failed_attempts = greatest(failed_attempts - 1, 0), "
+            "locked = false, updated_at = now(), "
+            "verified_order_ids = ARRAY(SELECT DISTINCT unnest(verified_order_ids || %s::int[])) "
+            "WHERE user_id = %s AND conversation_id = %s",
+            (order_ids, user_id, conversation_id),
+        )
+    await conn.commit()

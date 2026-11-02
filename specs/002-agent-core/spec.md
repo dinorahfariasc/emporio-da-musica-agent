@@ -56,8 +56,9 @@ every price, availability state, promotion and installment value in the answer m
    payment only for purchases above R$ 2.000.
 5. **Given** product 136 is discontinued but has 13 units, **When** asked about it, **Then** Melody
    says it is no longer sold and offers alternatives; it never offers it for sale.
-6. **Given** product 130 is "coming soon", **When** asked about it, **Then** Melody says it is coming
-   soon and does not offer it for sale.
+6. **Given** product 130 is "coming soon", **When** asked about it, **Then** Melody offers it
+   normally (price, payment options) and says it has no immediate delivery: it arrives soon, with
+   no date promised. *Amended 2026-11-02, DL-BE-006; it was "does not offer it for sale".*
 7. **Given** products 135–144 have descriptions that contradict their names, **When** a customer
    asks for "Fender Jazz Bass", **Then** Melody does not present product 135 ("Music Man Bass 1X")
    as a Fender Jazz Bass.
@@ -295,8 +296,9 @@ repeat without the key.
   R$ 2.000.
 - **FR-007**: Promotional prices MUST always be presented with the original price and the
   discount percentage.
-- **FR-008**: Products not for sale (discontinued, coming soon, out of stock) MUST never be offered
-  for sale; their state MUST be stated truthfully.
+- **FR-008**: Products not for sale (discontinued, out of stock) MUST never be offered for sale;
+  their state MUST be stated truthfully. A coming-soon product is offered on pre-sale and MUST be
+  stated as having no immediate delivery, with no arrival date invented (DL-BE-006).
 - **FR-009**: Policy answers MUST be grounded in retrieved manual sections; where the manual has
   known conflicts, the resolution documented in feature 001 applies (official contact §1.2; §3.1
   over the installment table).

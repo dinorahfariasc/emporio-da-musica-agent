@@ -39,3 +39,18 @@ async def test_needs_an_input(tool_ctx):
     with pytest.raises(ToolError) as exc:
         await calculate_payment_options(tool_ctx)
     assert exc.value.code == "invalid_input"
+
+
+async def test_several_units_are_multiplied_in_python(tool_ctx):
+    options = await calculate_payment_options(tool_ctx, product_id=130, quantity=2)
+
+    assert options.amount_brl == D("3498.00")  # 2 × R$ 1.749,00
+    assert options.pix.amount_brl == D("3323.10")
+    assert options.installments[-1].times == 12
+
+
+async def test_several_promoted_units_keep_the_promo_and_no_pix(tool_ctx):
+    options = await calculate_payment_options(tool_ctx, product_id=121, quantity=2)
+
+    assert options.amount_brl == D("878.40")  # 2 × R$ 439,20
+    assert not options.pix.applies

@@ -30,6 +30,16 @@ async def _run(tools, script):
     return (await agent.ainvoke({"messages": [("human", "go")]}))["messages"]
 
 
+def test_customers_can_find_their_orders_by_contact():
+    assert "find_my_orders" in CONTRACT_TOOL_NAMES
+    for intent in ("order_status", "service_request"):
+        assert "find_my_orders" in TOOLS_BY_INTENT[intent]
+
+
+def test_promotions_can_read_the_campaign_calendar():
+    assert "search_policies" in TOOLS_BY_INTENT["promotions"]
+
+
 async def test_tool_error_becomes_an_error_message_and_the_run_continues():
     tools = langchain_tools(None, ["missing"], {"missing": missing})  # type: ignore[arg-type]
 

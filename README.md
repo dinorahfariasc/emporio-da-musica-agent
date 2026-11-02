@@ -274,8 +274,17 @@ decision-log entry with the reasoning):
   or a human handoff, and only on the customer's explicit request.
 - **The store sells instruments only.** Accessories (strings, picks, cables, cases, pedals,
   amplifiers) are refused politely, with an instrument suggested instead.
-- **Order data needs proof of ownership:** order number plus the e-mail or phone on file, with a
-  generic error on mismatch and a lock after repeated failures (privacy, manual §9).
+- **Order data needs proof of ownership:** the e-mail or phone on file (with or without the order
+  number), with a generic error on mismatch and a lock after repeated failures (privacy, manual
+  §9). A customer's name alone ("sou a Fernanda…") is never proof; it only disambiguates an
+  e-mail shared by two customers.
+- **Order statuses mean:** `pending` = received, waiting for payment confirmation; `confirmed` =
+  paid, waiting to ship; `shipped`, `delivered`, `cancelled` as named. The data has no status
+  timestamps, so "how long" is counted from the order date; orders pending or confirmed for more
+  than 7 days are flagged with an offer of human support.
+- **The sale calendar (§6.1) is a range, not a promise:** "best time to buy" compares the
+  campaign ranges (Black Friday 15–30%, store anniversary 10–25%…) and shows what is on sale now;
+  no future discount is promised for a specific product.
 - **Data anomalies are corrected by explicit rules, not silently** (e.g. a product name beats a
   contradicting description; only four promotions are active), listed in
   `docs/data-quality-report.md` (DL-001).
@@ -285,6 +294,10 @@ decision-log entry with the reasoning):
   because the deployed agent runs on paid models behind a public URL.
 - **Stock answers are exact:** the agent states the quantity on hand and whether N units can be
   sold, from the database (DL-BE-003).
+- **"Coming soon" means pre-sale:** such a product is offered normally (price, payment options)
+  with a clear note that it has no immediate delivery and arrives soon; no arrival date is
+  invented. Buying it is a purchase delivered later, not a reservation (the manual has none).
+  This is why product 130 in orders 3 and 14 is not treated as an anomaly (DL-BE-006).
 
 ## AI-assistant workflow
 

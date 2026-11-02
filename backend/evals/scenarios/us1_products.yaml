@@ -62,7 +62,7 @@
       calls:
         - {name: get_product, args: {product_id: 130}}
       expect:
-        required_facts: ["coming_soon", '"is_sellable":false']
+        required_facts: ["coming_soon", '"is_sellable":true', '"ready_to_ship":false']
 
 - id: us1-7-descricao-nao-confiavel-135
   turns:

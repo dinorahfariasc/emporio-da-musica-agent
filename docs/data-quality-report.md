@@ -10,8 +10,8 @@
 | untrusted_description | product | 10 | Name and specs win; the description is never shown or indexed (DL-002). |
 | out_of_stock_active | product | 1 | Unavailable; suggest alternatives (DL-002). |
 | discontinued | product | 2 | Not sellable (DL-002). |
-| coming_soon | product | 1 | Not sellable; shown as coming soon (DL-002). |
-| not_on_sale_in_order | order | 2 | Kept as historical data; flagged on the order item. |
+| coming_soon | product | 1 | Sold on pre-sale without immediate delivery; shown as coming soon (DL-BE-006). |
+| not_on_sale_in_order | order | 0 | Kept as historical data; flagged on the order item. |
 | duplicate_promotions | product | 3 | Only active promotions apply; the largest discount wins (DL-002). |
 | active_promotions | product | 4 | Informational: these are the only discounts the agent may quote. |
 | no_promotion_validity_dates | promotion | 25 | `is_active` is the only source of truth; no date logic. |
@@ -31,7 +31,7 @@
 | 96 active with zero stock | `out_of_stock_active` |
 | 113 discontinued | `discontinued` |
 | 136 discontinued with 13 units | `discontinued` |
-| 130 coming_soon yet present in orders | `coming_soon` + `not_on_sale_in_order` |
+| 130 coming_soon yet present in orders | `coming_soon` (pre-sale since DL-BE-006, so not an anomaly in orders) |
 | Duplicate promotions per product (96: 18% and 40%) | `duplicate_promotions` |
 | Only 4 promotions active | `active_promotions` |
 | Promotions have no validity dates | `no_promotion_validity_dates` |
@@ -97,15 +97,6 @@ Product not launched yet.
 | Record | Detail |
 |---|---|
 | product 130 | stock 2 |
-
-### not_on_sale_in_order
-
-Order contains a product that is not on sale (discontinued or coming soon); a product that is only out of stock does not count.
-
-| Record | Detail |
-|---|---|
-| order 3 | contains product 130 |
-| order 14 | contains product 130 |
 
 ### duplicate_promotions
 

@@ -34,7 +34,7 @@ NO_SPECIALIST: frozenset[str] = frozenset({"multi_intent", "unclear"})
 INTENT_CRITERIA: dict[str, str] = {
     "product_search": "looking for or comparing instruments to buy, or asking for recommendations",
     "product_details": "asking about one specific product: specs, price, stock, similar ones",
-    "promotions": "asking about discounts or promotions currently running",
+    "promotions": "asking about discounts, promotions running now, or the best time to buy",
     "payment_options": "asking how to pay, PIX discount or installments",
     "order_status": "asking where an order is, its status or tracking code",
     "policy_question": "asking about returns, exchanges, warranty, shipping or other store rules",
