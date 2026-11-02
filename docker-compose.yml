@@ -15,5 +15,46 @@ services:
       timeout: 3s
       retries: 15
 
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: local
+      DATABASE_URL: postgresql://emporio:emporio@db:5432/emporio
+      SERVICE_JWT_SECRET: ${SERVICE_JWT_SECRET:-dev-secret-at-least-32-bytes-long-ok}
+      LLM_PROVIDER: fake
+      ROUTER_PROVIDER: fake
+      EMBEDDINGS_PROVIDER: fake
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      BACKEND_URL: http://backend:8000
+      CHAT_MODE: backend
+      DATABASE_URL: postgresql://emporio:emporio@db:5432/emporio
+      DATABASE_URL_UNPOOLED: postgresql://emporio:emporio@db:5432/emporio
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-at-least-32-bytes-long-ok}
+      SERVICE_JWT_SECRET: ${SERVICE_JWT_SECRET:-dev-secret-at-least-32-bytes-long-ok}
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
 volumes:
   pgdata:
