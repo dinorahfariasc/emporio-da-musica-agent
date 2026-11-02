@@ -771,3 +771,17 @@ now run and recorded locally, so a small, safe MCP is enough.
 
 **Role of AI.** Claude Code found the UUID mismatch while exploring and proposed the cut; the
 owner chose the read-only option.
+
+---
+
+## DL-BE-008 — Semantic recommendations on the existing hybrid index (2026-11-02, spec 010)
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Add `category_id` to `find_similar_products` and teach the prompt to translate subjective requests into `description` + `category_id` + `max_price_brl` | Enrich product documents; a re-ranker; a new tool | The CSV descriptions already say "iniciantes", "timbre quente", so the vectors capture them; the real gap was wrong-category hits and no guidance. No new dependency. |
+
+CI uses the fake n-gram embedder, so scenarios assert the tool call and its arguments, and the
+tool test asserts the category filter; semantic quality itself is checked live (T5).
+
+**Role of AI.** Claude Code found the gap, wrote the test first and the change; the owner chose the
+scope.

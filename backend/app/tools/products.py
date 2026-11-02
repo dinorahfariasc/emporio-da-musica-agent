@@ -186,10 +186,14 @@ async def find_similar_products(
     ctx: ToolContext,
     product_id: int | None = None,
     description: str | None = None,
+    category_id: int | None = None,
     max_price_brl: Decimal | None = None,
     limit: Annotated[int, Field(ge=1, le=5)] = 3,
 ) -> ProductsResult:
-    """Find sellable alternatives to a product (same category) or to a text description."""
+    """Find sellable alternatives to a product (same category) or to a text description.
+
+    With `description`, pass `category_id` when the instrument family is known so that a request
+    such as a soft-sounding beginner guitar does not return other instruments."""
     if product_id is None and not (description or "").strip():
         raise ToolError("invalid_input", "give product_id or description")
     async with ctx.pool.connection() as conn:
@@ -206,7 +210,9 @@ async def find_similar_products(
             )
             result = await _similar_to_product(conn, product_id, filters=filters, limit=limit)
         else:
-            filters = ProductFilters(only_sellable=True, max_price=max_price_brl)
+            filters = ProductFilters(
+                category_id=category_id, only_sellable=True, max_price=max_price_brl
+            )
             result = await _search_products(
                 conn, ctx.embedder, description or "", filters=filters, limit=limit
             )

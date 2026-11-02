@@ -36,3 +36,32 @@
       live_expect:
         required_facts: []
         answer_excludes: ["temos flauta", "R$"]
+
+- id: us4-5-pedido-subjetivo-iniciante
+  turns:
+    - say: "Quero um violão de som suave para quem está começando, até R$ 700"
+      intent: product_search
+      calls:
+        - {name: find_similar_products,
+           args: {description: violão de som suave para iniciante, category_id: 5,
+                  max_price_brl: 700}}
+      expect:
+        required_facts: ['"is_sellable":true', "Violões"]
+        forbidden_facts: ['"product_id":113,', '"product_id":136,']
+      live_expect:
+        required_facts: ['"is_sellable":true', "Violões"]
+        forbidden_facts: ['"product_id":113,', '"product_id":136,']
+
+- id: us4-6-timbre-quente-nylon
+  turns:
+    - say: "Procuro um violão de nylon com timbre quente"
+      intent: product_search
+      calls:
+        - {name: find_similar_products,
+           args: {description: violão de nylon com timbre quente, category_id: 5}}
+      expect:
+        required_facts: ['"strings":"nylon"', "Violões"]
+        forbidden_facts: ['"strings":"steel"']
+      live_expect:
+        required_facts: ['"strings":"nylon"']
+        forbidden_facts: ['"product_id":113,', '"product_id":136,']
