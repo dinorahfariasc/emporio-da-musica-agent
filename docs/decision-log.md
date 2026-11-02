@@ -615,3 +615,19 @@ store.
 
 **Role of AI.** Claude found the gap, wrote the failing tests first and checked the live answer
 for 5 and 10 units. Dinorah reported the bad answer.
+
+## DL-BE-004 — Prompt fixes from a review against the brief (2026-11-01)
+
+**Problem.** A live run of 11 conversations against the brief showed four gaps: the greeting did
+not introduce Melody (the brief asks for a persona); an out-of-stock product got "want me to look
+for alternatives?" instead of alternatives; a "the guitar arrived broken" message went straight
+to a human without the defect/warranty rules (§4.2, §8.1); and a "let me check" preamble was
+glued to the answer ("right now.Hi!").
+
+**Decision.** Prompt-only changes, each covered by a rule test: introduce Melody on the first
+message; never announce tool use; on an unavailable product call `find_similar_products` and show
+alternatives in the same answer; for a damaged or defective product, call `search_policies` and
+explain the rule before or alongside a handoff.
+
+**Role of AI.** Claude ran the conversations, proposed the fixes and re-ran them live. Dinorah
+approved doing all of them.
