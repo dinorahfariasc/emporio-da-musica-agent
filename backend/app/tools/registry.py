@@ -29,6 +29,7 @@ CONTRACT_TOOL_NAMES: tuple[str, ...] = (
     "search_policies",
     "get_store_info",
     "get_order_status",
+    "find_my_orders",
     "check_return_eligibility",  # not in the #4 contract table; the UI labels it (T033)
     "request_return",
     "register_complaint",
@@ -39,12 +40,13 @@ CONTRACT_TOOL_NAMES: tuple[str, ...] = (
 TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "product_search": ("search_products", "find_similar_products"),
     "product_details": ("get_product", "find_similar_products", "calculate_payment_options"),
-    "promotions": ("get_active_promotions",),
+    "promotions": ("get_active_promotions", "search_policies"),
     "payment_options": ("get_product", "calculate_payment_options", "search_policies"),
-    "order_status": ("get_order_status",),
+    "order_status": ("find_my_orders", "get_order_status", "search_policies"),
     "policy_question": ("search_policies",),
     "store_info": ("get_store_info", "search_policies"),
     "service_request": (
+        "find_my_orders",
         "get_order_status",
         "check_return_eligibility",
         "request_return",

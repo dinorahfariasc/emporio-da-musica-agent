@@ -711,3 +711,25 @@ This supersedes the WhatsApp and instalment choices of DL-001 (`backend/etl/rule
 **Role of AI.** Grok Bot found the inconsistencies while copying the manual and applied the
 decision. Dinorah made the decision.
 
+
+## DL-BE-005 — Customer lookup by contact, order context, sale calendar, firmer answers (2026-11-02)
+
+**Problem.** A batch of hard conversations showed: Melody apologised and wavered when a customer
+insisted that a discontinued bass with 13 units in the database could be sold; it offered to
+"reserve" an unreleased product (the manual has no reservations; §6.2 even denies price
+reservations). Two new needs: a customer who says "sou a Fernanda…" without an order number, and
+"when is the best time to buy?".
+
+**Decision.**
+
+| Choice | Why |
+|---|---|
+| New tool `find_my_orders(contact, full_name?)` | Lists the customer's orders from the e-mail or phone on file and verifies all of them for the conversation. A name alone is never proof (anyone knows a name); it only disambiguates `bruno.martins@jmail.com`, shared by customers 11 and 43. Wrong contacts count against the existing conversation lock (3). |
+| `OrderStatusView` gains `payment_method`, `shipping_region`, `order_age_days` | "Is it shipped? How long?" needs the region (§5.1 Campo Grande vs §5.2 carriers) and how old the order is, computed in Python. There is no status timestamp, so the age is from the order date and the prompt says so. |
+| Status meanings in the prompt (`pending` = waiting for payment confirmation, `confirmed` = paid, waiting to ship) | The data has no payment status; this is the reading of the order statuses (README Assumptions). |
+| `promotions` intent can call `search_policies` | The sale calendar lives in §6.1; it compares ranges and never promises a future discount. |
+| Unsellable stays unsellable; no reservations | Prompt rules; the agent keeps a correct answer when challenged, without apologising. |
+| `search_policies` done label "Políticas da loja consultadas" | It said "Política de trocas consultada" for any manual lookup (hours, payment…). |
+
+**Role of AI.** Claude ran the batches, designed the lookup with the privacy rule, wrote the tests
+first and re-ran every case live. Dinorah asked for the scenarios.

@@ -10,6 +10,7 @@ const CONTRACT_TOOLS = [
   "get_active_promotions",
   "calculate_payment_options",
   "get_order_status",
+  "find_my_orders",
   "search_policies",
   "get_store_info",
   "check_return_eligibility",
@@ -38,6 +39,11 @@ describe("i18n", () => {
       const catalog = getMessages(locale);
       expect(Object.keys(catalog.toolsDone).sort()).toEqual(Object.keys(catalog.tools).sort());
     }
+  });
+
+  it("labels a policy lookup generically, since it is not only about returns", () => {
+    expect(getMessages("pt-BR").toolsDone.search_policies).toBe("Políticas da loja consultadas");
+    expect(getMessages("en").toolsDone.search_policies).toBe("Store policies checked");
   });
 
   it("keeps the English catalog in step with pt-BR", () => {

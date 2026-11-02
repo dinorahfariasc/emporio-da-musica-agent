@@ -156,6 +156,11 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - **Done:** DL-FE-005 assumptions applied (e-mail without accent, minimum instalment R$ 100,00, phone and WhatsApp distinct); gate green; `feat/store-home` pushed and PR opened.
 - **Next:** store confirms DL-FE-005; if confirmed, align the backend policy text (4x–6x minimum) with the page.
 
+### 2026-11-02 — Hard-case batch, customer lookup, #59 review
+- **Done:** #59 review fixes (Melody aligned with the page on WhatsApp/instalments, mobile minimised, catalog copy). `find_my_orders` (contact-based lookup, name only disambiguates), order region/age/payment, sale-calendar answers (DL-BE-005).
+- **Fixed:** Melody wavering on a discontinued product; promising reservations; "Política de trocas consultada" for every manual lookup.
+- **Next:** spec 010 semantic recommendations (needs a Gemini key locally). Local test accounts `probe`/`probe2` exist only in the Docker DB.
+
 ### 2026-11-01 — Review against the brief
 - **Done:** 11 live conversations against the brief; five recorded as the example conversations (`docs/conversations/`, replacing the fake-mode placeholders). README: interface row, history persistence, Assumptions, Access for evaluators.
 - **Fixed:** prompt (persona greeting, alternatives when out of stock, defect rules before handoff, no preamble) #56; history in `localStorage` + New chat + one card per product #57.
