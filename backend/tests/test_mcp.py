@@ -5,7 +5,7 @@ from fastmcp import Client
 from starlette.testclient import TestClient
 
 from app.config import EmbeddingsProvider, Settings
-from app.mcp import CONTRACT_TOOL_NAMES, build_mcp, build_mcp_app
+from app.mcp import MCP_TOOL_NAMES, build_mcp, build_mcp_app
 from app.tools.products import get_product
 
 
@@ -19,14 +19,23 @@ def mcp_settings(seeded_db):
     )
 
 
-async def test_tools_list_has_all_contract_tools_and_no_ctx_param(mcp_settings):
+async def test_tools_list_is_the_read_only_set_and_has_no_ctx_param(mcp_settings):
     mcp = build_mcp(mcp_settings)
 
     async with Client(mcp) as client:
         tools = await client.list_tools()
 
     names = {t.name for t in tools}
-    assert names == set(CONTRACT_TOOL_NAMES)
+    assert names == set(MCP_TOOL_NAMES)
+    forbidden = {
+        "get_order_status",
+        "find_my_orders",
+        "check_return_eligibility",
+        "request_return",
+        "register_complaint",
+        "handoff_to_human",
+    }
+    assert not names & forbidden
     for t in tools:
         assert t.description
         assert "ctx" not in (t.input_schema.get("properties") or {})

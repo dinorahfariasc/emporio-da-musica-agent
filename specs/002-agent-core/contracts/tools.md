@@ -41,8 +41,9 @@ second guard.
 
 ## MCP exposure (US7, #8)
 
-- **Tools**: the same functions are registered with FastMCP. `ctx` is built by the MCP layer per
-  call. The MCP conversation id is `mcp:<client_id>`, so verification state is separate per
-  client.
+- **Tools**: only the read-only functions (`search_products`, `get_product`,
+  `find_similar_products`, `get_active_promotions`, `calculate_payment_options`,
+  `search_policies`, `get_store_info`) are registered with FastMCP (`MCP_TOOL_NAMES`). `ctx` is
+  built by the MCP layer per call. Order and action tools are not exposed (DL-BE-007).
 - **Auth**: `Authorization: Bearer <MCP_API_KEY>`. A missing or invalid key gets 401.
 - **Business logic**: none in the MCP layer (constitution VI).

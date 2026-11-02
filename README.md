@@ -335,27 +335,28 @@ brief asks for the workflow to be explained, not just the fact that AI was used.
 
 ## MCP server
 
-The same tools Melody uses are exposed over [MCP](https://modelcontextprotocol.io) at `/mcp`,
-behind a bearer key (`MCP_API_KEY`; the server is disabled when it is unset). No business logic
-lives in the MCP layer (`backend/app/mcp.py`) — it is the exact functions in
-`backend/app/tools/`, wrapped only to build a per-client `ToolContext`.
+Melody calls its tools in process; MCP is an optional side door so that **other** AI clients (for
+example Claude Desktop) can reuse the same catalog and policy tools. Only the **read-only** tools
+are exposed (`search_products`, `get_product`, `find_similar_products`, `get_active_promotions`,
+`calculate_payment_options`, `search_policies`, `get_store_info`). Order lookups and actions
+(returns, complaints, handoff) need a verified customer and are not available over MCP (DL-BE-007).
 
-Add this to Claude Desktop's `claude_desktop_config.json` (or any MCP client that supports
-streamable HTTP with a bearer header):
+It lives at `/mcp`, behind a bearer key (`MCP_API_KEY`; disabled when unset), and holds no business
+logic (`backend/app/mcp.py` wraps the functions in `backend/app/tools/`).
+
+Locally, set `MCP_API_KEY=dev-key` in `backend/.env`, restart the backend, and add this to Claude
+Desktop's `claude_desktop_config.json` (or any MCP client with streamable HTTP and a bearer header):
 
 ```json
 {
   "mcpServers": {
     "emporio-da-musica": {
-      "url": "https://emporio-da-musica-agent.vercel.app/mcp",
-      "headers": { "Authorization": "Bearer <MCP_API_KEY>" }
+      "url": "http://localhost:8000/mcp",
+      "headers": { "Authorization": "Bearer dev-key" }
     }
   }
 }
 ```
-
-Locally: `MCP_API_KEY=dev-key uv run uvicorn app.main:app --reload`, then point a client at
-`http://localhost:8000/mcp`.
 
 ## Limitations and next steps
 
@@ -374,7 +375,7 @@ on purpose"):
   `register_complaint`) beyond the model asking the customer in-conversation; a hard `interrupt`
   gate is planned (P1, #13/S9).
 - **No tracing/cost observability in production yet** (P1, #15/S10, Langfuse).
-- **MCP server is live but needs `MCP_API_KEY` in the environment** (see above); the Claude Desktop demo (#19) is pending.
+- **MCP is read-only and local-only**: no order or action tools over MCP, and the Claude Desktop demo (#19) is not recorded.
 - **Return-window scenarios use the real current date**, so every dataset order is outside its
   return window today by construction (orders predate the challenge); this is a deliberate,
   documented choice (DL-002) over a configurable reference date, with a scripted-clock eval suite

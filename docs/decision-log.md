@@ -755,3 +755,19 @@ production still treats product 130 as not for sale.
 
 **Role of AI.** Claude mapped every place that depended on the old rule, wrote the tests first
 and re-seeded the local database. Dinorah made the decision.
+
+---
+
+## DL-BE-007 — MCP exposes only the read-only tools (2026-11-02)
+
+**Context.** The agent calls its tools in process, so MCP only serves external clients such as
+Claude Desktop. Review found that the order and action tools could not work over MCP: they key
+`conversation_state` by a user UUID, and the MCP client id (`mcp:<id>`) is not one. The project is
+now run and recorded locally, so a small, safe MCP is enough.
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| `MCP_TOOL_NAMES` in `app/mcp.py` lists seven read-only tools (catalog, price, promotions, payment, policies, store info) | Keep all 13; remove MCP | Removes the broken order/action path and the risk of writes without a verified customer, while keeping the "tools reusable by other agents" point. A test asserts the order and action tools are absent. |
+
+**Role of AI.** Claude Code found the UUID mismatch while exploring and proposed the cut; the
+owner chose the read-only option.
