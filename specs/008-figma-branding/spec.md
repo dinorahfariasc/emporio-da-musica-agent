@@ -17,6 +17,12 @@ product cards, absorbed here)
 
 ## Clarifications
 
+- **2026-11-01 — approved palette (DL-FE-002).** The approved Melody UI (Inter, action `#E00B41`,
+  brand `#FF385C` for the mark only, light + dark tokens) replaces the fallback palette below.
+  `public/brand-mark.svg` was deleted; the mark is the `BrandMark` component. On `feat/ui-melody`
+  the login form, Sign out and PT | EN (with `en.ts`) are styled too, because the approved screens
+  include them; reconcile with #13 when it lands. Mentions of cream paper, rosewood, brass,
+  Fraunces or the SVG mark below are historical.
 - The Figma MCP was rate-limited on 2026-11-01. Tokens and frames come from the brief plus a
   store-brand theme (warm paper, rosewood, brass) until the file can be re-read. Re-open
   https://www.figma.com/design/ReQoFKg7YK90YmqsSNbfTU/Empório-da-Música-—-Chat-Melody--UI-?node-id=0-1
@@ -109,8 +115,9 @@ render with brand tokens and existing behaviour.
 
 ### Key Entities
 
-- **Brand tokens**: CSS variables for paper, ink, rosewood, brass, bubbles, banners.
-- **Store mark**: SVG logo used in the header (and login placeholder).
+- **Brand tokens**: CSS variables from the approved Melody UI (DL-FE-002): surfaces, text, action,
+  brand, bubbles, status banners; light and dark.
+- **Store mark**: `BrandMark` component (brand tile + music icon) in the header and on `/login`.
 - **Surfaces**: empty chat, conversation, tool line, product card, input, error banners, header,
   login placeholder.
 

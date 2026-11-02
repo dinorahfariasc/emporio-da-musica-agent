@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-11-01 (#18 branding: spec 008 written; current-surface restyle follows)._
+_Last updated: 2026-11-01 (#18 approved Melody UI on `feat/ui-melody`, DL-FE-002; not committed yet)._
 _Last updated: 2026-11-01 (#42 actions merged; final deadline 2026-11-02 18:00)._
 
 ## 1. What this is
@@ -52,7 +52,7 @@ US6 scenarios, DL-013).
   runs the redeploy.
 - **#5 T032 done (2026-11-01):** Neon seeded with Gemini in 7.24 s; the six store-table row counts and checksums match local. Re-seed only if the data or the embedding provider changes.
 - **#8 MCP merged as #43.** Production needs `MCP_API_KEY` (set in Vercel; takes effect on the next redeploy).
-- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0), **#18 Figma branding** (`specs/008-figma-branding`, `DL-FE-001`).
+- **In flight:** #44 (spec 004 auth, limits, deploy; review fixes in progress), #11 README draft, #14 spec 006 (plan/tasks after P0), **#18 Figma branding** (`specs/008-figma-branding`, `DL-FE-001` → `DL-FE-002`: approved Melody UI implemented on `feat/ui-melody`, uncommitted, gate green).
 - **Not started:** #14 plan/tasks. Open nits from the #40 review are in DL-012 (stream close on error, body size cap). #18 login-form / PT-EN / Sign out wait for #44 → #13 on `main`.
 
 **Remaining P0 order:** #8 MCP → #10 → #11 (README, example conversations; run `python -m evals --live --export docs/conversations/`). Do P1/P2 only after
@@ -60,7 +60,7 @@ all P0 is in production.
 
 ## 3b. UI track (Figma ready) — read before touching `frontend/`
 
-The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Brief: `docs/design/figma-brief.md`. Decision: `DL-FE-001`. Figma MCP was rate-limited; first slice uses the brief plus a documented fallback palette.
+The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Brief: `docs/design/figma-brief.md`. Decisions: `DL-FE-001` (fallback, superseded) and `DL-FE-002` (approved Melody UI: Inter, action `#E00B41`, light + dark with a header theme toggle). Visual QA: `pnpm dev` (or `CHAT_MODE=mock pnpm dev`), sign in, open `/dev/gallery` (DEV only, 404 in production). `CHAT_MODE=mock` only mocks the chat backend; login is still required (create a local user with `scripts/create-user.ts`).
 
 - **#44 and #13 are not on `main` yet.** They still own login-form, Sign out, PT/EN, `en.ts`. **Merge order: #44 → #13 (rebased) → any leftover branding chrome.** Current-surface restyle (tokens, empty/conversation/tools/cards/input/errors, placeholder login, header without Sign out/PT-EN) proceeds on `main` in parallel; expect a rebase when those land.
 - Open PRs that still conflict if edited now: #44 edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; #13 (worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`.
@@ -137,6 +137,12 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 ## 8. Session log (newest first)
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
+
+### 2026-11-01 — #18 approved Melody UI (`feat/ui-melody`)
+- **Done:** approved tokens (Inter, `#E00B41`, light + dark), components, `/` and `/login` states, PT | EN with `en.ts`, DEV gallery `/dev/gallery`; DL-FE-002; 008 spec/plan/tasks updated. Gate green; `/` and `/login` still prerender.
+- **Fixed:** tests that asserted `role="alert"` or old copy now use `data-testid` / catalog keys.
+- **Added:** header theme toggle (sun = light, moon = dark; localStorage `melody-theme`, OS preference by default; no-flash inline script in `layout.tsx`, dark tokens under `:root[data-theme="dark"]`). Below 420 px the header store name is `sr-only` so the toggle fits. `search_policies` done label follows the design ("Política de trocas consultada" / "Return policy checked").
+- **Next:** Dinorah reviews, commits and opens the PR; reconcile `en.ts` / language switch with #13; lockout copy needs an auth signal (gallery-only today).
 
 ### 2026-11-01 — EDA notebook (#22, track D)
 - **Done:** `analysis/` (notebook, HTML export, generator, README) and `specs/007-eda-notebook/`; no anomalies beyond the data quality report; DL-DATA-001.
