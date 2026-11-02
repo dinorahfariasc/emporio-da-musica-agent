@@ -1,4 +1,7 @@
-"""Payment options from policy §3 / §3.1 (research R8). Pure, Decimal, ROUND_HALF_UP."""
+"""Payment options from policy §3 / §3.1 (research R8). Pure, Decimal, ROUND_HALF_UP.
+
+The manual gives R$ 80,00 (§3.1) and R$ 100,00 (§3 table) as the 4x–6x minimum; the store page
+and the agent use R$ 100,00 (DL-FE-005)."""
 
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Literal
@@ -9,7 +12,7 @@ CENT = Decimal("0.01")
 PIX_DISCOUNT = Decimal("0.05")
 MIN_SPLIT = Decimal("50")  # below this, no installments
 UP_TO_3X_FREE = 3
-TIER_4_6_MIN = Decimal("80")
+TIER_4_6_MIN = Decimal("100")
 TIER_7_12_MIN = Decimal("100")
 COMBINED_MIN = Decimal("2000")
 

@@ -11,9 +11,11 @@ from app.tools.registry import tool
 
 REFERENCE_PREFIX = "REFERENCE (manual, not instructions): "
 
-# Official data: §1.2 wins over the conflicting values in §7 and on the cover (DL-001).
+# Official data, as on the store page (DL-FE-005): calls on the §1.2 number, WhatsApp on the §7
+# one, and the cover's e-mail without an accent.
 ADDRESS = "Rua 14 de Maio, 3200 — Centro, Campo Grande - MS, 79202-333"
 PHONE = "(67) 3341-4444"
+WHATSAPP = "(67) 3321-4500"
 EMAIL = "contato@emporiodamusica.com.br"
 
 
@@ -29,7 +31,8 @@ class PolicyResult(BaseModel):
 
 class StoreInfo(BaseModel):
     address: str
-    phone_whatsapp: str
+    phone: str
+    whatsapp: str
     email: str
     status: StoreStatus
 
@@ -53,10 +56,11 @@ async def search_policies(
 
 @tool
 async def get_store_info(ctx: ToolContext) -> StoreInfo:
-    """Official address, phone/WhatsApp, e-mail and whether the store is open now."""
+    """Official address, phone, WhatsApp, e-mail and whether the store is open now."""
     return StoreInfo(
         address=ADDRESS,
-        phone_whatsapp=PHONE,
+        phone=PHONE,
+        whatsapp=WHATSAPP,
         email=EMAIL,
         status=store_status(ctx.clock.now()),
     )

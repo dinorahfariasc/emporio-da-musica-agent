@@ -6,7 +6,7 @@
         - {name: get_store_info, args: {}}
       expect:
         required_facts: ["Rua 14 de Maio, 3200", "(67) 3341-4444", "contato@emporiodamusica.com.br"]
-        forbidden_facts: ["3321-4500", "empório"]
+        forbidden_facts: ["empório"]
 
 - id: us2-2-arrependimento
   turns:

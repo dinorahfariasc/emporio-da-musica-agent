@@ -107,12 +107,13 @@ UNTRUSTED_DESCRIPTION_IDS: dict[int, str] = {
 # Known contradictions in challenge/data/store_policies.pdf (DL-001), recorded statically.
 POLICY_CONFLICTS: dict[str, str] = {
     "1.2-vs-7-whatsapp": "§1.2 lists WhatsApp (67) 3341-4444; §7 lists (67) 3321-4500. "
-    "Use §1.2: (67) 3341-4444.",
+    "Use (67) 3341-4444 for calls and (67) 3321-4500 for WhatsApp (DL-FE-005).",
     "1.2-email-accent": "§1.2 lists contato@empóriodamusica.com.br; the cover lists "
     "contato@emporiodamusica.com.br. Use the address without the accent.",
     "3-vs-3.1-installments": "§3 table says up to 12x with a R$ 100,00 minimum installment; "
     "§3.1 sets up to 3x without a minimum installment (except below R$ 50,00), 4–6x with a "
-    "R$ 80,00 minimum and 7–12x with R$ 100,00. §3.1 wins.",
+    "R$ 80,00 minimum and 7–12x with R$ 100,00. The §3 R$ 100,00 minimum applies from 4x on; "
+    "the rest of §3.1 stands (DL-FE-005).",
 }
 
 

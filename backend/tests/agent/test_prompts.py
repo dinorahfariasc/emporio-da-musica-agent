@@ -16,6 +16,8 @@ RULES = [
     "apresente-se como Melody",  # persona on the first greeting
     "find_similar_products",  # alternatives whenever a product is unavailable
     "Não anuncie o que vai fazer",  # no preamble glued to the answer
+    "(67) 3321-4500",  # manual conflicts resolved as on the store page (DL-FE-005)
+    "R$ 100,00",
 ]
 
 

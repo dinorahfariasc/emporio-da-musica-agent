@@ -698,10 +698,13 @@ the minimum instalment for 4x–6x is R$ 80,00.
 | Minimum instalment R$ 100,00, also for 4x–6x | Follows the §3 card table. The 4x–6x line in the PT and EN catalogs now says R$ 100,00; the other §3.1 conditions (up to 3x, 7x–12x, combined payment over R$ 2.000,00) are unchanged. A test keeps "R$ 80,00" out of the store copy. |
 | Phone and WhatsApp are distinct channels | Calls: (67) 3341-4444 (`tel:+556733414444`). Messages: WhatsApp (67) 3321-4500 (`wa.me/556733214500`). Shown separately in the contact section and the footer. |
 
-**Limits.** Front end only. The backend still follows §3.1 (`backend/etl/rules.py`: "§3.1 wins",
-R$ 80,00 for 4x–6x), so Melody's instalment answers can differ from the page until the store
-confirms and the backend rule is aligned in its own PR. The backend also lists (67) 3341-4444 as
-WhatsApp (`1.2-vs-7-whatsapp`); the page treats it as the phone line and (67) 3321-4500 as WhatsApp.
+**Backend aligned (same PR, after review).** Melody now follows this decision, so the page and
+the chat agree: `calculate_payment_options` uses a R$ 100,00 minimum from 4x on
+(`app/policies/payments.py`); `get_store_info` returns `phone` (67) 3341-4444 and `whatsapp`
+(67) 3321-4500 separately, and the handoff message names both; the system prompt states both
+resolutions because `search_policies` still returns the manual text with the conflicting values.
+This supersedes the WhatsApp and instalment choices of DL-001 (`backend/etl/rules.py` and
+`docs/data-quality-report.md` updated).
 
 **Role of AI.** Grok Bot found the inconsistencies while copying the manual and applied the
 decision. Dinorah made the decision.

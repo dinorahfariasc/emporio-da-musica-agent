@@ -121,7 +121,8 @@ async def test_complaint_about_an_order_needs_it_verified(tool_ctx):
 
 async def test_handoff_gives_channel_and_hours(tool_ctx, seeded_db):
     receipt = await handoff_to_human(tool_ctx, "Quero falar com uma pessoa", True)
-    assert "3341-4444" in receipt.channel and "09:00" in receipt.hours
+    assert "3321-4500" in receipt.channel and "3341-4444" in receipt.channel
+    assert "09:00" in receipt.hours
     assert len(await _rows(seeded_db, tool_ctx.conversation_id)) == 1
 
 

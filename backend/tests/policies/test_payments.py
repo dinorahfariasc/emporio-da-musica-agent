@@ -29,7 +29,17 @@ def test_active_promotion_blocks_pix_and_uses_promo_price():
 
 @pytest.mark.parametrize(
     ("amount", "max_times"),
-    [("49.99", 1), ("50", 3), ("240", 3), ("320", 4), ("700", 7), ("1200", 12)],
+    [
+        ("49.99", 1),
+        ("50", 3),
+        ("240", 3),
+        ("320", 3),  # 4x would be R$ 80,00: below the R$ 100,00 minimum (DL-FE-005)
+        ("399.99", 3),
+        ("400", 4),
+        ("600", 6),
+        ("700", 7),
+        ("1200", 12),
+    ],
 )
 def test_installment_boundaries(amount, max_times):
     assert _times(amount) == list(range(1, max_times + 1))

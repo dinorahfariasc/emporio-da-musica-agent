@@ -15,7 +15,7 @@ from app.agent import state
 from app.agent.logging import mask_pii
 from app.policies.returns import Eligibility, Reason, ReturnOrder, eligibility
 from app.tools.context import ToolContext, ToolError
-from app.tools.policies import PHONE
+from app.tools.policies import PHONE, WHATSAPP
 from app.tools.registry import tool
 
 REASON_MAX_CHARS = 1000
@@ -180,7 +180,9 @@ async def handoff_to_human(
     async with ctx.pool.connection() as conn:
         request_id = await _record(conn, ctx, "handoff", reason)
     return HandoffReceipt(
-        request_id=request_id, channel=f"WhatsApp ou telefone {PHONE}", hours=HANDOFF_HOURS
+        request_id=request_id,
+        channel=f"WhatsApp {WHATSAPP} ou telefone {PHONE}",
+        hours=HANDOFF_HOURS,
     )
 
 
