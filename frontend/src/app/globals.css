@@ -190,3 +190,109 @@
   0%, 80%, 100% { opacity: .3; }
   40% { opacity: 1; }
 }
+
+/* Store page: smooth anchor scrolling (unless reduced motion), and no page scroll behind the
+   full-screen chat sheet on phones/tablets. */
+@media (prefers-reduced-motion: no-preference) {
+  html:has([data-chat-widget]) {
+    scroll-behavior: smooth;
+  }
+}
+@media (max-width: 1023.98px) {
+  html[data-chat="open"]:has([data-chat-widget]) {
+    overflow: hidden;
+  }
+}
+
+/* Store background (music-staff-background.tsx): faint waving staves with a few floating notes.
+   Decorative only: behind the page, no pointer events, transform-only animation. Faded behind the
+   content (mask) so body text keeps its AA contrast. */
+.staff-bg {
+  --staff-line: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  --staff-note-brand: color-mix(in srgb, var(--color-accent-brand) 16%, transparent);
+  --staff-note-neutral: color-mix(in srgb, var(--color-text-primary) 9%, transparent);
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  contain: strict;
+  /* Never above 60 % anywhere text can sit; 40 % behind the centre column. With these opacities
+     secondary text (#6A6A6A) stays >= 4.6:1 in light and >= 6.5:1 in dark over a line or note. */
+  -webkit-mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0.4) 30%, rgb(0 0 0 / 0.4) 70%, rgb(0 0 0 / 0.6));
+  mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0.4) 30%, rgb(0 0 0 / 0.4) 70%, rgb(0 0 0 / 0.6));
+}
+:root[data-theme="dark"] .staff-bg {
+  --staff-line: color-mix(in srgb, var(--color-text-primary) 9%, transparent);
+  --staff-note-brand: color-mix(in srgb, var(--color-accent-brand) 26%, transparent);
+  --staff-note-neutral: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+}
+/* Next to the open desktop chat panel the background stops at the panel's edge. */
+@media (min-width: 1024px) {
+  html[data-chat="open"] .staff-bg { right: 412px; }
+}
+@media (min-width: 1280px) {
+  html[data-chat="open"] .staff-bg { right: 432px; }
+}
+.staff-bg__lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--staff-line);
+  stroke-width: 1;
+}
+.staff-bg__note {
+  position: absolute;
+  display: block;
+}
+.staff-bg__note--brand { color: var(--staff-note-brand); }
+.staff-bg__note--neutral { color: var(--staff-note-neutral); }
+@media (prefers-reduced-motion: no-preference) {
+  .staff-bg__note > svg {
+    animation: staff-note-float var(--staff-note-duration, 9s) ease-in-out var(--staff-note-delay, 0s) infinite;
+    will-change: transform;
+  }
+}
+@keyframes staff-note-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -10px, 0) rotate(var(--staff-note-tilt, 4deg)); }
+}
+
+/* Store info cards: subtle lift + accent edge on hover (pointer devices only) and on keyboard
+   focus inside. Not clickable as a whole, so no pointer cursor. */
+.store-card {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.store-card-icon {
+  transition: color 180ms ease, transform 180ms ease;
+}
+.store-card:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent-default) 55%, var(--color-border-default));
+  box-shadow: var(--elevation-card);
+}
+@media (hover: hover) {
+  .store-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--color-accent-default) 55%, var(--color-border-default));
+    box-shadow: var(--elevation-card);
+  }
+  .store-card:hover .store-card-icon {
+    color: var(--color-text-link);
+    transform: scale(1.1);
+  }
+}
+.store-card:focus-within .store-card-icon { color: var(--color-text-link); }
+@media (prefers-reduced-motion: reduce) {
+  .store-card,
+  .store-card-icon { transition: none; }
+  .store-card:hover,
+  .store-card:hover .store-card-icon { transform: none; }
+}
+
+/* Maximised chat overlay (desktop): the store page behind does not scroll. */
+html[data-chat-max] {
+  overflow: hidden;
+}

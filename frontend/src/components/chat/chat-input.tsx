@@ -104,7 +104,7 @@ export function ChatInput({ inputRef, disabled, busy, lock = null, onSend, onSto
         )}
       </div>
       {!disabled && (
-        <p className="mt-2 hidden text-center text-xs leading-4 text-secondary-text md:block">
+        <p className="mt-2 hidden text-center text-xs leading-4 text-secondary-text @3xl:block">
           {messages.input.hint}
         </p>
       )}

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 
 import { getMessages, locale } from "@/lib/i18n";
 import { LocaleProvider } from "@/lib/i18n/context";
+import { CHAT_WIDGET_INIT_SCRIPT } from "@/lib/chat-widget";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
@@ -32,8 +33,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // suppressHydrationWarning: the inline theme script sets data-theme before React hydrates.
     <html lang={locale} className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
-        {/* Static inline script (no request data), so / and /login still prerender. */}
+        {/* Static inline scripts (no request data), so / and /login still prerender. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: CHAT_WIDGET_INIT_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col">
         <LocaleProvider>{children}</LocaleProvider>

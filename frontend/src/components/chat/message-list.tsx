@@ -57,7 +57,7 @@ export function MessageList({ messages, status, children, answerFooter }: Messag
       aria-label={copy.messages.logLabel}
       className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto"
     >
-      <div className="mx-auto mt-auto flex w-full max-w-(--size-content-max) flex-col gap-5 pt-5 pb-2 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] md:px-0 md:pt-8">
+      <div className="mx-auto mt-auto flex w-full max-w-(--size-content-max) flex-col gap-5 pt-5 pb-2 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] @3xl:px-0 @3xl:pt-8">
         {messages.map((message, index) =>
           // An assistant message with only `step-start` or empty text is not shown yet; the
           // typing indicator covers it.

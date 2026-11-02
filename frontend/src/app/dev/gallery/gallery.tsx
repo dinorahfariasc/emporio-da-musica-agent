@@ -10,6 +10,9 @@ import { ChatView } from "@/components/chat/chat-view";
 import { StoppedNotice } from "@/components/chat/stopped-notice";
 import { LoginForm, type LoginPreview } from "@/components/login/login-form";
 import { LoginScreen } from "@/components/login/login-screen";
+import { SignInPrompt } from "@/components/store/chat-widget";
+import { StoreSections } from "@/components/store/store-sections";
+import { StoreShell } from "@/components/store/store-shell";
 import type { ChatMessage } from "@/lib/chat/types";
 import { useMessages } from "@/lib/i18n/context";
 
@@ -25,7 +28,8 @@ type ChatScreen = {
   lock?: InputLock;
 };
 type LoginScreenDef = { kind: "login"; preview?: LoginPreview };
-type Screen = ChatScreen | LoginScreenDef;
+type WidgetSignInScreen = { kind: "widget-signin" };
+type Screen = ChatScreen | LoginScreenDef | WidgetSignInScreen;
 
 const noop = () => {};
 
@@ -168,6 +172,9 @@ function useScreens(): Record<string, Screen> {
         ),
       ],
     },
+    // Store page with the widget showing the signed-out prompt. Any chat screen also renders
+    // inside the store widget with `&frame=widget`.
+    "widget-signin": { kind: "widget-signin" },
     "login-normal": { kind: "login" },
     "login-error": { kind: "login", preview: "error" },
     "login-locked": { kind: "login", preview: "locked" },
@@ -198,7 +205,9 @@ function Index({ names }: { names: string[] }) {
 
 export function Gallery() {
   const screens = useScreens();
-  const name = useSearchParams().get("screen") ?? "";
+  const params = useSearchParams();
+  const name = params.get("screen") ?? "";
+  const inWidget = params.get("frame") === "widget";
   const screen = Object.hasOwn(screens, name) ? screens[name] : null;
 
   if (!screen) return <Index names={Object.keys(screens)} />;
@@ -223,11 +232,21 @@ export function Gallery() {
     );
   }
 
+  if (screen.kind === "widget-signin") {
+    return (
+      <>
+        <StoreShell chat={<SignInPrompt />}>
+          <StoreSections />
+        </StoreShell>
+        {tag}
+      </>
+    );
+  }
+
   const status = screen.status ?? "ready";
   const busy = status === "submitted" || status === "streaming";
-  return (
-    <>
-      <ChatView
+  const view = (
+    <ChatView
         key={name}
         messages={screen.messages}
         status={status}
@@ -239,7 +258,18 @@ export function Gallery() {
         busy={busy}
         onSend={() => false}
         onStop={noop}
+        {...(inWidget ? { embedded: true, header: null } : {})}
       />
+  );
+  return (
+    <>
+      {inWidget ? (
+        <StoreShell chat={view}>
+          <StoreSections />
+        </StoreShell>
+      ) : (
+        view
+      )}
       {tag}
     </>
   );

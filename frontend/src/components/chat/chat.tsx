@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { useRouter } from "next/navigation";
 import { generateId } from "ai";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ChatError } from "@/components/chat/chat-error";
 import type { InputLock } from "@/components/chat/chat-input";
@@ -16,26 +16,39 @@ import { ChatTransport } from "@/lib/chat/transport";
 import type { ChatMessage } from "@/lib/chat/types";
 import { useMessages } from "@/lib/i18n/context";
 
-type ChatProps = { fetch?: typeof globalThis.fetch };
+type ChatProps = {
+  fetch?: typeof globalThis.fetch;
+  /** Store widget: its own Melody header instead of the full-page one; a function gets "New chat". */
+  header?: ReactNode | ((onNewChat?: () => void) => ReactNode);
+  embedded?: boolean;
+  /** Called whenever Melody's latest answer changes (the widget marks its FAB as unread). */
+  onActivity?: () => void;
+};
 
 const noSubscribe = () => () => {};
 
 // `/` is prerendered with an empty conversation; once hydrated, the chat remounts and restores
 // the conversation saved in this browser (no setState in an effect, no hydration mismatch).
-export function Chat({ fetch }: ChatProps) {
+export function Chat(props: ChatProps) {
   const hydrated = useSyncExternalStore(
     noSubscribe,
     () => true,
     () => false,
   );
-  return <ChatSession key={hydrated ? "client" : "server"} fetch={fetch} restore={hydrated} />;
+  return <ChatSession key={hydrated ? "client" : "server"} {...props} restore={hydrated} />;
 }
 
 function freshChat(): StoredChat {
   return { id: generateId(), messages: [] };
 }
 
-function ChatSession({ fetch, restore }: ChatProps & { restore: boolean }) {
+function ChatSession({
+  fetch,
+  header,
+  embedded,
+  onActivity,
+  restore,
+}: ChatProps & { restore: boolean }) {
   const copy = useMessages();
   const transport = useMemo(
     () => new ChatTransport({ api: "/api/chat", fetch }),
@@ -128,6 +141,17 @@ function ChatSession({ fetch, restore }: ChatProps & { restore: boolean }) {
       : null;
 
   const last = messages.at(-1);
+  const onActivityRef = useRef(onActivity);
+  // A conversation restored from this browser is not new activity (no unread dot on reload).
+  const restoredIdRef = useRef(session.messages.at(-1)?.id);
+  useEffect(() => {
+    onActivityRef.current = onActivity;
+  });
+  useEffect(() => {
+    if (last?.role === "assistant" && last.id !== restoredIdRef.current && hasVisibleContent(last)) {
+      onActivityRef.current?.();
+    }
+  }, [last]);
   const typing =
     status === "submitted" ||
     (status === "streaming" && !(last?.role === "assistant" && hasVisibleContent(last)));
@@ -166,6 +190,8 @@ function ChatSession({ fetch, restore }: ChatProps & { restore: boolean }) {
       onSend={handleSend}
       onStop={stop}
       onNewChat={handleNewChat}
+      header={header}
+      embedded={embedded}
     />
   );
 }
