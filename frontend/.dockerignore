@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.env.local
+.env.*.local
+.DS_Store
+*.log
+.pytest_cache
+coverage
+dist
+build
+.turbo
+.swc
