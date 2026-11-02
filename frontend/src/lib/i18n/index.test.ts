@@ -67,4 +67,17 @@ describe("i18n", () => {
     }
     expect(STORE_INFO.email.display).toBe("contato@emporiodamusica.com.br");
   });
+
+  it("describes the catalog the store actually sells (65 products, six categories)", () => {
+    const pt = getMessages("pt-BR").store;
+    const en = getMessages("en").store;
+    for (const copy of [pt.hero, pt.about, en.hero, en.about].map((part) => JSON.stringify(part))) {
+      expect(copy).not.toMatch(/300|sopro|orquestr|wind instruments|orchestral/i);
+    }
+    expect(JSON.stringify(pt.about)).toMatch(/violões.*guitarras.*baixos.*baterias.*teclados.*ukuleles/);
+  });
+
+  it("calls the store \"a Empório\" everywhere", () => {
+    expect(JSON.stringify(getMessages("pt-BR"))).not.toContain("do Empório");
+  });
 });

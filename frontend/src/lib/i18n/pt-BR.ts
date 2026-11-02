@@ -20,7 +20,7 @@ export const ptBR = {
   emptyState: {
     greeting: "Oi! Eu sou a Melody 🎵",
     intro:
-      "Assistente virtual do Empório da Música. Posso ajudar com produtos, preços, promoções, formas de pagamento, pedidos e trocas.",
+      "Assistente virtual da Empório da Música. Posso ajudar com produtos, preços, promoções, formas de pagamento, pedidos e trocas.",
     suggestionsLabel: "Sugestões para começar",
     suggestions: [
       "Quais violões vocês têm até R$ 1.000?",
@@ -153,13 +153,13 @@ export const ptBR = {
       lead: "Loja especializada em instrumentos musicais para músicos iniciantes, intermediários e profissionais.",
       chatCta: "Falar com a Melody",
       visitCta: "Horário e endereço",
-      highlights: ["Desde 2008", "Mais de 15 anos de atuação", "Mais de 300 instrumentos"],
+      highlights: ["Desde 2008", "Mais de 15 anos de atuação", "Só instrumentos musicais"],
     },
     about: {
       title: "Quem somos",
       paragraphs: [
         "A Empório da Música é uma loja especializada em instrumentos musicais, fundada em 2008 em Campo Grande, Mato Grosso do Sul. Com mais de 15 anos de atuação no mercado, somos referência regional na venda de instrumentos para músicos iniciantes, intermediários e profissionais.",
-        "Nosso catálogo abrange mais de 300 instrumentos de marcas nacionais e internacionais, incluindo guitarras, baixos, violões, baterias, teclados, instrumentos de sopro, cordas orquestrais e ukuleles.",
+        "Nosso catálogo reúne instrumentos de marcas nacionais e internacionais: violões, guitarras, baixos, baterias, teclados e ukuleles.",
       ],
       onlyInstrumentsTitle: "Só instrumentos musicais",
       onlyInstruments:

@@ -88,7 +88,7 @@ describe("store chat widget", () => {
     vi.unstubAllGlobals();
   });
 
-  it("opens by default on desktop and on mobile", () => {
+  it("opens by default on desktop and starts minimised on mobile, so the store shows first", () => {
     mockViewport(true);
     runInitScript();
     expect(html.dataset.chat).toBe("open");
@@ -96,14 +96,14 @@ describe("store chat widget", () => {
     delete html.dataset.chat;
     mockViewport(false);
     runInitScript();
-    expect(html.dataset.chat).toBe("open");
+    expect(html.dataset.chat).toBe("closed");
   });
 
-  it("respects a saved minimised choice per layout", () => {
-    localStorage.setItem(CHAT_WIDGET_KEYS.mobile, "closed");
+  it("respects a saved choice per layout", () => {
+    localStorage.setItem(CHAT_WIDGET_KEYS.mobile, "open");
     mockViewport(false);
     runInitScript();
-    expect(html.dataset.chat).toBe("closed");
+    expect(html.dataset.chat).toBe("open");
 
     mockViewport(true);
     runInitScript();
@@ -149,16 +149,15 @@ describe("store chat widget", () => {
     expect(fab).toHaveFocus();
   });
 
-  it("is a modal sheet on mobile, open on load, with a visible way back to the store", async () => {
+  it("is a modal sheet on mobile, minimised on load, with a visible way back to the store", async () => {
     mockViewport(false);
     runInitScript();
     const user = userEvent.setup();
     const { container } = renderStore();
-    expect(screen.queryByRole("button", { name: copy.widget.maximize })).toHaveClass("max-lg:hidden");
-    await user.click(screen.getByRole("button", { name: copy.widget.minimize }));
     expect(html.dataset.chat).toBe("closed");
     expect(container.querySelector("[inert]")).toBeNull();
     await user.click(screen.getByRole("button", { name: copy.widget.open }));
+    expect(screen.queryByRole("button", { name: copy.widget.maximize })).toHaveClass("max-lg:hidden");
     const dialog = screen.getByRole("dialog", { name: copy.widget.title });
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(container.querySelector("[inert]")).toContainElement(

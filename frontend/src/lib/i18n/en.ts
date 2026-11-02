@@ -150,13 +150,13 @@ export const en: Messages = {
       lead: "A store specialised in musical instruments for beginner, intermediate and professional musicians.",
       chatCta: "Talk to Melody",
       visitCta: "Hours and address",
-      highlights: ["Since 2008", "Over 15 years in business", "Over 300 instruments"],
+      highlights: ["Since 2008", "Over 15 years in business", "Musical instruments only"],
     },
     about: {
       title: "About us",
       paragraphs: [
         "Empório da Música is a store specialised in musical instruments, founded in 2008 in Campo Grande, Mato Grosso do Sul. With over 15 years in the market, we are a regional reference in selling instruments to beginner, intermediate and professional musicians.",
-        "Our catalogue covers over 300 instruments from Brazilian and international brands, including electric guitars, basses, acoustic guitars, drums, keyboards, wind instruments, orchestral strings and ukuleles.",
+        "Our catalogue brings together instruments from Brazilian and international brands: acoustic guitars, electric guitars, basses, drums, keyboards and ukuleles.",
       ],
       onlyInstrumentsTitle: "Musical instruments only",
       onlyInstruments:

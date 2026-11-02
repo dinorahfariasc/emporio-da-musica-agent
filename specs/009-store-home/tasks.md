@@ -18,6 +18,7 @@ Part of #18 · Spec `specs/009-store-home/spec.md`
 - [x] T015 Section menu wraps instead of cutting off next to the open panel; e-mail wraps after "@"
 - [x] T016 Screenshots round 2 in `emporio-design-ref/shots/store2/`
 - [x] T017 Open by default on mobile too (saved choice wins); maximise/restore on desktop + tests
+- [x] T018 Review of #59: minimised by default on mobile (round 4); catalog copy matches the data; "da Empório" everywhere; backend aligned with DL-FE-005
 - [x] T018 Screenshots round 3 in `emporio-design-ref/shots/store3/`
 - [x] T012 E-mail without accent and minimum instalment R$ 100,00 decided by Dinorah (DL-FE-005)
 - [ ] T019 Store confirms the DL-FE-005 assumptions

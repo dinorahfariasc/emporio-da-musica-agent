@@ -33,6 +33,11 @@ Part of #18.
 - **2026-11-01 — round 3 (Dinorah):** "Melody must already be open when the page opens, and add an
   option to maximise the window." Open by default on mobile too (FR-007); maximise (FR-013).
 
+- **2026-11-02 — round 4 (Dinorah, review of #59):** on mobile the open sheet covered the whole
+  store on first visit, so the chat starts minimised there (FAB visible) and stays open by default
+  on desktop (FR-007). The page describes the catalog the store actually sells (six categories,
+  65 products), not the manual's "300+ instruments, wind and orchestral strings" (FR-014).
+
 ## Assumptions
 
 Decided by Dinorah on 2026-11-02, **to be confirmed by the store** (DL-FE-005):
@@ -67,10 +72,11 @@ Decided by Dinorah on 2026-11-02, **to be confirmed by the store** (DL-FE-005):
 - **FR-006** Mobile (< 1024 px): the FAB opens a full-screen sheet (dialog, page behind inert)
   with a close control.
 - **FR-007** State in localStorage per layout; with no saved choice the chat starts open on desktop
-  and on mobile (full-screen sheet with a visible minimise control); a saved "minimised" wins. Set
-  before first paint (no flash).
+  and minimised on mobile (round 4); a saved choice wins. Set before first paint (no flash).
 - **FR-008** `useChat` stays mounted while minimised. Esc minimises; focus goes to the panel on
   open and back to the FAB on minimise; no focus trap on the desktop side panel.
+- **FR-014** Catalog claims on the page match the product data (the categories sold today), not
+  the manual's marketing figures; policy text is still copied verbatim.
 - **FR-009** 375 px without horizontal scroll, tap targets ≥ 44 px, AA contrast, safe areas, light
   and dark themes, approved tokens, no stock images.
 
