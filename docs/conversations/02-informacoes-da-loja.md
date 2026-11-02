@@ -1,21 +1,25 @@
-> **FAKE-MODE PLACEHOLDER — not a real model run.** Reconstructed from the scripted scenario
-> `us2-1-endereco` (`backend/evals/scenarios/us2_policies.yaml`) and the deterministic fake
-> provider. To be replaced by a live export (`uv run python -m evals --live --export
-> docs/conversations/`) once #8/#10 are deployed. See `docs/conversations/README.md`.
+# Informações gerais da loja
 
-- Scenario id: `us2-1-endereco`
-- Mode: fake (scripted router + fake model)
-- Date: placeholder
+**O que demonstra:** Endereço e horário vindos de `get_store_info` (relógio da loja: sabe que hoje está fechada e quando reabre) e do manual (`search_policies`) para o domingo.
+
+- Modo: **live**, agente real (não é placeholder)
+- Data: 01/11/2026 (domingo; a loja estava fechada)
+- Ambiente: stack local via Docker Compose (`docker compose up`), modelos via OpenRouter
+- Roteador: `perplexity/pplx-decider-v1.2`; respostas: `openai/gpt-6-luna` (especialista) e
+  `deepseek/deepseek-v4.1-flash` (geral), conforme a intenção classificada
+- As linhas `>` mostram a intenção, o modelo e as ferramentas chamadas em cada turno (com os
+  argumentos); o texto da Melody está exatamente como foi gerado.
 
 ---
 
-**Customer:** Qual o endereço e o telefone da loja?
+**Cliente:** Qual o endereço da loja?
 
-**Melody** _(tool call: `get_store_info`, args `{}`)_
+> intent `store_info`, model `openai/gpt-6-luna`; tools: `get_store_info({})`, `search_policies({"query": "horário de funcionamento da loja aos domingos, sábados e feriados", "limit": 3})`
 
-**Melody:** Estamos na Rua 14 de Maio, 3200, em Campo Grande/MS. Você pode nos ligar ou chamar no
-WhatsApp pelo (67) 3341-4444, ou escrever para contato@emporiodamusica.com.br.
+**Melody:** Olá! A loja fica na **Rua 14 de Maio, 3200 — Centro, Campo Grande - MS, 79202-333**. Hoje está fechada e abre **terça-feira, 3 de novembro, às 9h**. Quer também o telefone ou WhatsApp?
 
-_Required facts checked by the scenario: the address, the phone number and the e-mail must appear
-exactly as above; an outdated phone number found in the manual (3321-4500) and a misspelled store
-name ("empório") must not appear._
+**Cliente:** Vocês abrem domingo?
+
+> intent `store_info`, model `openai/gpt-6-luna`; tools: `get_store_info({})`, `search_policies({"query": "horário de funcionamento aos domingos", "limit": 3})`
+
+**Melody:** Não, aos domingos a loja fica fechada. O horário normal é de segunda a sexta, das 9h às 18h, e aos sábados, das 9h às 13h. A próxima abertura é terça-feira, às 9h. Quer mais alguma informação?

@@ -17,8 +17,10 @@ store policies and return/complaint requests, backed by the store's real data an
 - [Architecture](#architecture)
 - [Run locally](#run-locally)
 - [Run in production](#run-in-production)
+- [Access for evaluators](#access-for-evaluators)
 - [Data](#data)
 - [Key decisions and trade-offs](#key-decisions-and-trade-offs)
+- [Assumptions](#assumptions)
 - [AI-assistant workflow](#ai-assistant-workflow)
 - [MCP server](#mcp-server)
 - [Limitations and next steps](#limitations-and-next-steps)
@@ -203,6 +205,18 @@ to be missing or to check:
 
 Deploys are triggered by the repository owner.
 
+## Access for evaluators
+
+There is no sign-up page: the agent runs on paid models, so access is by account only (spec 004).
+
+- **Locally (works today):** `docker compose up --build` with an OpenRouter key in
+  `backend/.env`, then create your own login with `scripts/create-user.ts` as shown in
+  [Run locally](#run-locally). That is the whole setup.
+- **Production:** once the deploy is fixed (see above), a ready account's username and password
+  are sent with the delivery e-mail, never committed.
+- **Without running anything:** the five live transcripts in
+  [`docs/conversations/`](docs/conversations/) show each tool call and answer.
+
 ## Data
 
 The challenge files in `challenge/` are read-only inputs (`.gitattributes` keeps their CRLF bytes
@@ -240,11 +254,37 @@ to be justified:
 | LLM and provider | OpenRouter, one key for every model: `perplexity/pplx-decider-v1.2` (router/decider), `openai/gpt-6-luna` (specialist answers), `deepseek/deepseek-v4.1-flash` (general/ambiguous) | Measured with a 34-scenario router spike and 27-29/29 live evals (DL-012); a single provider simplifies secrets over mixing Anthropic + a dedicated decider API |
 | Retrieval architecture | Postgres full-text (`pt_unaccent`) + pgvector, fused with RRF k=60; Gemini `gemini-embedding-001` embeddings, 768 dims | OR-semantics full-text keeps recall for natural-language questions without tuning; a prefix match on long lexemes fixes a stemmer gap the reference-query tests caught (DL-010) |
 | Prompt strategy | System prompt carries the store's current date/time and persona (Melody, manual §7.1/§7.2); tool outputs are the only source of facts, explicitly fenced as "FATOS SOMENTE DAS FERRAMENTAS" against prompt injection | Verified by the US5 safety scenarios (prompt extraction, invented discounts, fake employee) |
-| Conversation history persistence | Not implemented for P0 (each request carries its own history window from the client); durable server-side persistence is planned (P1, issue #12/S7) | The brief says to implement it only if it helps the UX; a stateless API was enough to ship P0 safely by the deadline |
+| Interaction interface | Web chat: Next.js (App Router) + Vercel AI SDK `useChat`, streaming tokens, tool status lines and product cards; PT/EN switch, light/dark theme, mobile-first. The same tools are also exposed over MCP | The customer channel for a store is a chat window; the UI is a thin client that only renders what the Python backend streams (no business logic, no facts derived in the UI), so Python stays the main language as the brief requires. MCP shows the tools are reusable by other agents |
+| Conversation history persistence | Per browser: the conversation id and its last 40 messages live in `localStorage`, survive a reload and are cleared by "New chat" or sign-out. Every request carries the recent window (12 messages) to a stateless API; the only server-side state is the per-conversation order verification | Enough for a support chat (a reload no longer loses the context or the order verification) with no new infrastructure. Cross-device durable history (Postgres checkpointer) is a P1 (#12/S7) and not needed for the brief (DL-FE-003) |
 | Access control and cost limits | Username/password login (Auth.js, accounts only from a CLI, no sign-up), a short-lived HS256 token from the frontend to the backend, 20 requests/min and 200k tokens/day per account, fail-closed config checks | The agent runs on paid models behind a public URL; the brief's evaluator needs a login, not open access (spec 004, DL-BE-002, DL-FE-001) |
 | Stock answers | Tools return the exact `stock_quantity`; `get_product(quantity=N)` returns `enough_stock` computed in Python | The agent must say with certainty whether N units are available, never send the customer to check (DL-BE-003) |
 | Local runtime | Docker Compose with Postgres, backend and frontend; the backend reads `backend/.env` for the provider key | Whoever clones the repo runs everything with one command and one key |
 | Data handling | Deterministic ETL with documented correction rules per anomaly (`docs/data-quality-report.md`), not silent cleaning | The brief explicitly flags recorded anomalies; a customer-service agent must not paper over a bad date or a contradictory product record without a visible rule |
+
+## Assumptions
+
+Where the brief or the data were silent, these interpretations were taken (each one has a
+decision-log entry with the reasoning):
+
+- **"Today" is the real current date** in Campo Grande (America/Campo_Grande). Return windows and
+  "open now" are computed from it, so every order in the dataset is outside its return window;
+  the policy logic is still proven by a scripted-clock eval suite (DL-002, DL-013).
+- **The agent informs, it does not sell.** It never places orders or reservations; it points to
+  the website, the store or WhatsApp. It can register a return request, a complaint
+  or a human handoff, and only on the customer's explicit request.
+- **The store sells instruments only.** Accessories (strings, picks, cables, cases, pedals,
+  amplifiers) are refused politely, with an instrument suggested instead.
+- **Order data needs proof of ownership:** order number plus the e-mail or phone on file, with a
+  generic error on mismatch and a lock after repeated failures (privacy, manual §9).
+- **Data anomalies are corrected by explicit rules, not silently** (e.g. a product name beats a
+  contradicting description; only four promotions are active), listed in
+  `docs/data-quality-report.md` (DL-001).
+- **Replies follow the customer's language** (Portuguese by default, English and Spanish
+  supported); the policy manual is searched in Portuguese.
+- **Access is by account and usage is capped** (20 messages/min, 200k tokens/day per account),
+  because the deployed agent runs on paid models behind a public URL.
+- **Stock answers are exact:** the agent states the quantity on hand and whether N units can be
+  sold, from the database (DL-BE-003).
 
 ## AI-assistant workflow
 
@@ -310,8 +350,8 @@ What's known to be incomplete or weak, and what would be done with more time (fu
 residual-risk notes are in the decision log, e.g. DL-011 "Residual risk" and DL-012 "Not applied,
 on purpose"):
 
-- **No durable conversation history.** Each request sends its own window of prior turns; nothing
-  is persisted server-side across page reloads. Planned as P1 (#12/S7, Postgres checkpointer).
+- **History is per browser.** The conversation survives a reload but not a change of device or
+  browser; server-side history is a P1 (#12/S7, Postgres checkpointer).
 - **Production deploy is down** (see [Run in production](#run-in-production)); the full stack runs
   locally with Docker.
 - **Budget is soft under concurrency.** Two simultaneous requests can both pass the daily token
@@ -326,10 +366,8 @@ on purpose"):
   return window today by construction (orders predate the challenge); this is a deliberate,
   documented choice (DL-002) over a configurable reference date, with a scripted-clock eval suite
   to still prove the policy logic (DL-013).
-- **The final 3–5 example conversations are not fully live yet.** `docs/conversations/` has the
-  selection criteria and four fake-mode placeholder transcripts (clearly marked); replacing them
-  with a real `--live --export` run needs the `--export` flag added to the eval runner and the
-  agent deployed with #8/#10 — tracked in `docs/delivery-checklist.md`.
-- **With more time:** LLM-as-judge evals over the scenario set (P2, #22/S18), an EDA notebook
-  reproducing the data-quality findings with charts (P2, #22/S17), product cards in the chat UI
-  (P1, #20/S15), and the admin insights dashboard (P2, #21/E16).
+- **Example conversations were recorded by hand-driving the API**, not exported by the eval
+  runner; an `--export` flag would make them regenerable in one command.
+- **With more time:** LLM-as-judge evals over the scenario set (P2, #22/S18) and the admin
+  insights dashboard (P2, #21/E16). The EDA notebook with the data-quality findings is already in
+  `analysis/` (#22/S17).

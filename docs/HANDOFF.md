@@ -151,6 +151,11 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-01 — Review against the brief
+- **Done:** 11 live conversations against the brief; five recorded as the example conversations (`docs/conversations/`, replacing the fake-mode placeholders). README: interface row, history persistence, Assumptions, Access for evaluators.
+- **Fixed:** prompt (persona greeting, alternatives when out of stock, defect rules before handoff, no preamble) #56; history in `localStorage` + New chat + one card per product #57.
+- **Next:** #56 and #57 both append to `docs/decision-log.md` — rebase the second one. Then the Vercel deploy.
+
 ### 2026-11-01 — Docker, stock quantity, README
 - **Done:** Docker Compose for db + backend + frontend (#52, #53); end-to-end login + chat verified locally with OpenRouter. README: Docker quickstart, env-var table, production status, new decisions.
 - **Fixed:** compose forced the fake LLM (every turn failed); host bind mounts broke the container venv; agent could not state stock counts (#54, `get_product(quantity=N)` → `enough_stock`).

@@ -1,22 +1,31 @@
-> **FAKE-MODE PLACEHOLDER — not a real model run.** Reconstructed from the scripted scenario
-> `us1-2-gd20-sem-promocao` (`backend/evals/scenarios/us1_products.yaml`) and the deterministic
-> fake provider. To be replaced by a live export (`uv run python -m evals --live --export
-> docs/conversations/`) once #8/#10 are deployed. See `docs/conversations/README.md`.
+# Consulta de preço, pagamento e estoque
 
-- Scenario id: `us1-2-gd20-sem-promocao`
-- Mode: fake (scripted router + fake model)
-- Date: placeholder
+**O que demonstra:** Preço do Takamine GD20, parcelamento em 12x e desconto de 5% no PIX calculados por `calculate_payment_options` (o modelo não faz contas), e estoque exato para 3 unidades com `get_product(quantity=3)`.
+
+- Modo: **live**, agente real (não é placeholder)
+- Data: 01/11/2026 (domingo; a loja estava fechada)
+- Ambiente: stack local via Docker Compose (`docker compose up`), modelos via OpenRouter
+- Roteador: `perplexity/pplx-decider-v1.2`; respostas: `openai/gpt-6-luna` (especialista) e
+  `deepseek/deepseek-v4.1-flash` (geral), conforme a intenção classificada
+- As linhas `>` mostram a intenção, o modelo e as ferramentas chamadas em cada turno (com os
+  argumentos); o texto da Melody está exatamente como foi gerado.
 
 ---
 
-**Customer:** Quanto custa o Takamine GD20?
+**Cliente:** Quanto custa o Takamine GD20?
 
-**Melody** _(tool calls: `get_product` args `{name: "Takamine GD20"}`, then
-`calculate_payment_options` args `{product_id: 95}`)_
+> intent `product_details`, model `openai/gpt-6-luna`; tools: `get_product({"name": "Takamine GD20"})`
 
-**Melody:** O Takamine GD20 custa R$ 2.199,00, sem promoção ativa no momento. Posso te mostrar as
-opções de parcelamento, se quiser.
+**Melody:** Olá! O Takamine GD20 Dreadnought Natural custa **R$ 2.199,00** e temos **5 unidades em estoque**. Ele tem tampo sólido em cedro, corpo em sapele e timbre quente e definido. Precisa de mais alguma informação?
 
-_Required facts checked by the scenario: the price (2199.00) and the parcelamento base (2089.05 for
-a cash/à vista option, per the payment rules in `app/catalog/rules.py`); the answer must not invent
-a 12% discount that doesn't apply to this product._
+**Cliente:** Dá pra parcelar em 12x sem juros? E no PIX tem desconto?
+
+> intent `payment_options`, model `openai/gpt-6-luna`; tools: `get_product({"name": "Takamine GD20"})`, `search_policies({"query": "formas de pagamento parcelamento em 12 vezes sem juros e desconto no PIX; promoções e acumulação de descontos", "limit": 5})`, `calculate_payment_options({"product_id": 95})`
+
+**Melody:** Sim! O Takamine GD20 pode ser parcelado em **12x de R$ 183,25 sem juros**, ou você pode pagar no PIX por **R$ 2.089,05**, com 5% de desconto sobre o preço de R$ 2.199,00. O desconto do PIX não se acumula com preços promocionais. Precisa de mais alguma informação?
+
+**Cliente:** Tem 3 unidades? Quero comprar pra minha banda.
+
+> intent `product_details`, model `openai/gpt-6-luna`; tools: `get_product({"name": "Takamine GD20", "quantity": 3})`
+
+**Melody:** Sim, temos **5 unidades** do Takamine GD20 em estoque, então há disponibilidade para as 3 que você precisa. Você pode comprar pelo site, na loja ou pelo WhatsApp. Posso ajudar com mais alguma informação?
