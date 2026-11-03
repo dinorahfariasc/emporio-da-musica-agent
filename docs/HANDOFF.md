@@ -33,45 +33,60 @@ The repo is private now; the user makes it public at delivery.
 
 ## 3. Status (update me)
 
-**✅ P0 COMPLETE. All merged to `main`:**
+_Last updated 2026-11-02._
 
-E0 #2 · C1 #3 · C2 #4 · E2 #5/#31 (embeddings Gemini) · E3a #40 (agent core, router, 8 read tools,
-OpenRouter) · E3b #42 (actions: return, complaint, handoff) · E3c #43 (MCP server, `/mcp` endpoint) ·
-E4 #36/#38 (chat web) · E5 #44 (Auth.js, limits, cost controls) · E6 #48 (README draft) · plus polish
-PRs #49/#50/#51/#52/#53/#54/#55/#56/#57/#58/#59/#60 (Melody UI, Docker Compose, example conversations,
-store home page).
+**On `main` (all P0 merged):** data foundation (#35) · chat web (#36–#38) · agent core (#40) ·
+actions (#42) · MCP (#43) · auth, limits, deploy config (#44) · CI fix (#50) · README and
+deliverables (#48, #55, #58) · branding and approved Melody UI (#46, #49, #51) · Docker Compose
+(#52, #53) · exact stock (#54) · prompt fixes (#56) · history in the browser (#57) · store home
+with the Melody widget (#59) · customer lookup by contact, order context, sale calendar,
+pre-sale for coming-soon products, totals for several units in Python (#60).
 
-**Latest commits (2026-11-02):**
-- #60: feat: customer lookup by contact, order context, sale calendar, pre-sale and firmer answers
-- #59: feat: store home page with Melody chat widget  
-- #58: docs: live example conversations, assumptions and evaluator access  
-- #57: feat: keep the conversation across reloads and show each product card once  
-- #56: fix: persona greeting, proactive alternatives and defect rules in the prompt  
+**Issues:** closed #5, #6, #13, #18 (2026-11-02, each with a comment linking its PRs and any
+criterion superseded by a later decision). Open: #11 (tag `v1.0-submission` at the deadline,
+working production), #12 (server-side history; browser history done in #57), P1/P2 #14, #15,
+#16, #17, #19, #21, #23.
 
-**What's ready:**
-- ✅ README: full (setup, deploy, justifications, limitations, AI workflow, DL links)
-- ✅ 5 live example conversations in `docs/conversations/` (all 4 brief scenarios + security test)
-- ✅ Decision log: DL-001..DL-013 (sequential), then per-area prefixes (DL-BE-*, DL-FE-*, DL-DOCS-*, DL-DATA-*)
-- ✅ Agent: full-featured (Melody, router, tools, MCP server)
-- ✅ Chat web: login, auth limits, history, mobile-first UI
-- ✅ Data: ETL with documented rules, quality report, hybrid retrieval (Gemini + full-text)
-- ✅ Local stack: Docker Compose with all services
+**Production (Vercel) is DOWN since #44:** the frontend's fail-closed hook throws
+`missing required config: BACKEND_URL`. `AUTH_SECRET`/`SERVICE_JWT_SECRET` are not set in Vercel
+yet; `BACKEND_URL` comes from the service binding, which seems not visible to
+`src/instrumentation.ts`. Checklist in README "Run in production". Deferred by Dinorah; local
+Docker is the working path.
 
-**Known issue — Production Vercel:** After #44 (auth), frontend fails to start due to `BACKEND_URL`
-not being visible to the startup hook. **Workaround:** runs perfectly in local Docker. **Fix checklist**
-(in README under "Run in production"): (1) set `AUTH_SECRET` + `SERVICE_JWT_SECRET` in Vercel project,
-(2) backend env: `ENVIRONMENT`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `MCP_API_KEY`, (3) redeploy,
-(4) create evaluator account against Neon.
+**Pending on Neon (Dinorah runs it, needs the Neon and Gemini credentials):** re-seed after #60 so
+product 130 is sellable on pre-sale: `cd backend && uv run python -m etl --yes` with
+`DATABASE_URL_UNPOOLED` (Neon direct URL), `EMBEDDINGS_PROVIDER=gemini` and `GEMINI_API_KEY`.
+Vectors are cached, so it costs no embedding calls.
 
-**Neon status:** seeded with Gemini in 7.24s (2026-11-01); row counts and checksums match local.
-Only reseed if data or embeddings provider changes.
+**Models (DL-012):** router `perplexity/pplx-decider-v1.2`, specialist `openai/gpt-6-luna`,
+general `deepseek/deepseek-v4.1-flash`, all through OpenRouter.
 
-**P1 on the board:** #12 (history), #13 (i18n), #14 (HITL), #15 (Langfuse),
-#18 (Figma demo), #19 (MCP demo). #16 (Playwright) and #17 (routing bench) were dropped on 2026-11-03. None started (waiting for all P0 in production).
+**Rules decided since the brief (see the decision log):** WhatsApp (67) 3321-4500 separate from
+the phone (67) 3341-4444 and a R$ 100,00 minimum instalment from 4x (DL-FE-005); coming-soon =
+pre-sale, no immediate delivery, no date, no reservation (DL-BE-006); a name alone never unlocks
+orders, only the e-mail or phone on file (DL-BE-005).
 
-## 3b. UI track (Figma done) — history for reference
+**Next:** spec `010-semantic-recommendations` (style not in the catalog → top 3 similar with
+shared/different traits, or a friendly tour of the catalog when nothing is close). Needs real
+embeddings locally (`EMBEDDINGS_PROVIDER=gemini` + `GEMINI_API_KEY` in `backend/.env`) to
+calibrate the similarity thresholds; the local Docker index uses the fake embedder. Then the
+Vercel deploy.
 
-✅ **All merged.** Spec: `specs/008-figma-branding`. Decisions: `DL-FE-001` (initial, fallback palette), `DL-FE-002` (approved Melody UI: Inter, action `#E00B41`, light + dark with header theme toggle). All applied in #51 and subsequent PRs. Visual QA verified: `/dev/gallery` (DEV only, 404 in production). Login required even for `CHAT_MODE=mock`; use `scripts/create-user.ts` to set up a test account.
+**Local testing:** `docker compose up --build` (README). Test accounts `probe`, `probe2`, `probe3`
+exist only in the local Docker database (for scripted batches; each has the 200k tokens/day cap).
+
+## 3b. UI track (Figma ready) — read before touching `frontend/`
+
+The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Brief: `docs/design/figma-brief.md`. Decisions: `DL-FE-001` (fallback, superseded) and `DL-FE-002` (approved Melody UI: Inter, action `#E00B41`, light + dark with a header theme toggle). Visual QA: `pnpm dev` (or `CHAT_MODE=mock pnpm dev`), sign in, open `/dev/gallery` (DEV only, 404 in production). `CHAT_MODE=mock` only mocks the chat backend; login is still required (create a local user with `scripts/create-user.ts`).
+
+- **#44 and #13 are not on `main` yet.** They still own login-form, Sign out, PT/EN, `en.ts`. **Merge order: #44 → #13 (rebased) → any leftover branding chrome.** Current-surface restyle (tokens, empty/conversation/tools/cards/input/errors, placeholder login, header without Sign out/PT-EN) proceeds on `main` in parallel; expect a rebase when those land.
+- Open PRs that still conflict if edited now: #44 edits `src/app/login/page.tsx`, `src/components/login/login-form.tsx`, `src/components/chat/chat-header.tsx`, `src/lib/i18n/pt-BR.ts`, `src/app/api/chat/route.ts`, `src/proxy.ts`; #13 (worktree `track-c-frontend-i18n-brand`, not yet a PR) edits `layout.tsx`, `login/page.tsx`, `chat-header.tsx`, `product-card.tsx`, `lib/i18n/*` and adds `en.ts`, `language-switch.tsx`.
+- **Safe to do now (no overlap):** design tokens in `src/app/globals.css`, Tailwind theme, fonts, logo asset in `public/`, new presentational components under `src/components/ui/`.
+- **Do not touch:** `frontend/auth.ts`, `src/lib/auth/*`, `src/proxy.ts`, `src/app/api/**`, `scripts/create-user.ts` (auth), and the chat-stream logic (`src/lib/chat/*`, tool labels). Restyle, never re-wire.
+- **Copy:** all strings go through the i18n catalog (pt-BR default, EN via `en.ts` after #13). No hard-coded text in components.
+- **Constraints that must survive the restyle:** 375 px without horizontal scroll, tap targets ≥ 44 px, safe-area insets, `role="status"` announcements, no images in markdown, product cards without images, no status codes or JSON shown. Prices are only formatted, never computed.
+- **Gate per PR:** `pnpm lint && pnpm typecheck && pnpm test && pnpm build`; `/` and `/login` must still prerender. Decision-log prefix `DL-FE-NNN`. Small PRs, `Part of #18`.
+- **Backend/agent files are off limits for this track** (other agents work there: `backend/app/**`, `backend/evals/**`).
 
 ## 4. Working agreements (from the user)
 
@@ -160,6 +175,11 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 ### 2026-11-02 — #18 store home PR
 - **Done:** DL-FE-005 assumptions applied (e-mail without accent, minimum instalment R$ 100,00, phone and WhatsApp distinct); gate green; `feat/store-home` pushed and PR opened.
 - **Next:** store confirms DL-FE-005; if confirmed, align the backend policy text (4x–6x minimum) with the page.
+
+### 2026-11-02 — Pre-sale, issues, handoff
+- **Done:** #60 merged with coming-soon pre-sale (DL-BE-006) and `calculate_payment_options(quantity)`. Issues #5, #6, #13, #18 closed with PR links; progress comments on #11 and #12. Status section rewritten.
+- **Pending:** Neon re-seed (Dinorah, credentials). Vercel deploy still down.
+- **Next:** spec 010 semantic recommendations.
 
 ### 2026-11-02 — Hard-case batch, customer lookup, #59 review
 - **Done:** #59 review fixes (Melody aligned with the page on WhatsApp/instalments, mobile minimised, catalog copy). `find_my_orders` (contact-based lookup, name only disambiguates), order region/age/payment, sale-calendar answers (DL-BE-005).
