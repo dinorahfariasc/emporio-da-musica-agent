@@ -3,8 +3,7 @@
 **🇧🇷 [Clique aqui para a versão em português](README.pt-BR.md)**
 
 AI customer-service agent for Empório da Música, a fictional musical instrument store in Campo
-Grande/MS (Artefact AI Engineer take-home challenge, `challenge/challenge_brief.pdf`). The agent
-("Melody") answers customers in Portuguese or English about the catalog, prices, order status,
+Grande/MS. The agent ("Melody") answers customers in Portuguese or English about the catalog, prices, order status,
 store policies and return/complaint requests, backed by the store's real data and policy manual.
 
 - **Production:** https://emporio-da-musica-agent.vercel.app (currently down, see
@@ -19,7 +18,7 @@ store policies and return/complaint requests, backed by the store's real data an
 - [Architecture](#architecture)
 - [Run locally](#run-locally)
 - [Run in production](#run-in-production)
-- [Access for evaluators](#access-for-evaluators)
+- [Access for reviewers](#access-for-reviewers)
 - [Data](#data)
 - [Models used](#models-used)
 - [Key decisions and trade-offs](#key-decisions-and-trade-offs)
@@ -280,12 +279,12 @@ to be missing or to check:
    (`src/instrumentation.ts`); to confirm on the next deploy, and if so the check should move to
    request time, as the backend already does.
 3. After setting variables, redeploy: env changes only take effect on the next deploy. Then
-   create the evaluator's login against Neon with `scripts/create-user.ts`
+   create the reviewer's login against Neon with `scripts/create-user.ts`
    (`DATABASE_URL_UNPOOLED` set to the Neon direct URL).
 
 Deploys are triggered by the repository owner.
 
-## Access for evaluators
+## Access for reviewers
 
 There is no sign-up page: the agent runs on paid models, so access is by account only (spec 004).
 
@@ -299,7 +298,7 @@ There is no sign-up page: the agent runs on paid models, so access is by account
 
 ## Data
 
-The challenge files in `challenge/` are read-only inputs (`.gitattributes` keeps their CRLF bytes
+The source files in `inputs/` are read-only inputs (`.gitattributes` keeps their CRLF bytes
 intact). One command validates them, applies the correction rules and loads Postgres:
 
 ```bash
@@ -355,7 +354,7 @@ to be justified:
 | Prompt strategy | System prompt carries the store's current date/time and persona (Melody, manual §7.1/§7.2); tool outputs are the only source of facts, explicitly fenced as "FATOS SOMENTE DAS FERRAMENTAS" against prompt injection | Verified by the US5 safety scenarios (prompt extraction, invented discounts, fake employee) |
 | Interaction interface | Web chat: Next.js (App Router) + Vercel AI SDK `useChat`, streaming tokens, tool status lines and product cards; PT/EN switch, light/dark theme, mobile-first. The same tools are also exposed over MCP | The customer channel for a store is a chat window; the UI is a thin client that only renders what the Python backend streams (no business logic, no facts derived in the UI), so Python stays the main language as the brief requires. MCP shows the tools are reusable by other agents |
 | Conversation history persistence | Per browser: the conversation id and its last 40 messages live in `localStorage`, survive a reload and are cleared by "New chat" or sign-out. Every request carries the recent window (12 messages) to a stateless API; the only server-side state is the per-conversation order verification | Enough for a support chat (a reload no longer loses the context or the order verification) with no new infrastructure. Cross-device durable history (Postgres checkpointer) is a P1 (#12/S7) and not needed for the brief (DL-FE-003) |
-| Access control and cost limits | Username/password login (Auth.js, accounts only from a CLI, no sign-up), a short-lived HS256 token from the frontend to the backend, 20 requests/min and 200k tokens/day per account, fail-closed config checks | The agent runs on paid models behind a public URL; the brief's evaluator needs a login, not open access (spec 004, DL-BE-002, DL-FE-001) |
+| Access control and cost limits | Username/password login (Auth.js, accounts only from a CLI, no sign-up), a short-lived HS256 token from the frontend to the backend, 20 requests/min and 200k tokens/day per account, fail-closed config checks | The agent runs on paid models behind a public URL; the brief's reviewer needs a login, not open access (spec 004, DL-BE-002, DL-FE-001) |
 | Stock answers | Tools return the exact `stock_quantity`; `get_product(quantity=N)` returns `enough_stock` computed in Python | The agent must say with certainty whether N units are available, never send the customer to check (DL-BE-003) |
 | Local runtime | Docker Compose with Postgres, backend and frontend; the backend reads `backend/.env` for the provider key | Whoever clones the repo runs everything with one command and one key |
 | Data handling | Deterministic ETL with documented correction rules per anomaly (`docs/data-quality-report.md`), not silent cleaning | The brief explicitly flags recorded anomalies; a customer-service agent must not paper over a bad date or a contradictory product record without a visible rule |
@@ -476,7 +475,7 @@ on purpose"):
 - **No tracing/cost observability in production yet** (P1, #15/S10, Langfuse).
 - **MCP is read-only and local-only**: no order or action tools over MCP, and the Claude Desktop demo (#19) is not recorded.
 - **Return-window scenarios use the real current date**, so every dataset order is outside its
-  return window today by construction (orders predate the challenge); this is a deliberate,
+  return window today by construction (orders predate the project); this is a deliberate,
   documented choice (DL-002) over a configurable reference date, with a scripted-clock eval suite
   to still prove the policy logic (DL-013).
 - **Example conversations were recorded by hand-driving the API**, not exported by the eval

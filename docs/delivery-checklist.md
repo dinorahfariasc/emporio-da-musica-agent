@@ -1,13 +1,13 @@
 # Delivery checklist — brief requirements vs. repo state
 
-Cross-checked against `challenge/challenge_brief.pdf` (sections "O que você precisa construir",
+Cross-checked against the project brief (sections "O que você precisa construir",
 "Decisões Técnicas", "Entregáveis"). Updated by Track F (#11); re-check before the tag.
 
 _Last updated: 2026-11-01._
 
 ## 1. The agent itself
 
-| Brief requirement | Status | Where |
+| Requirement | Status | Where |
 |---|---|---|
 | Python project | ✅ | `backend/` (FastAPI, uv, Python 3.13) |
 | Assumes a persona aligned with the store | ✅ | Melody, `app/agent/prompts.py`; manual §7.1/§7.2 |
@@ -39,7 +39,7 @@ _Last updated: 2026-11-01._
 ## 4. Known gaps / follow-ups for other tracks
 
 - Production deploy on Vercel is down (README "Run in production" has the checklist); the
-  evaluator path that works today is Docker Compose.
+  reviewer path that works today is Docker Compose.
 - `--export` in `backend/evals/__main__.py` would make the example conversations regenerable in
   one command (they were recorded by driving the chat API turn by turn).
 - The git tag `v1.0-submission` and making the repo public are the user's action, at the deadline.

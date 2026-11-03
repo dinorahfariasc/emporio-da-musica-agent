@@ -47,10 +47,10 @@ second database would add an operational moving part for one small table.
 
 **Alternatives considered**:
 - Auth.js email/passwordless magic links — rejected: needs an email provider (SES/Resend) that is
-  out of scope and unnecessary for an internal evaluator login (spec explicitly: no self-service,
+  out of scope and unnecessary for an internal reviewer login (spec explicitly: no self-service,
   credentials handed out of band).
 - Storing users in an environment variable (static allow-list) — rejected: fails FR-004 (a CLI
-  that *creates* an account) and makes rotating/adding an evaluator require a redeploy.
+  that *creates* an account) and makes rotating/adding an reviewer require a redeploy.
 
 ## R4 — Service-to-service trust (BFF → FastAPI)
 
@@ -94,7 +94,7 @@ runaway client/bug, not a sophisticated rate-limit evader.
 
 **Alternatives considered**:
 - Upstash/Redis rate limiting — rejected: another managed service and env var to wire up and
-  fail-close correctly, for a one-evaluator deployment; Postgres is already a hard dependency.
+  fail-close correctly, for a one-reviewer deployment; Postgres is already a hard dependency.
 - Sliding-window log (store every request timestamp) — rejected: more rows and query complexity
   for a limit this small; the fixed-window edge case is an accepted, documented trade-off.
 
@@ -138,7 +138,7 @@ requested page (`callbackUrl`) after success — reusing the existing `LoginNoti
 `reason=expired` query-param convention already present in the placeholder.
 
 **Rationale**: spec Assumptions call this an implementation detail within "a standard multi-day
-session"; 30 days matches an evaluator's realistic review window without requiring re-login mid
+session"; 30 days matches an reviewer's realistic review window without requiring re-login mid
 evaluation, while still expiring eventually rather than being eternal.
 
 ## R10 — Closing the conversation-id residual risk (DL-012)
@@ -178,8 +178,8 @@ how few real users exist, and the cost of adding this is one small table and one
 
 **Alternatives considered**:
 - IP-based lockout — rejected: more complex (proxies, shared/dynamic IPs for a legitimate
-  evaluator) for a project this size; username-based is simpler and matches the actual threat
-  (guessing one evaluator's password), accepting the trade-off that it cannot stop a
+  reviewer) for a project this size; username-based is simpler and matches the actual threat
+  (guessing one reviewer's password), accepting the trade-off that it cannot stop a
   distributed attacker from trying many *different* usernames.
 - No lockout at all — rejected now that a specific, cheap mitigation was already specified by a
   parallel review of the same issue; declining it without a stated reason would be worse than

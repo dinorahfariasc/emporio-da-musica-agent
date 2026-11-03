@@ -45,7 +45,7 @@ middleware redirect) — both already the project's test runners.
 
 **Performance Goals**: Login and the auth/limit checks must not be user-perceptible — under 100ms
 added latency before the agent turn starts (the turn itself already runs seconds behind an LLM
-call). No specific throughput target: this is a single-evaluator deployment (see spec Assumptions).
+call). No specific throughput target: this is a single-reviewer deployment (see spec Assumptions).
 
 **Constraints**: Fail closed (spec FR-015): any required secret/config missing or invalid in
 `Environment.PRODUCTION` must stop requests from being served rather than silently allow them.

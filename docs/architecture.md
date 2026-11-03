@@ -69,7 +69,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    csv["CSVs (challenge/data)"] --> etl["ETL<br/>validation + explicit<br/>correction rules"]
+    csv["CSVs (inputs/data)"] --> etl["ETL<br/>validation + explicit<br/>correction rules"]
     pdf["Policies PDF"] --> chunk["Chunks per section<br/>(§ number kept)"]
     etl --> pg[("Postgres")]
     etl --> report["data-quality-report.md"]

@@ -1,4 +1,4 @@
-"""Reads the read-only challenge CSVs into NFC strings, recording what NFC changed."""
+"""Reads the read-only source CSVs into NFC strings, recording what NFC changed."""
 
 import csv
 from dataclasses import dataclass, field

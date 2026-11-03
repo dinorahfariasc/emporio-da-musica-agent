@@ -10,7 +10,7 @@ summarizes it and links here.
 
 ## DL-001 — Kickoff: reading the brief and the data (2026-10-31)
 
-**Context.** Artefact technical challenge (AI Engineer): a customer-service agent for the
+**Context.** A customer-service agent for the
 fictional store Empório da Música, backed by operational CSVs and a policies manual (PDF).
 Deadline: P0 done by 2026-10-31 evening; 2026-11-02 reserved for improvements.
 
@@ -26,8 +26,8 @@ Several inconsistencies were found; handling them became data requirements:
 | customers | "Ponta Porã" stored with two different Unicode encodings; customers 11 and 43 share the email `bruno.martins@jmail.com` (found in backlog QA review) |
 | manual | Two WhatsApp numbers (3341-4444 in §1.2, 3321-4500 in §7); email with and without accent; installment table contradicts §3.1; 7-day withdrawal right applies only to online purchases, but orders don't record the channel |
 
-Challenge files were renamed to paths without spaces/accents (`challenge/`,
-`challenge/data/*.csv`, `store_policies.pdf`).
+Source files were renamed to paths without spaces/accents (`inputs/`,
+`inputs/data/*.csv`, `store_policies.pdf`).
 
 **Role of AI.** Claude Code read the PDFs and CSVs and produced the profiling; I validated the
 findings.
@@ -54,7 +54,7 @@ assistants that execute tasks, AI in production).
 | Recommendation | `find_similar_products`: structured filters + vector similarity | Name search only | "We don't carry guitar X, but here are similar ones" — fulfils manual §7.3 (suggest alternatives). |
 | Tools | Exposed through an **MCP server** (FastMCP) mounted in FastAPI | Direct function calls | Named in the job description; the same server can be used from Claude Desktop/Code. |
 | Actions | `request_return`, `register_complaint`, `handoff_to_human`; confirmation via `interrupt` (P1) | Answer-only agent | Job description asks for assistants that execute tasks. |
-| Identity | Orders are revealed only with order number + email or phone | Trust the logged-in user | LGPD; the logged-in user is the evaluator, not the customer. |
+| Identity | Orders are revealed only with order number + email or phone | Trust the logged-in user | LGPD; the logged-in user is the reviewer, not the customer. |
 | Persona | **Melody**, informal-but-professional tone (manual §7.1), §7.2 flow, multilingual | — | Visuals/branding will come from a Figma mockup later. |
 | Dates | Use the **real current date** | Configurable reference date | Simplicity; accepted consequence: returns for dataset orders will be refused as out of window. |
 | Frontend | **Next.js + Vercel AI SDK (`useChat`) + shadcn/ui**, i18n PT/EN | CLI, Streamlit | Production-like deliverable; AI SDK named in the job description. |
@@ -246,7 +246,7 @@ Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks
 
 | Decision | Alternatives | Rationale |
 |---|---|---|
-| Full-page chat at `/` | Landing page with a floating widget; both | Fastest path to P0, best on mobile; the evaluator lands in the conversation. A landing page can come with the Figma pass (#18). |
+| Full-page chat at `/` | Landing page with a floating widget; both | Fastest path to P0, best on mobile; the reviewer lands in the conversation. A landing page can come with the Figma pass (#18). |
 | **Basic product cards in #9** from the contract's `ProductCard` (no image field) | Markdown list now, cards in #20 | Chosen over the contract doc's "markdown in P0" note; #20 keeps branded variants. Cards only format values (constitution I). |
 | 401 → `/login?reason=expired` with a placeholder page | Inline notice; redirect to a 404 until #10 | Testable now; #10 replaces the page behind a fixed path and query. |
 | Errors mapped by one pure `toChatError()` over the SDK's `APICallError` (`statusCode`, `responseBody`) | Custom `fetch` wrapper | Verified in `ai@7` source that the transport keeps status and body; trivially unit-tested from the `http-*` fixtures. |

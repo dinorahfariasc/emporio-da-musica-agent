@@ -8,8 +8,8 @@ _Last updated: 2026-11-02 18h00 (all P0 complete, ready to tag and ship)._
 
 ## 1. What this is
 
-Artefact AI Engineer take-home: a customer-service agent ("Melody") for a fictional music store,
-**Empório da Música**. Brief: `challenge/challenge_brief.pdf`. Data: `challenge/data/`.
+A customer-service agent ("Melody") for a fictional music store,
+**Empório da Música**. Data: `inputs/data/`.
 Deliverables: public repo with real commit history, README (run instructions, decisions,
 limitations, **AI-assistant workflow**), 3–5 example conversations. **Final deadline: 2026-11-02 18:00
 (America/Campo_Grande), with P0, P1 and P2 all done. Target: P0 in production by 2026-11-01 evening, then
@@ -123,7 +123,7 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
   `export const dynamic`; use `await connection()`), Vitest 5. Check `node_modules` types and
   `node_modules/next/dist/docs` before using an API.
 - `.env*` ignore rules hide `.env.example`; keep the explicit `!.env.example`.
-- CSV files use CRLF line endings; never rewrite them (`challenge/** -text`).
+- CSV files use CRLF line endings; never rewrite them (`inputs/** -text`).
 - A PR whose base is another PR's branch merges into that branch, not into `main` (#41 did). Retarget to `main` before merging, or cherry-pick onto `main` afterwards.
 - Live evals: one event loop (`evals/runner.py::_live_client`); decider models are not chat models (`/api/alpha/decisions`); DeepSeek needs reasoning off for the router.
 - Squash-merged stacked PRs conflict: retarget with
@@ -187,7 +187,7 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - **Next:** spec 010 semantic recommendations (needs a Gemini key locally). Local test accounts `probe`/`probe2` exist only in the Docker DB.
 
 ### 2026-11-01 — Review against the brief
-- **Done:** 11 live conversations against the brief; five recorded as the example conversations (`docs/conversations/`, replacing the fake-mode placeholders). README: interface row, history persistence, Assumptions, Access for evaluators.
+- **Done:** 11 live conversations against the brief; five recorded as the example conversations (`docs/conversations/`, replacing the fake-mode placeholders). README: interface row, history persistence, Assumptions, Access for reviewers.
 - **Fixed:** prompt (persona greeting, alternatives when out of stock, defect rules before handoff, no preamble) #56; history in `localStorage` + New chat + one card per product #57.
 - **Next:** #56 and #57 both append to `docs/decision-log.md` — rebase the second one. Then the Vercel deploy.
 
@@ -204,7 +204,7 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 ### 2026-11-01 — Docker, stock quantity, README
 - **Done:** Docker Compose for db + backend + frontend (#52, #53); end-to-end login + chat verified locally with OpenRouter. README: Docker quickstart, env-var table, production status, new decisions.
 - **Fixed:** compose forced the fake LLM (every turn failed); host bind mounts broke the container venv; agent could not state stock counts (#54, `get_product(quantity=N)` → `enough_stock`).
-- **Next:** fix the Vercel deploy (secrets + `BACKEND_URL` visibility at startup), then create the evaluator login on Neon.
+- **Next:** fix the Vercel deploy (secrets + `BACKEND_URL` visibility at startup), then create the reviewer login on Neon.
 
 ### 2026-11-01 — #18 approved Melody UI (`feat/ui-melody`)
 - **Done:** approved tokens (Inter, `#E00B41`, light + dark), components, `/` and `/login` states, PT | EN with `en.ts`, DEV gallery `/dev/gallery`; DL-FE-002; 008 spec/plan/tasks updated. Gate green; `/` and `/login` still prerender.

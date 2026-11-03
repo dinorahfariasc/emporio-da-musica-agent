@@ -7802,7 +7802,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Emp%C3%B3rio-da-M%C3%BAsica-%E2%80%94-Exploratory-Data-Analysis">Empório da Música — Exploratory Data Analysis<a class="anchor-link" href="#Emp%C3%B3rio-da-M%C3%BAsica-%E2%80%94-Exploratory-Data-Analysis">¶</a></h1><p>Read-only EDA over <code>challenge/data/</code>: products, categories, orders, order_items, customers,
+<h1 id="Emp%C3%B3rio-da-M%C3%BAsica-%E2%80%94-Exploratory-Data-Analysis">Empório da Música — Exploratory Data Analysis<a class="anchor-link" href="#Emp%C3%B3rio-da-M%C3%BAsica-%E2%80%94-Exploratory-Data-Analysis">¶</a></h1><p>Read-only EDA over <code>inputs/data/</code>: products, categories, orders, order_items, customers,
 promotions. This complements <code>docs/data-quality-report.md</code> (the authoritative, ETL-generated
 anomaly list, DL-002) with distributions and visual evidence; it does not replace it.</p>
 </div>
@@ -7822,7 +7822,7 @@ anomaly list, DL-002) with distributions and visual evidence; it does not replac
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="n">DATA</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../challenge/data"</span><span class="p">)</span>
+<span class="n">DATA</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../inputs/data"</span><span class="p">)</span>
 <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">"display.max_columns"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"figure.figsize"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
 

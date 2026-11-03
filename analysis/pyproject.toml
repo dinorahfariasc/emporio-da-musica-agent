@@ -1,7 +1,7 @@
 [project]
 name = "emporio-agent-eda"
 version = "0.1.0"
-description = "Exploratory data analysis over challenge/data for Empório da Música"
+description = "Exploratory data analysis over inputs/data for Empório da Música"
 requires-python = ">=3.13"
 dependencies = [
     "pandas>=2.2",

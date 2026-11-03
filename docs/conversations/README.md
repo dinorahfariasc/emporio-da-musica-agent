@@ -1,6 +1,6 @@
 # Example conversations
 
-Brief requirement: 3–5 conversations in `.md`/`.txt`/image, covering varied scenarios, at least
+Requirement: 3–5 conversations in `.md`/`.txt`/image, covering varied scenarios, at least
 one non-trivial (real-time data lookup or a policy rule applied).
 
 All five are **live runs** of the real agent (not hand-written, not fake-mode), recorded on

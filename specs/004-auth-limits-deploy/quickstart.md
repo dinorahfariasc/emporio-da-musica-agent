@@ -50,8 +50,8 @@
    migrated in place automatically (dropped and recreated under the same advisory lock — it only
    ever held ephemeral per-turn verification state, nothing a customer would notice missing).
 3. Run the `create-user` CLI against production (`DATABASE_URL_UNPOOLED` from Vercel's env, not
-   committed anywhere) to provision the evaluator account(s); record the username(s) somewhere the
-   user will share out of band with the evaluator — never in the repo.
+   committed anywhere) to provision the reviewer account(s); record the username(s) somewhere the
+   user will share out of band with the reviewer — never in the repo.
 4. Set an organization/workspace spend limit in the OpenRouter dashboard (current LLM provider per
    DL-012) as a backstop behind the per-user daily budget (FR-016); record the configured amount in
    `docs/decision-log.md` (DL-DOCS-xxx), not the key itself.

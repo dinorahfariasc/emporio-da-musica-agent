@@ -1,6 +1,6 @@
 # EDA — Empório da Música
 
-Exploratory data analysis over `challenge/data/`. Standalone `uv` project, separate from
+Exploratory data analysis over `inputs/data/`. Standalone `uv` project, separate from
 `backend/` and `frontend/`, read-only.
 
 ## Run

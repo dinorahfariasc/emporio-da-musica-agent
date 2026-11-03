@@ -9,7 +9,7 @@ numbered-migrations mechanism is introduced (see `quickstart.md`).
 
 ## `users`
 
-Evaluator login accounts. Created only by the `create-user` CLI (FR-004); no code path inserts a
+Reviewer login accounts. Created only by the `create-user` CLI (FR-004); no code path inserts a
 row from a request.
 
 | Column | Type | Notes |

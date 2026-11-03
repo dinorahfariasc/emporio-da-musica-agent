@@ -36,6 +36,6 @@
   by `docs/planning/backlog.md` (E5/#10) and `.specify/memory/constitution.md` (principle V); this
   spec documents the user-facing behavior those decisions imply and leaves mechanism names (Auth.js,
   JWT, HS256) out of the requirements themselves, keeping them in Assumptions/Input context only.
-- Scale assumption (one to a handful of evaluator accounts, no self-service) follows directly from
-  this being a solo take-home deliverable with a same-day deadline; flagged in Assumptions rather
+- Scale assumption (one to a handful of reviewer accounts, no self-service) follows directly from
+  this being a solo project with a same-day deadline; flagged in Assumptions rather
   than as a clarification question since no other scale is plausible for this project.

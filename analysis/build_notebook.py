@@ -20,7 +20,7 @@ def code(text):
 
 md("""# Empório da Música — Exploratory Data Analysis
 
-Read-only EDA over `challenge/data/`: products, categories, orders, order_items, customers,
+Read-only EDA over `inputs/data/`: products, categories, orders, order_items, customers,
 promotions. This complements `docs/data-quality-report.md` (the authoritative, ETL-generated
 anomaly list, DL-002) with distributions and visual evidence; it does not replace it.
 """)
@@ -32,7 +32,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-DATA = Path("../challenge/data")
+DATA = Path("../inputs/data")
 pd.set_option("display.max_columns", None)
 plt.rcParams["figure.figsize"] = (8, 4)
 

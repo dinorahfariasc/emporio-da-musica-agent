@@ -8,7 +8,7 @@
 
 **Input**: Turn the chat-only front into the store's home page. `/` shows public store
 information (about, hours, address and contact, payment, returns, shipping, promotions,
-warranty, privacy) taken from the store manual v2.1 (`challenge/` PDF). Melody moves into a
+warranty, privacy) taken from the store manual v2.1 (`inputs/` PDF). Melody moves into a
 side widget that can be minimised to a floating button.
 
 Part of #18.

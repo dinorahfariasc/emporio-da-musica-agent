@@ -6,7 +6,7 @@
 
 Add a small, standalone `analysis/` uv project (separate from `backend/` and `frontend/`, so it
 carries its own data-science dependencies — pandas, matplotlib, jupyter — without bloating the
-agent's runtime image) containing one notebook, `eda.ipynb`, that loads the challenge CSVs with
+agent's runtime image) containing one notebook, `eda.ipynb`, that loads the source CSVs with
 pandas and renders matplotlib charts. Export to static HTML with `nbconvert` and commit both.
 
 ## Technical Context
@@ -15,7 +15,7 @@ pandas and renders matplotlib charts. Export to static HTML with `nbconvert` and
 
 **Primary Dependencies**: pandas, matplotlib, jupyter, nbconvert, ipykernel
 
-**Storage**: none — reads `challenge/data/*.csv` directly, read-only
+**Storage**: none — reads `inputs/data/*.csv` directly, read-only
 
 **Testing**: the notebook itself is the artifact; "test" = `uv run jupyter nbconvert --execute`
 succeeds with exit code 0 (no network, no randomness, so output is reproducible)
@@ -46,7 +46,7 @@ analysis/
 
 ## Constitution Check
 
-- Principle III (clean, traceable data): the notebook treats `challenge/` as read-only and cites
+- Principle III (clean, traceable data): the notebook treats `inputs/` as read-only and cites
   the decision log for every interpretation; no new cleaning rule is invented here that isn't
   already in `docs/data-quality-report.md`.
 - No agent/LLM code touched; no deterministic-fact rule changed.

@@ -26,7 +26,7 @@ the system; errors may amount to misleading advertising.
 **Rationale:** cost and latency proportional to difficulty; auditable decisions.
 
 ### III. Clean, traceable data
-- CSVs and the PDF in `challenge/` are read-only inputs; all cleaning happens in a reproducible
+- CSVs and the PDF in `inputs/` are read-only inputs; all cleaning happens in a reproducible
   ETL with schema validation.
 - Every data correction or interpretation MUST be an explicit, tested rule recorded in the data
   quality report and the decision log.

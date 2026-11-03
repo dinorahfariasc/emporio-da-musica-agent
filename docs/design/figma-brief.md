@@ -8,7 +8,7 @@ discounts, stock or eligibility.
 ## 1. What it is
 A website whose single product is a chat with **Melody**, the virtual assistant of a music store
 (instruments, accessories, audio). Customers ask about products, prices, promotions, payment
-methods, store policies, orders, returns and complaints. The evaluator plays the customer.
+methods, store policies, orders, returns and complaints. The reviewer plays the customer.
 
 ## 2. Screens
 | # | Screen | Route | Purpose |
