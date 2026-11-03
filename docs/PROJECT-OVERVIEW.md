@@ -1,5 +1,7 @@
 # Empório da Música — Melody, a customer-service agent for a music store
 
+**Author: Dinorah de Farias Chagas — AI Engineer**
+
 **What this is.** A small store website (a landing page with the store's general information and
 how it works) with **Melody**, an AI customer-service agent, living in a chat widget on the page.
 Melody answers in the customer's language (Portuguese first, English supported), looks up prices,
