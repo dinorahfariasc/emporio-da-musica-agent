@@ -100,6 +100,34 @@ understanding the customer and wording the reply.
 - **Everything is verifiable.** Tests run without API keys, evals run with real models, and every
   decision is recorded.
 
+### The product in action
+
+The store page, with Melody minimized to the floating button and her greeting bubble:
+
+<p align="center"><img src="screenshots/01-home.png" alt="Store home page with the Melody button and greeting" width="92%"></p>
+
+Melody's initial state when the chat opens: a greeting and four suggested questions that cover
+the main paths (catalog with a budget, opening hours, installments, returns).
+
+<p align="center"><img src="screenshots/06-initial-chat.png" alt="Melody initial state with suggested questions" width="92%"></p>
+
+A return request on mobile: Melody asks for the order number and the contact on file, checks the
+order, and applies the return rule with the dates computed by the tools. When the customer asks
+about a defect, she explains that the legal warranty has also ended and offers the manufacturer's
+warranty. The last screen shows a prompt-injection attempt with a fake manager discount, refused.
+
+<p align="center">
+<img src="screenshots/02-mobile-devolucao.png" alt="Return request: order verified and regret rule applied" width="31%">
+<img src="screenshots/03-mobile-devolucao.png" alt="Return request: defect and manufacturer warranty" width="31%">
+<img src="screenshots/04-mobile-prompt-injection.png" alt="Prompt injection and fake discount refused" width="31%">
+</p>
+
+Full-screen chat on desktop: a request for a product the store does not carry (a saxophone) gets a
+short answer without invented alternatives, and a request for drums returns product cards with the
+price and stock read from the database.
+
+<p align="center"><img src="screenshots/05-chat-not-found.png" alt="Desktop chat: no saxophones, then drum cards" width="92%"></p>
+
 ---
 
 ## 3. How I approached it, step by step
