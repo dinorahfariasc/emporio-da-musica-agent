@@ -1,5 +1,7 @@
 # Empório da Música — Melody, the customer service agent
 
+**🇧🇷 [Clique aqui para a versão em português](README.pt-BR.md)**
+
 AI customer-service agent for Empório da Música, a fictional musical instrument store in Campo
 Grande/MS (Artefact AI Engineer take-home challenge, `challenge/challenge_brief.pdf`). The agent
 ("Melody") answers customers in Portuguese or English about the catalog, prices, order status,
@@ -19,6 +21,7 @@ store policies and return/complaint requests, backed by the store's real data an
 - [Run in production](#run-in-production)
 - [Access for evaluators](#access-for-evaluators)
 - [Data](#data)
+- [Models used](#models-used)
 - [Key decisions and trade-offs](#key-decisions-and-trade-offs)
 - [Assumptions](#assumptions)
 - [AI-assistant workflow](#ai-assistant-workflow)
@@ -27,46 +30,118 @@ store policies and return/complaint requests, backed by the store's real data an
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    user([Customer]) --> web["Next.js frontend<br/>chat UI, login (Auth.js),<br/>/api/chat as BFF"]
+    web -->|"SSE stream<br/>service JWT"| api["FastAPI backend<br/>/api/chat"]
+    api --> agent["Agent<br/>router + create_agent<br/>(LangChain/LangGraph)"]
+    agent --> tools["Tools<br/>plain Python,<br/>facts computed here"]
+    tools --> db[("Postgres + pgvector<br/>store tables, search index,<br/>limits, conversation state")]
+    agent -.->|chat + router models| or["OpenRouter"]
+    tools -.->|query embeddings| gem["Gemini embeddings"]
+    ext([External MCP client]) -->|"bearer key<br/>read-only tools"| mcp["/mcp"]
+    mcp --> tools
 ```
-┌─────────────┐      SSE stream       ┌──────────────────────────┐
-│  Next.js     │  POST /api/chat ───▶ │  FastAPI backend          │
-│  chat UI     │ ◀─── token/tool parts │                           │
-│  (frontend/) │                       │  ┌─────────────────────┐ │
-└─────────────┘                       │  │ router (plain Python)│ │
-                                       │  │ intent classifier:   │ │
-                                       │  │ decider model, Haiku │ │
-                                       │  │ fallback             │ │
-                                       │  └──────────┬───────────┘ │
-                                       │             ▼             │
-                                       │  ┌─────────────────────┐  │
-                                       │  │ create_agent (per    │  │
-                                       │  │ request): specialist │  │
-                                       │  │ or general model,    │  │
-                                       │  │ LangChain/LangGraph  │  │
-                                       │  └──────────┬───────────┘  │
-                                       │             ▼              │
-                                       │  ┌─────────────────────┐   │
-                                       │  │ tools (plain async   │   │
-                                       │  │ functions, Python-   │   │
-                                       │  │ computed facts):      │   │
-                                       │  │ products, orders,     │   │
-                                       │  │ payments, policies,   │   │
-                                       │  │ actions (return,      │   │
-                                       │  │ complaint, handoff)   │   │
-                                       │  └──────────┬───────────┘   │
-                                       └─────────────┼───────────────┘
-                                                      ▼
-                             ┌─────────────────────────────────────┐
-                             │ Postgres (Neon) + pgvector           │
-                             │ store tables (products, orders, ...) │
-                             │ hybrid search index (policy chunks,  │
-                             │ product docs: full-text + vectors)   │
-                             └───────────────────────────────────────┘
+
+One chat turn, end to end:
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant W as Next.js /api/chat
+    participant B as FastAPI /api/chat
+    participant R as Router (decider)
+    participant A as Agent (create_agent)
+    participant T as Tools
+    participant D as Postgres
+    C->>W: message (+ recent history)
+    W->>W: check session, sign short-lived JWT
+    W->>B: POST with JWT
+    B->>D: rate limit and daily token budget
+    B->>R: classify intent
+    R-->>B: intent + confidence
+    B->>A: run with the tools for that intent
+    loop while the model needs facts
+        A->>T: tool call
+        T->>D: parameterized SQL / hybrid search
+        D-->>T: rows
+        T-->>A: JSON result
+    end
+    A-->>B: token and tool events
+    B-->>W: SSE (AI SDK UI message stream)
+    W-->>C: streamed answer + product cards
+    B->>D: record token usage
 ```
+
+More diagrams (decision flow, data and retrieval, semantic recommendation) in [`docs/architecture.md`](docs/architecture.md).
 
 - **Routing happens in plain Python, not a LangGraph node.** A request is classified by intent
   first (decider model, with a chat-model fallback), then exactly one `create_agent` run streams
   the answer with the tools for that intent. See DL-011 for why an outer graph was dropped.
+- **Fact or policy?** Facts come from deterministic tools, policies from RAG plus Python rules:
+
+```mermaid
+flowchart TD
+    q[Customer message] --> i{Intent}
+    i -->|price, stock, promotion| t1["Deterministic tools<br/>get_product, calculate_payment_options,<br/>get_active_promotions"]
+    i -->|returns, hours, payment rules| t2["search_policies<br/>(RAG over the manual)<br/>+ Python rules for deadlines"]
+    i -->|order status| v{"Order number +<br/>owner's e-mail or phone?"}
+    v -->|yes| t3[get_order_status]
+    v -->|no, or mismatch| deny["Generic refusal,<br/>lockout after repeated failures"]
+    i -->|return, complaint, human| act["check_return_eligibility,<br/>then action tools only on<br/>explicit customer request"]
+    i -->|out of scope| out["Polite decline,<br/>offer instruments"]
+    t1 --> w[LLM writes the answer from tool results only]
+    t2 --> w
+    t3 --> w
+    act --> w
+```
+
+- **The AI core, step by step.** Which model runs when (router, specialist or general, tools, embeddings):
+
+```mermaid
+flowchart TD
+    msg(["Customer message + last 12 messages"]) --> rt["1. ROUTER<br/>perplexity/pplx-decider-v1.2<br/>returns intent + confidence"]
+    rt -.->|"fails or takes over 2.5 s"| fb["Fallback: structured output<br/>from the specialist model"]
+    fb -.-> dec
+    rt --> dec{"Confidence ≥ 0.75 and a single intent?"}
+    dec -->|yes| sp["2a. SPECIALIST<br/>openai/gpt-6-luna<br/>prompt + ONLY the tools of that intent"]
+    dec -->|"no: multi_intent, unclear, router down"| ge["2b. GENERAL<br/>deepseek/deepseek-v4.1-flash<br/>generic prompt + ALL tools"]
+    sp --> loop
+    ge --> loop
+    loop{"Model needs a fact?"} -->|yes, up to 8 steps| tl["3. TOOLS (Python)<br/>price, stock, installments, deadlines,<br/>order lookup: deterministic SQL and rules"]
+    tl --> srch{"Free-text search?"}
+    srch -->|yes| emb["4. EMBEDDINGS<br/>gemini-embedding-001<br/>embeds only the query"]
+    emb --> hy["Hybrid search: full-text + vector, fused by RRF"]
+    srch -->|no| db[("Postgres")]
+    hy --> db
+    db --> loop
+    loop -->|no| ans["Answer written ONLY from tool results"]
+    ans --> out(["Streamed to the customer"])
+```
+
+A worked example (a subjective request):
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant R as Router (pplx-decider)
+    participant S as Specialist (gpt-6-luna)
+    participant T as Tool find_similar_products
+    participant E as Embeddings (gemini)
+    participant D as Postgres
+    C->>R: "I want a soft guitar for a beginner, up to R$ 700"
+    R-->>S: intent product_search, confidence 0.93 (≥ 0.75)
+    Note over S: Prompt for product_search + 2 tools only (search_products, find_similar_products)
+    S->>T: description="soft, beginner", category_id=5, max_price_brl=700
+    T->>E: embed the description
+    E-->>T: 768-dim vector
+    T->>D: full-text + vector search, filters: category 5, sellable, price ≤ 700
+    D-->>T: top 3 with price and stock
+    T-->>S: JSON
+    S-->>C: Answer: one shared trait + one difference, prices from the JSON
+    Note over C,D: Price and stock come from the database, the model only words the answer. Embeddings are used only to understand the query, never to state facts.
+```
+
 - **Facts are never computed by the LLM.** Price, stock, discount eligibility and return windows
   are plain Python (`app/catalog/rules.py`, `app/policies/returns.py`); tools return JSON the model
   can only read and quote, never derive (constitution principle I).
@@ -181,6 +256,11 @@ uv run python -m evals --live     # real models, needs keys above
 
 ## Run in production
 
+> **Scope note.** The login, the signed service token (JWT) between frontend and backend, and the
+> per-account limits exist because the plan was an open public deploy on paid models. The project
+> is now run and demonstrated locally, where `docker compose` already provides development secrets,
+> so none of this needs configuring. The Vercel deploy is kept as documented, not required.
+
 One Vercel project using [Services](https://vercel.com/docs/services) (`vercel.json` at the repo
 root): the Next.js `frontend` is the only public service; the FastAPI `backend` is private and
 reached by the frontend through a service binding that injects `BACKEND_URL`. `/mcp` is routed
@@ -241,6 +321,25 @@ uv run python -m etl --yes      # required for any non-local host (e.g. Neon)
   Gemini free tier: 100 requests/min, 1,000 requests/day, 30K tokens/min; Google may use
   free-tier content to improve its products, which is fine for this fictional data.
 - Design: [`specs/001-data-foundation/`](specs/001-data-foundation/).
+
+## Models used
+
+All chat models go through OpenRouter with a single key; embeddings go straight to Google.
+
+| Role | Model | Setting |
+|---|---|---|
+| Intent router (classifies each message) | `perplexity/pplx-decider-v1.2` | `ROUTER_MODEL` |
+| Specialist answers (one clear intent: price, policy, order...) | `openai/gpt-6-luna` | `SPECIALIST_MODEL` |
+| General answers (ambiguous or mixed requests) | `deepseek/deepseek-v4.1-flash` | `GENERAL_MODEL` |
+| Embeddings for hybrid search (768 dims) | `gemini-embedding-001` (Google) | `EMBEDDINGS_MODEL` |
+| Tests and CI | fake LLM, fake router and fake embedder (no keys, deterministic) | `*_PROVIDER=fake` |
+| Coding assistant | Claude Code (see [AI-assistant workflow](#ai-assistant-workflow)) | not part of the runtime |
+
+The recorded example conversations and the live evals ran on the three OpenRouter models above.
+The defaults in `backend/.env.example` (`claude-haiku-4-5-20251001`, `claude-sonnet-5-5`) are
+for the direct Anthropic provider; with OpenRouter, set the vendor ids shown in
+[Run locally](#run-locally). Prices, stock and eligibility never come from a model, only from
+Python tools. Why these models: DL-012.
 
 ## Key decisions and trade-offs
 
@@ -335,27 +434,28 @@ brief asks for the workflow to be explained, not just the fact that AI was used.
 
 ## MCP server
 
-The same tools Melody uses are exposed over [MCP](https://modelcontextprotocol.io) at `/mcp`,
-behind a bearer key (`MCP_API_KEY`; the server is disabled when it is unset). No business logic
-lives in the MCP layer (`backend/app/mcp.py`) — it is the exact functions in
-`backend/app/tools/`, wrapped only to build a per-client `ToolContext`.
+Melody calls its tools in process; MCP is an optional side door so that **other** AI clients (for
+example Claude Desktop) can reuse the same catalog and policy tools. Only the **read-only** tools
+are exposed (`search_products`, `get_product`, `find_similar_products`, `get_active_promotions`,
+`calculate_payment_options`, `search_policies`, `get_store_info`). Order lookups and actions
+(returns, complaints, handoff) need a verified customer and are not available over MCP (DL-BE-007).
 
-Add this to Claude Desktop's `claude_desktop_config.json` (or any MCP client that supports
-streamable HTTP with a bearer header):
+It lives at `/mcp`, behind a bearer key (`MCP_API_KEY`; disabled when unset), and holds no business
+logic (`backend/app/mcp.py` wraps the functions in `backend/app/tools/`).
+
+Locally, set `MCP_API_KEY=dev-key` in `backend/.env`, restart the backend, and add this to Claude
+Desktop's `claude_desktop_config.json` (or any MCP client with streamable HTTP and a bearer header):
 
 ```json
 {
   "mcpServers": {
     "emporio-da-musica": {
-      "url": "https://emporio-da-musica-agent.vercel.app/mcp",
-      "headers": { "Authorization": "Bearer <MCP_API_KEY>" }
+      "url": "http://localhost:8000/mcp",
+      "headers": { "Authorization": "Bearer dev-key" }
     }
   }
 }
 ```
-
-Locally: `MCP_API_KEY=dev-key uv run uvicorn app.main:app --reload`, then point a client at
-`http://localhost:8000/mcp`.
 
 ## Limitations and next steps
 
@@ -374,7 +474,7 @@ on purpose"):
   `register_complaint`) beyond the model asking the customer in-conversation; a hard `interrupt`
   gate is planned (P1, #13/S9).
 - **No tracing/cost observability in production yet** (P1, #15/S10, Langfuse).
-- **MCP server is live but needs `MCP_API_KEY` in the environment** (see above); the Claude Desktop demo (#19) is pending.
+- **MCP is read-only and local-only**: no order or action tools over MCP, and the Claude Desktop demo (#19) is not recorded.
 - **Return-window scenarios use the real current date**, so every dataset order is outside its
   return window today by construction (orders predate the challenge); this is a deliberate,
   documented choice (DL-002) over a configurable reference date, with a scripted-clock eval suite

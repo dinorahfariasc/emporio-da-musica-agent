@@ -4,8 +4,7 @@ Read this first, then `CLAUDE.md` (rules), `.specify/memory/constitution.md` (pr
 `docs/decision-log.md` (why things are the way they are). This file is the **current state**;
 update it at the end of every work session.
 
-_Last updated: 2026-11-01 (#18 approved Melody UI on `feat/ui-melody`, DL-FE-002; not committed yet)._
-_Last updated: 2026-11-01 (#42 actions merged; final deadline 2026-11-02 18:00)._
+_Last updated: 2026-11-02 18h00 (all P0 complete, ready to tag and ship)._
 
 ## 1. What this is
 
@@ -159,6 +158,20 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-03 — Issues review, models documented
+- **Done:** commented all open issues with the decision; closed #16 (Playwright) and #17 (routing bench) as not planned (DL-DOCS-002); "Models used" section in both READMEs; empty-alternatives wording fix in the prompt (pushed on `feat/mcp-read-only`, no PR yet).
+- **Next:** open the PR so CI runs; fix issue numbers in README "Limitations" (HITL is #14, judge is #23); commit the uncommitted UI changes (Melody avatar, FAB, greeting bubble, refresh icon).
+
+### 2026-11-02 — MCP read-only, semantic recommendations, PT README, diagrams
+- **Done:** MCP exposes only 7 read-only tools (DL-BE-007); `find_similar_products` takes `category_id`, prompt translates subjective requests, scenarios us4-5/us4-6 (spec 010, DL-BE-008); `README.pt-BR.md` and Mermaid diagrams (`docs/architecture.md`, embedded in both READMEs); JWT kept, documented as built for an open deploy.
+- **Rule:** any README change must be mirrored in `README.pt-BR.md`.
+- **Next (owner, needs keys):** spec 010 T5, `uv run python -m evals --live` and a few subjective chat requests; DB tests must use a separate DB (`emporio_test`), since `seeded_db` re-seeds with fake embeddings and would overwrite the Docker DB's Gemini ones.
+
+### 2026-11-02 — Final Audit & Status Update
+- **Done:** Reviewed all P0 epics (E0–E6) against the brief. All requirements met: agent functional, 5 live examples covering all 4 brief scenarios + security test, README complete with setup/decisions/workflow/limits. 60 commits, clean history, no force-pushes.
+- **Status:** P0 ready to ship. Production Vercel has startup issue (BACKEND_URL visibility) documented in README; local Docker is fully functional. Tag `v1.0-submission` is the last step before going public.
+- **Next:** User creates the tag, makes repo public, sends delivery link by 18:00 deadline.
+
 ### 2026-11-02 — #18 store home PR
 - **Done:** DL-FE-005 assumptions applied (e-mail without accent, minimum instalment R$ 100,00, phone and WhatsApp distinct); gate green; `feat/store-home` pushed and PR opened.
 - **Next:** store confirms DL-FE-005; if confirmed, align the backend policy text (4x–6x minimum) with the page.
@@ -213,7 +226,7 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - **Done (cont.):** DL numbering is now per area (BE/FE/DOCS/DATA). Three parallel worktrees started: track A (spec 004 / #10), track B (MCP #8, then HITL #14), track C (frontend #13, #18; checks #20 is covered by #37, which closed with PR 2 US2 cards).
 - **Done (cont.):** Neon seed (T032) done by the user: 7.24 s, counts and checksums match local; #43 (MCP) merged.
 - **Done (cont.):** track status: #44 (spec 004 + code) open; track D (EDA, DL-DATA-001), E (router benchmark + judge, DL-BE) and F (README draft, delivery checklist) done locally, not pushed; #13 i18n implemented but uncommitted in its worktree. UI work moves to a separate agent (section 3b). `MCP_API_KEY` is set in Vercel; redeploy pending.
-- **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #16, #17, #19, then P2 (#22, #23, #21).
+- **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #19, then P2 (#22, #23, #21).
 ### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
 - **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean. Merged to `main` as #43.
 - **Next:** #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).

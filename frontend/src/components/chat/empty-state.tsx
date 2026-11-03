@@ -13,7 +13,7 @@ export function EmptyState({ onPick }: EmptyStateProps) {
     <div className="mx-auto flex w-full max-w-(--size-content-max) flex-1 flex-col justify-end px-4 pt-5 pb-2 @3xl:justify-center @3xl:px-0 @3xl:pt-8">
       <div className="mb-2 flex flex-col gap-6 @3xl:mb-0 @3xl:items-center @3xl:gap-8 @3xl:text-center">
         <div className="flex flex-col gap-3 @3xl:items-center @3xl:gap-8">
-          <MelodyAvatar className="size-14 @3xl:size-[72px]" iconClassName="size-7 @3xl:size-9" />
+          <MelodyAvatar className="size-14 @3xl:size-[72px]" />
           <div>
             <h2 className="t-title-l @3xl:t-display">{emptyState.greeting}</h2>
             <p className="t-body-l mt-3 text-secondary-text @3xl:mx-auto @3xl:max-w-[560px]">

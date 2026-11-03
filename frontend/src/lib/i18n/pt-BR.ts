@@ -330,6 +330,7 @@ export const ptBR = {
   widget: {
     open: "Abrir chat com a Melody",
     openUnread: "Abrir chat com a Melody (nova mensagem)",
+    greeting: "Oi, sou a Melody, em que posso ajudar?",
     minimize: "Minimizar chat",
     maximize: "Maximizar chat",
     restore: "Restaurar tamanho do chat",

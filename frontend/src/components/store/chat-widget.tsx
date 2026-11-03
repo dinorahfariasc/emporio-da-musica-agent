@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Maximize2, Minimize2, Minus, Music, SquarePen } from "lucide-react";
+import { ChevronDown, Maximize2, Minimize2, Minus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useId, type KeyboardEvent, type ReactNode } from "react";
@@ -63,7 +63,7 @@ export function ChatWidget({ controller, content }: ChatWidgetProps) {
   function renderHeader(onNewChat?: () => void) {
     return (
       <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border pr-[max(10px,env(safe-area-inset-right))] pl-[max(16px,env(safe-area-inset-left))] max-lg:mt-[env(safe-area-inset-top)] lg:pr-2.5 lg:pl-4">
-        <MelodyAvatar className="size-9" iconClassName="size-[18px]" />
+        <MelodyAvatar className="size-9" />
         <div className="min-w-0 flex-1">
           <h2 id={titleId} className="t-label-m truncate">
             {widget.title}
@@ -79,7 +79,7 @@ export function ChatWidget({ controller, content }: ChatWidgetProps) {
             title={app.newChat}
             onClick={onNewChat}
           >
-            <SquarePen aria-hidden className="size-5" />
+            <RefreshCw aria-hidden className="size-5" />
           </Button>
         ) : null}
         <Button
@@ -128,6 +128,16 @@ export function ChatWidget({ controller, content }: ChatWidgetProps) {
         )}
       </div>
       <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden
+        onClick={openChat}
+        data-testid="chat-fab-greeting"
+        className="fixed right-[max(88px,calc(env(safe-area-inset-right)+68px))] bottom-[max(28px,calc(env(safe-area-inset-bottom)+28px))] z-40 max-w-[calc(100vw-120px)] cursor-pointer rounded-2xl rounded-br-sm bg-surface px-3.5 py-2 text-left text-sm leading-5 font-medium text-primary-text shadow-[var(--elevation-floating)] ring-1 ring-border motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-2 motion-safe:duration-300 in-data-[chat=open]:hidden"
+      >
+        {widget.greeting}
+      </button>
+      <button
         ref={fabRef}
         type="button"
         aria-label={unread ? widget.openUnread : widget.open}
@@ -136,7 +146,7 @@ export function ChatWidget({ controller, content }: ChatWidgetProps) {
         onClick={openChat}
         className="fixed right-[max(20px,env(safe-area-inset-right))] bottom-[max(20px,env(safe-area-inset-bottom))] z-40 grid size-14 cursor-pointer place-items-center rounded-full bg-action text-on-accent shadow-[var(--elevation-floating)] transition-colors active:bg-action-pressed in-data-[chat=open]:hidden"
       >
-        <Music aria-hidden className="size-6" strokeWidth={2.2} />
+        <MelodyAvatar className="size-full" />
         {unread && (
           <span
             data-testid="chat-fab-unread"
@@ -172,7 +182,7 @@ export function SignInPrompt() {
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-end gap-6 overflow-y-auto pt-5 pr-[max(16px,env(safe-area-inset-right))] pb-[max(24px,calc(16px+env(safe-area-inset-bottom)))] pl-[max(16px,env(safe-area-inset-left))]">
       <div className="flex flex-col gap-3">
-        <MelodyAvatar className="size-14" iconClassName="size-7" />
+        <MelodyAvatar className="size-14" />
         <div>
           <p className="t-title-l">{emptyState.greeting}</p>
           <p className="t-body-l mt-3 text-secondary-text">{emptyState.intro}</p>

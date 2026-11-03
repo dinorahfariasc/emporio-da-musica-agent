@@ -1,9 +1,11 @@
-"""MCP server exposing the store tools to external AI clients (US7, issue #8).
+"""MCP server exposing the read-only store tools to external AI clients (US7, issue #8).
 
 Each tool is the exact function the chat agent calls (`app.tools.registry.REGISTRY`); the
 wrapper only builds a `ToolContext` from the MCP client connection. No business logic lives here
-(constitution VI). Access is a single bearer key (`MCP_API_KEY`); the server is not mounted when
-it is unset.
+(constitution VI). Only catalog, price, promotion, payment, policy and store-info tools are
+exposed: order and action tools need a verified customer (a conversation_state row keyed by a
+user UUID), which an MCP client does not have. Access is a single bearer key (`MCP_API_KEY`); the
+server is not mounted when it is unset.
 """
 
 import hmac
@@ -17,7 +19,17 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import Settings
 from app.tools.context import ToolContext
-from app.tools.registry import CONTRACT_TOOL_NAMES, REGISTRY, ToolFn
+from app.tools.registry import REGISTRY, ToolFn
+
+MCP_TOOL_NAMES: tuple[str, ...] = (
+    "search_products",
+    "get_product",
+    "find_similar_products",
+    "get_active_promotions",
+    "calculate_payment_options",
+    "search_policies",
+    "get_store_info",
+)
 
 
 class BearerAuthMiddleware:
@@ -99,7 +111,7 @@ def build_mcp(settings: Settings) -> FastMCP:
     import app.tools  # noqa: F401 - registers every tool in REGISTRY
 
     mcp = FastMCP("Empório da Música tools")
-    for name in CONTRACT_TOOL_NAMES:
+    for name in MCP_TOOL_NAMES:
         mcp.add_tool(_wrap(REGISTRY[name], settings))
     return mcp
 

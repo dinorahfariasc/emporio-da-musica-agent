@@ -253,7 +253,7 @@ Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks
 | Retry via `regenerate()`; also offered when the 429 countdown ends | `sendMessage` with the same text | Never duplicates the user bubble. |
 | **Streamdown** for streaming markdown | `react-markdown` + `remark-gfm`; AI Elements | Closes incomplete markdown mid-stream, sanitizes HTML and hardens links; v2 keeps heavy plugins opt-in. |
 | Typed pt-BR catalog, no i18n framework yet | `next-intl` now | YAGNI until the PT/EN switch (#13); the catalog's type is what `en` must satisfy. |
-| Component tests drive the real `useChat` with a stub `fetch` serving the fixture files (jsdom + Testing Library) | MSW; Playwright | No network or keys; fixtures stay the single source. Playwright is #16. |
+| Component tests drive the real `useChat` with a stub `fetch` serving the fixture files (jsdom + Testing Library) | MSW; Playwright | No network or keys; fixtures stay the single source. Playwright was planned as #16 and later dropped (DL-DOCS-002). |
 
 **Spec review (PR #32, QA + senior).** Approved with changes. Applied before implementation:
 - Streamdown hardened: its 2.7.1 defaults allow any link/image prefix and `data:` images, so the
@@ -755,3 +755,49 @@ production still treats product 130 as not for sale.
 
 **Role of AI.** Claude mapped every place that depended on the old rule, wrote the tests first
 and re-seeded the local database. Dinorah made the decision.
+
+---
+
+## DL-BE-007 — MCP exposes only the read-only tools (2026-11-02)
+
+**Context.** The agent calls its tools in process, so MCP only serves external clients such as
+Claude Desktop. Review found that the order and action tools could not work over MCP: they key
+`conversation_state` by a user UUID, and the MCP client id (`mcp:<id>`) is not one. The project is
+now run and recorded locally, so a small, safe MCP is enough.
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| `MCP_TOOL_NAMES` in `app/mcp.py` lists seven read-only tools (catalog, price, promotions, payment, policies, store info) | Keep all 13; remove MCP | Removes the broken order/action path and the risk of writes without a verified customer, while keeping the "tools reusable by other agents" point. A test asserts the order and action tools are absent. |
+
+**Role of AI.** Claude Code found the UUID mismatch while exploring and proposed the cut; the
+owner chose the read-only option.
+
+---
+
+## DL-BE-008 — Semantic recommendations on the existing hybrid index (2026-11-02, spec 010)
+
+| Decision | Alternatives | Rationale |
+|---|---|---|
+| Add `category_id` to `find_similar_products` and teach the prompt to translate subjective requests into `description` + `category_id` + `max_price_brl` | Enrich product documents; a re-ranker; a new tool | The CSV descriptions already say "iniciantes", "timbre quente", so the vectors capture them; the real gap was wrong-category hits and no guidance. No new dependency. |
+
+CI uses the fake n-gram embedder, so scenarios assert the tool call and its arguments, and the
+tool test asserts the category filter; semantic quality itself is checked live (T5).
+
+**Role of AI.** Claude Code found the gap, wrote the test first and the change; the owner chose the
+scope.
+
+## DL-DOCS-002 — Drop Playwright smoke test and routing benchmark; document models (2026-11-03)
+
+**Context.** The project will be run locally and recorded, not deployed openly. #16 (Playwright
+smoke test in CI) and #17 (Jev vs Haiku routing benchmark) were P1 and not started.
+
+**Decision.** Close both as not planned. Component tests (162 Vitest) and the backend suite with
+fake providers already gate CI without keys, and the router choice is already backed by the
+34-scenario spike in DL-012. README and `README.pt-BR.md` gain a "Models used" section (router,
+specialist, general, embeddings, fake providers in CI, Claude Code as coding assistant).
+
+**Alternatives.** Keep both as post-delivery items (rejected: they add a browser install to CI and
+a benchmark nobody will read before the demo).
+
+**Role of AI.** Claude Code listed what was documented and wrote the section; the owner decided
+what to drop.

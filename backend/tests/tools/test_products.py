@@ -168,3 +168,12 @@ async def test_views_carry_specs_for_the_shared_trait_and_difference(tool_ctx):
     result = await find_similar_products(tool_ctx, product_id=95)
 
     assert all(p.specs for p in result.products)
+
+
+async def test_description_search_can_be_limited_to_a_category(tool_ctx):
+    result = await find_similar_products(
+        tool_ctx, description="som suave para quem está começando", category_id=5, limit=5
+    )
+
+    assert result.products
+    assert all(p.category == "Violões" and p.is_sellable for p in result.products)
