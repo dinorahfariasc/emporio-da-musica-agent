@@ -66,8 +66,8 @@ not being visible to the startup hook. **Workaround:** runs perfectly in local D
 **Neon status:** seeded with Gemini in 7.24s (2026-11-01); row counts and checksums match local.
 Only reseed if data or embeddings provider changes.
 
-**P1 on the board:** #12 (history), #13 (i18n), #14 (HITL), #15 (Langfuse), #16 (Playwright),
-#17 (routing bench), #18 (Figma demo), #19 (MCP demo). None started (waiting for all P0 in production).
+**P1 on the board:** #12 (history), #13 (i18n), #14 (HITL), #15 (Langfuse),
+#18 (Figma demo), #19 (MCP demo). #16 (Playwright) and #17 (routing bench) were dropped on 2026-11-03. None started (waiting for all P0 in production).
 
 ## 3b. UI track (Figma done) — history for reference
 
@@ -143,6 +143,10 @@ Only reseed if data or embeddings provider changes.
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-03 — Issues review, models documented
+- **Done:** commented all open issues with the decision; closed #16 (Playwright) and #17 (routing bench) as not planned (DL-DOCS-002); "Models used" section in both READMEs; empty-alternatives wording fix in the prompt (pushed on `feat/mcp-read-only`, no PR yet).
+- **Next:** open the PR so CI runs; fix issue numbers in README "Limitations" (HITL is #14, judge is #23); commit the uncommitted UI changes (Melody avatar, FAB, greeting bubble, refresh icon).
+
 ### 2026-11-02 — MCP read-only, semantic recommendations, PT README, diagrams
 - **Done:** MCP exposes only 7 read-only tools (DL-BE-007); `find_similar_products` takes `category_id`, prompt translates subjective requests, scenarios us4-5/us4-6 (spec 010, DL-BE-008); `README.pt-BR.md` and Mermaid diagrams (`docs/architecture.md`, embedded in both READMEs); JWT kept, documented as built for an open deploy.
 - **Rule:** any README change must be mirrored in `README.pt-BR.md`.
@@ -202,7 +206,7 @@ Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once ther
 - **Done (cont.):** DL numbering is now per area (BE/FE/DOCS/DATA). Three parallel worktrees started: track A (spec 004 / #10), track B (MCP #8, then HITL #14), track C (frontend #13, #18; checks #20 is covered by #37, which closed with PR 2 US2 cards).
 - **Done (cont.):** Neon seed (T032) done by the user: 7.24 s, counts and checksums match local; #43 (MCP) merged.
 - **Done (cont.):** track status: #44 (spec 004 + code) open; track D (EDA, DL-DATA-001), E (router benchmark + judge, DL-BE) and F (README draft, delivery checklist) done locally, not pushed; #13 i18n implemented but uncommitted in its worktree. UI work moves to a separate agent (section 3b). `MCP_API_KEY` is set in Vercel; redeploy pending.
-- **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #16, #17, #19, then P2 (#22, #23, #21).
+- **Next:** #11 README + example conversations after the deploy is stable; #12, #15, #19, then P2 (#22, #23, #21).
 ### 2026-11-01 — #8 MCP server (PR 3 of 002, track B)
 - **Done:** `backend/app/mcp.py` exposes all 12 contract tools over MCP streamable HTTP at `/mcp`, bearer-authed (`MCP_API_KEY`, disabled when unset), mounted in `app/main.py` with a combined lifespan; `vercel.json` `/mcp` rewrite; README "Use the store tools from Claude Desktop" section; `tests/test_mcp.py` (tools/list parity, no `ctx` in the schema, 401 on missing/wrong key); DL-BE-001; T034–T036 checked off; 290 backend tests pass, ruff clean. Merged to `main` as #43.
 - **Next:** #14 human-in-the-loop confirmation for write actions needs a short spec/plan/tasks first (ask the user: addition to 002 or a new small spec).

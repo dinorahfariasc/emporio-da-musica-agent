@@ -253,7 +253,7 @@ Spec Kit artifacts for `specs/003-chat-web` (spec → clarify → plan → tasks
 | Retry via `regenerate()`; also offered when the 429 countdown ends | `sendMessage` with the same text | Never duplicates the user bubble. |
 | **Streamdown** for streaming markdown | `react-markdown` + `remark-gfm`; AI Elements | Closes incomplete markdown mid-stream, sanitizes HTML and hardens links; v2 keeps heavy plugins opt-in. |
 | Typed pt-BR catalog, no i18n framework yet | `next-intl` now | YAGNI until the PT/EN switch (#13); the catalog's type is what `en` must satisfy. |
-| Component tests drive the real `useChat` with a stub `fetch` serving the fixture files (jsdom + Testing Library) | MSW; Playwright | No network or keys; fixtures stay the single source. Playwright is #16. |
+| Component tests drive the real `useChat` with a stub `fetch` serving the fixture files (jsdom + Testing Library) | MSW; Playwright | No network or keys; fixtures stay the single source. Playwright was planned as #16 and later dropped (DL-DOCS-002). |
 
 **Spec review (PR #32, QA + senior).** Approved with changes. Applied before implementation:
 - Streamdown hardened: its 2.7.1 defaults allow any link/image prefix and `data:` images, so the
@@ -785,3 +785,19 @@ tool test asserts the category filter; semantic quality itself is checked live (
 
 **Role of AI.** Claude Code found the gap, wrote the test first and the change; the owner chose the
 scope.
+
+## DL-DOCS-002 — Drop Playwright smoke test and routing benchmark; document models (2026-11-03)
+
+**Context.** The project will be run locally and recorded, not deployed openly. #16 (Playwright
+smoke test in CI) and #17 (Jev vs Haiku routing benchmark) were P1 and not started.
+
+**Decision.** Close both as not planned. Component tests (162 Vitest) and the backend suite with
+fake providers already gate CI without keys, and the router choice is already backed by the
+34-scenario spike in DL-012. README and `README.pt-BR.md` gain a "Models used" section (router,
+specialist, general, embeddings, fake providers in CI, Claude Code as coding assistant).
+
+**Alternatives.** Keep both as post-delivery items (rejected: they add a browser install to CI and
+a benchmark nobody will read before the demo).
+
+**Role of AI.** Claude Code listed what was documented and wrote the section; the owner decided
+what to drop.

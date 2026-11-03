@@ -21,6 +21,7 @@ store policies and return/complaint requests, backed by the store's real data an
 - [Run in production](#run-in-production)
 - [Access for evaluators](#access-for-evaluators)
 - [Data](#data)
+- [Models used](#models-used)
 - [Key decisions and trade-offs](#key-decisions-and-trade-offs)
 - [Assumptions](#assumptions)
 - [AI-assistant workflow](#ai-assistant-workflow)
@@ -93,6 +94,52 @@ flowchart TD
     t2 --> w
     t3 --> w
     act --> w
+```
+
+- **The AI core, step by step.** Which model runs when (router, specialist or general, tools, embeddings):
+
+```mermaid
+flowchart TD
+    msg(["Customer message + last 12 messages"]) --> rt["1. ROUTER<br/>perplexity/pplx-decider-v1.2<br/>returns intent + confidence"]
+    rt -.->|"fails or takes over 2.5 s"| fb["Fallback: structured output<br/>from the specialist model"]
+    fb -.-> dec
+    rt --> dec{"Confidence ≥ 0.75 and a single intent?"}
+    dec -->|yes| sp["2a. SPECIALIST<br/>openai/gpt-6-luna<br/>prompt + ONLY the tools of that intent"]
+    dec -->|"no: multi_intent, unclear, router down"| ge["2b. GENERAL<br/>deepseek/deepseek-v4.1-flash<br/>generic prompt + ALL tools"]
+    sp --> loop
+    ge --> loop
+    loop{"Model needs a fact?"} -->|yes, up to 8 steps| tl["3. TOOLS (Python)<br/>price, stock, installments, deadlines,<br/>order lookup: deterministic SQL and rules"]
+    tl --> srch{"Free-text search?"}
+    srch -->|yes| emb["4. EMBEDDINGS<br/>gemini-embedding-001<br/>embeds only the query"]
+    emb --> hy["Hybrid search: full-text + vector, fused by RRF"]
+    srch -->|no| db[("Postgres")]
+    hy --> db
+    db --> loop
+    loop -->|no| ans["Answer written ONLY from tool results"]
+    ans --> out(["Streamed to the customer"])
+```
+
+A worked example (a subjective request):
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant R as Router (pplx-decider)
+    participant S as Specialist (gpt-6-luna)
+    participant T as Tool find_similar_products
+    participant E as Embeddings (gemini)
+    participant D as Postgres
+    C->>R: "I want a soft guitar for a beginner, up to R$ 700"
+    R-->>S: intent product_search, confidence 0.93 (≥ 0.75)
+    Note over S: Prompt for product_search + 2 tools only (search_products, find_similar_products)
+    S->>T: description="soft, beginner", category_id=5, max_price_brl=700
+    T->>E: embed the description
+    E-->>T: 768-dim vector
+    T->>D: full-text + vector search, filters: category 5, sellable, price ≤ 700
+    D-->>T: top 3 with price and stock
+    T-->>S: JSON
+    S-->>C: Answer: one shared trait + one difference, prices from the JSON
+    Note over C,D: Price and stock come from the database, the model only words the answer. Embeddings are used only to understand the query, never to state facts.
 ```
 
 - **Facts are never computed by the LLM.** Price, stock, discount eligibility and return windows
@@ -274,6 +321,25 @@ uv run python -m etl --yes      # required for any non-local host (e.g. Neon)
   Gemini free tier: 100 requests/min, 1,000 requests/day, 30K tokens/min; Google may use
   free-tier content to improve its products, which is fine for this fictional data.
 - Design: [`specs/001-data-foundation/`](specs/001-data-foundation/).
+
+## Models used
+
+All chat models go through OpenRouter with a single key; embeddings go straight to Google.
+
+| Role | Model | Setting |
+|---|---|---|
+| Intent router (classifies each message) | `perplexity/pplx-decider-v1.2` | `ROUTER_MODEL` |
+| Specialist answers (one clear intent: price, policy, order...) | `openai/gpt-6-luna` | `SPECIALIST_MODEL` |
+| General answers (ambiguous or mixed requests) | `deepseek/deepseek-v4.1-flash` | `GENERAL_MODEL` |
+| Embeddings for hybrid search (768 dims) | `gemini-embedding-001` (Google) | `EMBEDDINGS_MODEL` |
+| Tests and CI | fake LLM, fake router and fake embedder (no keys, deterministic) | `*_PROVIDER=fake` |
+| Coding assistant | Claude Code (see [AI-assistant workflow](#ai-assistant-workflow)) | not part of the runtime |
+
+The recorded example conversations and the live evals ran on the three OpenRouter models above.
+The defaults in `backend/.env.example` (`claude-haiku-4-5-20251001`, `claude-sonnet-5-5`) are
+for the direct Anthropic provider; with OpenRouter, set the vendor ids shown in
+[Run locally](#run-locally). Prices, stock and eligibility never come from a model, only from
+Python tools. Why these models: DL-012.
 
 ## Key decisions and trade-offs
 

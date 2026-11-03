@@ -95,3 +95,54 @@ flowchart TD
     s --> v["Cards from the database:<br/>price, stock, specs"]
     v --> a["Answer cites one shared trait<br/>and one difference, from tool data only"]
 ```
+
+## 6. AI core: which model runs when
+
+Router decides the path; the specialist gets only the tools of its intent, the general model gets all of them. Embeddings only run inside a free-text search.
+
+```mermaid
+flowchart TD
+    msg(["Customer message + last 12 messages"]) --> rt["1. ROUTER<br/>perplexity/pplx-decider-v1.2<br/>returns intent + confidence"]
+    rt -.->|"fails or takes over 2.5 s"| fb["Fallback: structured output<br/>from the specialist model"]
+    fb -.-> dec
+    rt --> dec{"Confidence ≥ 0.75 and a single intent?"}
+    dec -->|yes| sp["2a. SPECIALIST<br/>openai/gpt-6-luna<br/>prompt + ONLY the tools of that intent"]
+    dec -->|"no: multi_intent, unclear, router down"| ge["2b. GENERAL<br/>deepseek/deepseek-v4.1-flash<br/>generic prompt + ALL tools"]
+    sp --> loop
+    ge --> loop
+    loop{"Model needs a fact?"} -->|yes, up to 8 steps| tl["3. TOOLS (Python)<br/>price, stock, installments, deadlines,<br/>order lookup: deterministic SQL and rules"]
+    tl --> srch{"Free-text search?"}
+    srch -->|yes| emb["4. EMBEDDINGS<br/>gemini-embedding-001<br/>embeds only the query"]
+    emb --> hy["Hybrid search: full-text + vector, fused by RRF"]
+    srch -->|no| db[("Postgres")]
+    hy --> db
+    db --> loop
+    loop -->|no| ans["Answer written ONLY from tool results"]
+    ans --> out(["Streamed to the customer"])
+```
+
+## 7. Worked example
+
+A subjective request, from message to answer:
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant R as Router (pplx-decider)
+    participant S as Specialist (gpt-6-luna)
+    participant T as Tool find_similar_products
+    participant E as Embeddings (gemini)
+    participant D as Postgres
+    C->>R: "I want a soft guitar for a beginner, up to R$ 700"
+    R-->>S: intent product_search, confidence 0.93 (≥ 0.75)
+    Note over S: Prompt for product_search + 2 tools only (search_products, find_similar_products)
+    S->>T: description="soft, beginner", category_id=5, max_price_brl=700
+    T->>E: embed the description
+    E-->>T: 768-dim vector
+    T->>D: full-text + vector search, filters: category 5, sellable, price ≤ 700
+    D-->>T: top 3 with price and stock
+    T-->>S: JSON
+    S-->>C: Answer: one shared trait + one difference, prices from the JSON
+    Note over C,D: Price and stock come from the database, the model only words the answer. Embeddings are used only to understand the query, never to state facts.
+```
+

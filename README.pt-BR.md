@@ -22,6 +22,7 @@ manual de políticas.
 - [Executar em produção](#executar-em-produção)
 - [Acesso para avaliadores](#acesso-para-avaliadores)
 - [Dados](#dados)
+- [Modelos usados](#modelos-usados)
 - [Decisões principais e trade-offs](#decisões-principais-e-trade-offs)
 - [Premissas](#premissas)
 - [Fluxo de trabalho com assistente de IA](#fluxo-de-trabalho-com-assistente-de-ia)
@@ -95,6 +96,52 @@ flowchart TD
     t2 --> w
     t3 --> w
     act --> w
+```
+
+- **O núcleo de IA, passo a passo.** Qual modelo roda quando (roteador, especialista ou geral, ferramentas, embeddings):
+
+```mermaid
+flowchart TD
+    msg(["Mensagem do cliente + últimas 12 mensagens"]) --> rt["1. ROTEADOR<br/>perplexity/pplx-decider-v1.2<br/>devolve intenção + confiança"]
+    rt -.->|"falha ou passa de 2,5 s"| fb["Fallback: saída estruturada<br/>do modelo especialista"]
+    fb -.-> dec
+    rt --> dec{"Confiança ≥ 0,75 e uma única intenção?"}
+    dec -->|sim| sp["2a. ESPECIALISTA<br/>openai/gpt-6-luna<br/>prompt + SÓ as ferramentas dessa intenção"]
+    dec -->|"não: multi_intent, unclear, roteador fora"| ge["2b. GERAL<br/>deepseek/deepseek-v4.1-flash<br/>prompt genérico + TODAS as ferramentas"]
+    sp --> loop
+    ge --> loop
+    loop{"O modelo precisa de um fato?"} -->|sim, até 8 passos| tl["3. FERRAMENTAS (Python)<br/>preço, estoque, parcelas, prazos,<br/>pedidos: SQL e regras determinísticas"]
+    tl --> srch{"Busca em texto livre?"}
+    srch -->|sim| emb["4. EMBEDDINGS<br/>gemini-embedding-001<br/>embeda só a consulta"]
+    emb --> hy["Busca híbrida: full-text + vetor, fundidos por RRF"]
+    srch -->|não| db[("Postgres")]
+    hy --> db
+    db --> loop
+    loop -->|não| ans["Resposta escrita SÓ a partir do resultado das ferramentas"]
+    ans --> out(["Streaming para o cliente"])
+```
+
+Um exemplo real (pedido subjetivo):
+
+```mermaid
+sequenceDiagram
+    actor C as Cliente
+    participant R as Roteador (pplx-decider)
+    participant S as Especialista (gpt-6-luna)
+    participant T as Ferramenta find_similar_products
+    participant E as Embeddings (gemini)
+    participant D as Postgres
+    C->>R: "Quero um violão macio para iniciante, até R$ 700"
+    R-->>S: intent product_search, confiança 0.93 (≥ 0.75)
+    Note over S: Prompt de product_search + só 2 ferramentas (search_products, find_similar_products)
+    S->>T: description="macio, iniciante", category_id=5, max_price_brl=700
+    T->>E: embeda a descrição
+    E-->>T: vetor de 768 dimensões
+    T->>D: busca full-text + vetorial, filtros: categoria 5, à venda, preço ≤ 700
+    D-->>T: 3 melhores com preço e estoque
+    T-->>S: JSON
+    S-->>C: Resposta: uma característica em comum + uma diferença, preços vindos do JSON
+    Note over C,D: Preço e estoque vêm do banco, o modelo só redige a resposta. Embeddings só ajudam a entender a consulta, nunca a afirmar fatos.
 ```
 
 - **Fatos nunca são calculados pelo LLM.** Preço, estoque, elegibilidade a desconto e prazos de
@@ -279,6 +326,25 @@ uv run python -m etl --yes      # required for any non-local host (e.g. Neon)
   pode usar o conteúdo do plano gratuito para melhorar seus produtos, o que não é problema para
   estes dados fictícios.
 - Design: [`specs/001-data-foundation/`](specs/001-data-foundation/).
+
+## Modelos usados
+
+Todos os modelos de chat passam pelo OpenRouter, com uma única chave; os embeddings vão direto ao Google.
+
+| Papel | Modelo | Configuração |
+|---|---|---|
+| Roteador de intenção (classifica cada mensagem) | `perplexity/pplx-decider-v1.2` | `ROUTER_MODEL` |
+| Respostas especialistas (uma intenção clara: preço, política, pedido...) | `openai/gpt-6-luna` | `SPECIALIST_MODEL` |
+| Respostas gerais (pedidos ambíguos ou mistos) | `deepseek/deepseek-v4.1-flash` | `GENERAL_MODEL` |
+| Embeddings da busca híbrida (768 dimensões) | `gemini-embedding-001` (Google) | `EMBEDDINGS_MODEL` |
+| Testes e CI | LLM, roteador e embedder falsos (sem chaves, determinísticos) | `*_PROVIDER=fake` |
+| Assistente de código | Claude Code (veja [Fluxo de trabalho com assistente de IA](#fluxo-de-trabalho-com-assistente-de-ia)) | fora do runtime |
+
+As conversas de exemplo gravadas e os evals ao vivo rodaram nos três modelos do OpenRouter acima.
+Os padrões em `backend/.env.example` (`claude-haiku-4-5-20251001`, `claude-sonnet-5-5`) são para o
+provedor Anthropic direto; com OpenRouter, use os ids mostrados em
+[Executar localmente](#executar-localmente). Preços, estoque e elegibilidade nunca vêm de um
+modelo, só das ferramentas em Python. Por que esses modelos: DL-012.
 
 ## Decisões principais e trade-offs
 
