@@ -33,7 +33,7 @@ tests use the `local_database_url` fixture (T005).
   - add `pydantic>=2.9` to `[project] dependencies`. Each other dependency is added by the task that first uses it (#31 review): `httpx` (T025), `psycopg-pool` (T028), the `etl` group with `pypdf` (T027). No `default-groups`, so ETL-only packages never reach the Vercel function;
   - add the pytest marker `gemini: calls the real Gemini API (opt-in)` and `addopts = "-m 'not gemini'"`;
   - run `uv lock`.
-- [X] T002 [P] Add a root `.gitattributes` with `challenge/** -text` and `backend/tests/fixtures/*.csv -text`. Confirm with `git ls-files --eol challenge/data/` that the CSVs keep `crlf` in the index and in the working tree.
+- [X] T002 [P] Add a root `.gitattributes` with `inputs/** -text` and `backend/tests/fixtures/*.csv -text`. Confirm with `git ls-files --eol inputs/data/` that the CSVs keep `crlf` in the index and in the working tree.
 - [X] T003 [P] Add `etl/**` to `services.backend.functions["app/main.py"].excludeFiles` in the root `vercel.json`.
 - [X] T004 [P] Add `embeddings_model: str = "gemini-embedding-001"` and `database_url_unpooled: str | None = None` to `Settings` in `backend/app/config.py`; add `EMBEDDINGS_MODEL=gemini-embedding-001` and `DATABASE_URL_UNPOOLED=` (with a matrix comment: Neon direct URL, seed only) to `backend/.env.example`; extend `backend/tests/test_config.py`.
 - [X] T005 [P] In `backend/tests/conftest.py`, add the fixture `local_database_url`: it skips unless `DATABASE_URL` is set **and** its host is `localhost`, `127.0.0.1` or `::1`, or `ALLOW_DESTRUCTIVE_TESTS=1`.
@@ -85,7 +85,7 @@ tests use the `local_database_url` fixture (T005).
 - [X] T014 [US1] `backend/tests/etl/test_seed.py` (integration, `local_database_url`):
   - seed and check the row counts, the T013 facts in the DB (including `promo_price_brl` for 90) and the NULLs for order 9;
   - a second seed gives identical `table_stats`;
-  - the `challenge/data` bytes are unchanged;
+  - the `inputs/data` bytes are unchanged;
   - a validation error leaves a previously seeded DB unchanged;
   - after adding a column to `products` by hand, a reseed restores the declared shape (drop/recreate).
 - [X] T015 [P] [US1] Implement `backend/app/catalog/rules.py`: `availability`, `is_sellable`, `effective_promotion` (with a `PromotionLike` Protocol) and `promo_price` (`Decimal`, `ROUND_HALF_UP`, 2 places).
@@ -111,7 +111,7 @@ tests use the `local_database_url` fixture (T005).
   - the DL-001 traceability table is present with every row from data-model.md;
   - each Details section starts with its description line;
   - emails are masked and no phone numbers appear;
-  - **drift**: `render(build_payload(challenge/data))` equals the committed `docs/data-quality-report.md` byte for byte.
+  - **drift**: `render(build_payload(inputs/data))` equals the committed `docs/data-quality-report.md` byte for byte.
 - [X] T019 [US2] Implement `backend/etl/report.py` (`render(payload) -> str`, per contracts/data-quality-report.md). Generate and commit `docs/data-quality-report.md`.
 
 ## Phase 5: US5 (safety part): Seed any environment safely

@@ -60,7 +60,7 @@ mint tokens. This is expected; US1 closes that gap next.
 
 ---
 
-## Phase 3: User Story 1 - An evaluator logs in and chats (Priority: P1) 🎯 MVP start
+## Phase 3: User Story 1 - An reviewer logs in and chats (Priority: P1) 🎯 MVP start
 
 **Goal**: real credentials login replaces the `/login` placeholder; a signed-in session is required
 to reach the chat and to get a working answer.
@@ -90,7 +90,7 @@ creation itself still requires a manual `INSERT` until US2 lands.)
 
 ---
 
-## Phase 4: User Story 2 - The project owner provisions an evaluator account (Priority: P1)
+## Phase 4: User Story 2 - The project owner provisions an reviewer account (Priority: P1)
 
 **Goal**: a CLI creates accounts; there is no other way to create one.
 

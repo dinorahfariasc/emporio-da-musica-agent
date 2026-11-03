@@ -52,7 +52,7 @@ E0 Bootstrap ─> C1 Scaffolding + walking-skeleton deploy ─> C2 Chat stream c
 ## E0 — Project bootstrap: dataset, Spec Kit, constitution
 `type:chore` `P0` `size:S` `area:docs` · D1 · closed by the bootstrap PR
 
-- [ ] Challenge brief and data under `challenge/` with clean paths.
+- [ ] Project brief and data under `inputs/` with clean paths.
 - [ ] Spec Kit initialized; constitution v1.x ratified.
 - [ ] `CLAUDE.md` and `docs/decision-log.md` (DL-001..DL-003) exist.
 
@@ -247,7 +247,7 @@ size and Neon connectivity before any feature is built.
 **Acceptance criteria**
 - [ ] `/api/chat` without a valid service JWT → 401 (tested).
 - [ ] Exceeding rate or budget → 429 with the localized message (tested with fake clock).
-- [ ] Production URL works end to end with an evaluator account; C2 contract holds in prod.
+- [ ] Production URL works end to end with an reviewer account; C2 contract holds in prod.
 - [ ] Deploy and user-creation steps documented in the README.
 
 ---

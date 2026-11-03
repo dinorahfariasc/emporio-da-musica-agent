@@ -1,4 +1,4 @@
-"""Typed rows for the challenge CSVs, plus dataset-wide checks (FR-002, FR-003)."""
+"""Typed rows for the source CSVs, plus dataset-wide checks (FR-002, FR-003)."""
 
 import json
 from dataclasses import dataclass

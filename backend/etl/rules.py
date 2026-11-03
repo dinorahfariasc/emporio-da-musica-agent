@@ -104,7 +104,7 @@ UNTRUSTED_DESCRIPTION_IDS: dict[int, str] = {
     144: "describes a Yamaha arranger; name is Roland",
 }
 
-# Known contradictions in challenge/data/store_policies.pdf (DL-001), recorded statically.
+# Known contradictions in inputs/data/store_policies.pdf (DL-001), recorded statically.
 POLICY_CONFLICTS: dict[str, str] = {
     "1.2-vs-7-whatsapp": "§1.2 lists WhatsApp (67) 3341-4444; §7 lists (67) 3321-4500. "
     "Use (67) 3341-4444 for calls and (67) 3321-4500 for WhatsApp (DL-FE-005).",

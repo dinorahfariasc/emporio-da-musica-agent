@@ -7,7 +7,7 @@ from etl.rules import Derived, apply_rules
 from etl.sources import read_sources
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = REPO_ROOT / "challenge" / "data"
+DATA_DIR = REPO_ROOT / "inputs" / "data"
 REPORT_PATH = REPO_ROOT / "docs" / "data-quality-report.md"
 
 

@@ -40,7 +40,7 @@ scroll; lint, typecheck and build pass in CI."
 
 ## User Scenarios & Testing *(mandatory)*
 
-The primary user is a store customer (in this challenge, the evaluator acting as one) who talks
+The primary user is a store customer (in practice, a reviewer acting as one) who talks
 to Melody, the store's virtual assistant, on a full-page chat. In development and CI the chat
 runs against the existing mock, which replays the #4 contract fixtures (a fixture is selected by
 sending `/fixture <name>` as the message), so the whole UI can be built and verified before the
@@ -130,7 +130,7 @@ situation and a way forward: log in again (session expired), wait (limit reached
 (temporary failure).
 
 **Why this priority**: the public deployment is protected by authentication and per-user limits
-(#10); without distinct states the evaluator would hit an opaque failure and conclude the app is
+(#10); without distinct states the reviewer would hit an opaque failure and conclude the app is
 broken.
 
 **Independent Test**: replay `http-401`, `http-429-rate-limited`, `http-429-budget-exhausted`,
@@ -162,7 +162,7 @@ action as defined by the contract's error-code table.
 
 ### User Story 4 - Use the chat comfortably on a phone (Priority: P2)
 
-The evaluator may open the link on a phone. The chat must be fully usable at 375 px wide: no
+The reviewer may open the link on a phone. The chat must be fully usable at 375 px wide: no
 horizontal scrolling, input always reachable, long content (URLs, tables, product names) wraps or
 scrolls inside its own container.
 

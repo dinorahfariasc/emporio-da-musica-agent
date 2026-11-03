@@ -64,7 +64,7 @@ request over both gets `rate_limited` (checked first, cheaper, and the more comm
   either calls `record_usage`, so the account can briefly go slightly over 200,000 tokens for that
   day before the *next* request is refused. Making this strictly atomic would mean reserving an
   estimated token cost before the model call (an estimate, since the real cost is unknown until the
-  provider responds) and reconciling afterward — real complexity for a one-evaluator-scale
+  provider responds) and reconciling afterward — real complexity for a one-reviewer-scale
   deployment where the realistic failure mode is one client sending turns sequentially, not a
   deliberate concurrent-request attack on the budget specifically (the per-minute rate limit above
   already bounds how much damage a burst can do either way).

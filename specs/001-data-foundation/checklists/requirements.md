@@ -34,7 +34,7 @@
 - The spec names the report path, the source folder and the product/order IDs on purpose. They
   come from the acceptance criteria in issue #5, which is the source of truth, and they are data
   facts, not implementation choices.
-- Validation finding: the committed `challenge/data/customers.csv` already stores every
+- Validation finding: the committed `inputs/data/customers.csv` already stores every
   "Ponta Porã" in NFC (bytes `c3 a3`). DL-001's "two encodings" came from CRLF line endings plus a
   last row with no trailing newline: line-based profiling saw "Ponta Porã\r" and "Ponta Porã".
   Raised in `/speckit-clarify`; corrected in DL-005.

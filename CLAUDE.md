@@ -1,13 +1,13 @@
 # Empório da Música — Customer Service Agent
 
-Artefact AI Engineer technical challenge. Customer-service agent ("Melody") for a fictional
-music store. Source material lives in `challenge/` (brief, CSVs, policies PDF).
+Customer-service agent ("Melody") for a fictional
+music store. Source material lives in `inputs/` (brief, CSVs, policies PDF).
 
 ## Start here
 **Read `docs/HANDOFF.md` first** (current status, environment, gotchas). Update it at the end of every session.
 
 ## Where things are
-- `challenge/` — original brief and data (read-only inputs)
+- `inputs/` — original brief and data (read-only inputs)
 - `.specify/memory/constitution.md` — project principles; every spec/plan must comply
 - `specs/NNN-*/` — Spec Kit artifacts per epic (spec → plan → tasks)
 - `docs/decision-log.md` — running log of decisions and AI usage; **append an entry after every

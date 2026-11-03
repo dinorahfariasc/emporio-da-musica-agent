@@ -3,8 +3,7 @@
 **🇬🇧 [Click here for the English version](README.md)**
 
 Agente de atendimento ao cliente com IA para a Empório da Música, uma loja fictícia de instrumentos
-musicais em Campo Grande/MS (desafio técnico de AI Engineer da Artefact, `challenge/challenge_brief.pdf`).
-A agente ("Melody") atende clientes em português ou inglês sobre catálogo, preços, status de pedidos,
+musicais em Campo Grande/MS. A agente ("Melody") atende clientes em português ou inglês sobre catálogo, preços, status de pedidos,
 políticas da loja e solicitações de devolução/reclamação, com base nos dados reais da loja e no
 manual de políticas.
 
@@ -20,7 +19,7 @@ manual de políticas.
 - [Arquitetura](#arquitetura)
 - [Executar localmente](#executar-localmente)
 - [Executar em produção](#executar-em-produção)
-- [Acesso para avaliadores](#acesso-para-avaliadores)
+- [Acesso para revisores](#acesso-para-revisores)
 - [Dados](#dados)
 - [Modelos usados](#modelos-usados)
 - [Decisões principais e trade-offs](#decisões-principais-e-trade-offs)
@@ -284,12 +283,12 @@ O que se sabe que falta ou deve ser verificado:
    (`src/instrumentation.ts`); a confirmar no próximo deploy e, se for isso, a verificação deve ir
    para o momento da requisição, como o backend já faz.
 3. Depois de definir as variáveis, faça um novo deploy: mudanças de variáveis só valem no próximo
-   deploy. Em seguida, crie o login do avaliador no Neon com `scripts/create-user.ts`
+   deploy. Em seguida, crie o login do revisor no Neon com `scripts/create-user.ts`
    (`DATABASE_URL_UNPOOLED` apontando para a URL direta do Neon).
 
 Os deploys são disparados pelo dono do repositório.
 
-## Acesso para avaliadores
+## Acesso para revisores
 
 Não há página de cadastro: a agente roda em modelos pagos, então o acesso é apenas por conta (spec 004).
 
@@ -303,7 +302,7 @@ Não há página de cadastro: a agente roda em modelos pagos, então o acesso é
 
 ## Dados
 
-Os arquivos do desafio em `challenge/` são entradas somente leitura (o `.gitattributes` preserva os
+Os arquivos de origem em `inputs/` são entradas somente leitura (o `.gitattributes` preserva os
 bytes CRLF). Um comando os valida, aplica as regras de correção e carrega o Postgres:
 
 ```bash
@@ -360,7 +359,7 @@ enunciado pede para justificar:
 | Estratégia de prompt | O prompt de sistema traz a data/hora atual da loja e a persona (Melody, manual §7.1/§7.2); as saídas das ferramentas são a única fonte de fatos, explicitamente delimitadas como "FATOS SOMENTE DAS FERRAMENTAS" contra prompt injection | Verificada pelos cenários de segurança US5 (extração de prompt, descontos inventados, funcionário falso) |
 | Interface de interação | Chat web: Next.js (App Router) + Vercel AI SDK `useChat`, tokens em streaming, linhas de status das ferramentas e cards de produto; alternância PT/EN, tema claro/escuro, mobile-first. As mesmas ferramentas também são expostas via MCP | O canal do cliente em uma loja é uma janela de chat; a UI é um cliente fino que só renderiza o que o backend Python transmite (sem regra de negócio, sem fatos derivados na UI), então Python continua sendo a linguagem principal, como o enunciado exige. O MCP mostra que as ferramentas são reutilizáveis por outros agentes |
 | Persistência do histórico de conversa | Por navegador: o id da conversa e suas últimas 40 mensagens ficam no `localStorage`, sobrevivem a um reload e são apagados por "Nova conversa" ou ao sair. Cada requisição leva a janela recente (12 mensagens) a uma API sem estado; o único estado no servidor é a verificação de pedido por conversa | Suficiente para um chat de suporte (um reload não perde mais o contexto nem a verificação do pedido) sem infraestrutura nova. Histórico durável entre dispositivos (checkpointer no Postgres) é um P1 (#12/S7) e não é necessário para o enunciado (DL-FE-003) |
-| Controle de acesso e limites de custo | Login com usuário/senha (Auth.js, contas só via CLI, sem cadastro), token HS256 de curta duração do frontend para o backend, 20 requisições/min e 200 mil tokens/dia por conta, verificações de configuração fail-closed | A agente roda em modelos pagos atrás de uma URL pública; o avaliador do enunciado precisa de um login, não de acesso aberto (spec 004, DL-BE-002, DL-FE-001) |
+| Controle de acesso e limites de custo | Login com usuário/senha (Auth.js, contas só via CLI, sem cadastro), token HS256 de curta duração do frontend para o backend, 20 requisições/min e 200 mil tokens/dia por conta, verificações de configuração fail-closed | A agente roda em modelos pagos atrás de uma URL pública; o revisor do enunciado precisa de um login, não de acesso aberto (spec 004, DL-BE-002, DL-FE-001) |
 | Respostas sobre estoque | As ferramentas devolvem o `stock_quantity` exato; `get_product(quantity=N)` devolve `enough_stock` calculado em Python | A agente precisa dizer com certeza se N unidades estão disponíveis, nunca mandar o cliente conferir (DL-BE-003) |
 | Execução local | Docker Compose com Postgres, backend e frontend; o backend lê `backend/.env` para a chave do provedor | Quem clona o repositório roda tudo com um comando e uma chave |
 | Tratamento dos dados | ETL determinístico com regras de correção documentadas por anomalia (`docs/data-quality-report.md`), sem limpeza silenciosa | O enunciado destaca explicitamente as anomalias registradas; um agente de atendimento não deve mascarar uma data errada ou um registro de produto contraditório sem uma regra visível |
@@ -491,7 +490,7 @@ applied, on purpose"):
 - **O MCP é somente leitura e apenas local**: sem ferramentas de pedido ou de ação via MCP, e a
   demo com o Claude Desktop (#19) não foi gravada.
 - **Os cenários de prazo de devolução usam a data real atual**, então todo pedido do dataset está
-  fora do prazo de devolução hoje por construção (os pedidos são anteriores ao desafio); é uma
+  fora do prazo de devolução hoje por construção (os pedidos são anteriores ao projeto); é uma
   escolha deliberada e documentada (DL-002) em vez de uma data de referência configurável, com uma
   suíte de evals com relógio roteirizado para ainda comprovar a lógica das políticas (DL-013).
 - **As conversas de exemplo foram gravadas dirigindo a API manualmente**, não exportadas pelo

@@ -10,7 +10,7 @@ uv run python -m etl [--yes]
 |---|---|
 | `--yes` | Required when the target host is not local (`localhost`, `127.0.0.1`, `::1`) |
 
-Paths are fixed (`../challenge/data`, `../docs/data-quality-report.md`); tests call the
+Paths are fixed (`../inputs/data`, `../docs/data-quality-report.md`); tests call the
 pipeline functions with `tmp_path` instead of the CLI.
 
 **Environment** (via `app.config.Settings`):

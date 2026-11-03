@@ -6,11 +6,11 @@
 
 **Status**: Draft
 
-**Input**: Issue #22 (P2) — exploratory data analysis notebook over `challenge/data/`.
+**Input**: Issue #22 (P2) — exploratory data analysis notebook over `inputs/data/`.
 
 ## Scope
 
-A reproducible, read-only EDA notebook over the five CSVs in `challenge/data/`
+A reproducible, read-only EDA notebook over the five CSVs in `inputs/data/`
 (products, orders, order_items, customers, promotions) plus the policy PDF for context.
 It does not replace `docs/data-quality-report.md` (the authoritative, ETL-generated anomaly
 list) — it complements it with distributions, cross-table patterns, and visual evidence for
@@ -44,7 +44,7 @@ all should appear.
 
 ## Requirements
 
-- **FR-001**: Notebook MUST load the 5 CSVs directly from `challenge/data/` (read-only, no copy).
+- **FR-001**: Notebook MUST load the 5 CSVs directly from `inputs/data/` (read-only, no copy).
 - **FR-002**: Notebook MUST run deterministically with `uv run` and no API keys or network calls.
 - **FR-003**: Notebook MUST cover: table sizes/schemas, price/stock distributions, category mix,
   order value/status/payment patterns, promotion overlap, and the known anomalies from the data

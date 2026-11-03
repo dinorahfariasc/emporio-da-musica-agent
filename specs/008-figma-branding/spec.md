@@ -40,7 +40,7 @@ background, rosewood/brass tokens, store mark, Fraunces headings, branded bubble
 and error banners. Sending a message, watching tools, reading product cards and recovering from
 errors still works exactly as in 003.
 
-**Why this priority**: #18 is the visual delivery; the evaluator judges the store, not shadcn defaults.
+**Why this priority**: #18 is the visual delivery; the reviewer judges the store, not shadcn defaults.
 
 **Independent Test**: replay every 003 fixture on the mock; behaviour matches
 `specs/003-chat-web/contracts/ui-rendering.md`; 375 px has no horizontal scroll; tokens come from

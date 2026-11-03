@@ -6,7 +6,7 @@
 
 ## Summary
 
-A reproducible ETL (`uv run python -m etl`) reads the read-only challenge CSVs and policy PDF,
+A reproducible ETL (`uv run python -m etl`) reads the read-only source CSVs and policy PDF,
 validates them with Pydantic, applies the DL-002 correction rules, normalizes text to NFC and
 loads Postgres in one locked transaction that drops and recreates only the tables it owns. It
 renders a deterministic `docs/data-quality-report.md` from in-memory data, and CI checks it for
@@ -88,7 +88,7 @@ specs/001-data-foundation/
 ### Source Code
 
 ```text
-.gitattributes                    # challenge/** -text ; backend/tests/fixtures/*.csv -text      (A)
+.gitattributes                    # inputs/** -text ; backend/tests/fixtures/*.csv -text      (A)
 vercel.json                       # services.backend excludeFiles += etl/**                       (A)
 backend/
 ├── app/

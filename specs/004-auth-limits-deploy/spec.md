@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "004-auth-limits-deploy: Auth, limits, cost controls and production deploy. Replace the /login placeholder with real authentication: Auth.js credentials provider, no public sign-up, a create-user CLI/script to provision accounts. The Next.js BFF calls FastAPI with a short-lived HS256 service JWT. Per-user rate limiting (20 req/min) and daily token budget (200k tokens/day) stored in Postgres, reset at 00:00 America/Campo_Grande; a turn already streaming finishes, the next request is refused with 429. Fail-closed production config: missing/invalid required env vars must refuse to start or refuse requests. Also: Anthropic/OpenRouter workspace spend limit (documented), production deploy wiring, end-to-end verification with a real evaluator account. See docs/planning/backlog.md E5 (#10) and constitution.md principle V."
+**Input**: User description: "004-auth-limits-deploy: Auth, limits, cost controls and production deploy. Replace the /login placeholder with real authentication: Auth.js credentials provider, no public sign-up, a create-user CLI/script to provision accounts. The Next.js BFF calls FastAPI with a short-lived HS256 service JWT. Per-user rate limiting (20 req/min) and daily token budget (200k tokens/day) stored in Postgres, reset at 00:00 America/Campo_Grande; a turn already streaming finishes, the next request is refused with 429. Fail-closed production config: missing/invalid required env vars must refuse to start or refuse requests. Also: Anthropic/OpenRouter workspace spend limit (documented), production deploy wiring, end-to-end verification with a real reviewer account. See docs/planning/backlog.md E5 (#10) and constitution.md principle V."
 
 **Merge note (2026-11-01)**: a parallel draft of this spec (`docs/10-auth-limits-spec` branch) was
 reviewed and folded in: the error-response shape here now matches the existing `#4` chat-stream
@@ -18,9 +18,9 @@ and clock-skew tolerance for the service credential were also adopted from that 
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - An evaluator logs in and chats (Priority: P1)
+### User Story 1 - An reviewer logs in and chats (Priority: P1)
 
-An evaluator (the person reviewing this take-home, or the candidate demoing it) opens the
+An reviewer (the person reviewing this project, or the candidate demoing it) opens the
 production site, is sent to a login page, enters the username and password they were given out of
 band, and reaches the chat. Reloading the page or returning later keeps them signed in until the
 session naturally expires or they sign out.
@@ -34,23 +34,23 @@ straight to the chat instead of asking again.
 
 **Acceptance Scenarios**:
 
-1. **Given** no active session, **When** the evaluator opens the chat URL, **Then** they are
+1. **Given** no active session, **When** the reviewer opens the chat URL, **Then** they are
    redirected to `/login` with the chat destination preserved.
-2. **Given** a provisioned account, **When** the evaluator submits the correct username and
+2. **Given** a provisioned account, **When** the reviewer submits the correct username and
    password, **Then** they land on the chat and can send a message that gets a real answer.
-3. **Given** a provisioned account, **When** the evaluator submits a wrong password, **Then**
+3. **Given** a provisioned account, **When** the reviewer submits a wrong password, **Then**
    login is refused with a message that does not reveal whether the username exists.
-4. **Given** an active session, **When** the evaluator reloads or reopens the browser later within
+4. **Given** an active session, **When** the reviewer reloads or reopens the browser later within
    the session lifetime, **Then** they are still signed in.
-5. **Given** an active session, **When** the evaluator signs out, **Then** the chat is no longer
+5. **Given** an active session, **When** the reviewer signs out, **Then** the chat is no longer
    reachable until they sign in again.
 
 ---
 
-### User Story 2 - The project owner provisions an evaluator account (Priority: P1)
+### User Story 2 - The project owner provisions an reviewer account (Priority: P1)
 
 Before sharing the production URL, the project owner runs a command-line step to create a login
-for a named evaluator, without exposing any public sign-up page.
+for a named reviewer, without exposing any public sign-up page.
 
 **Why this priority**: this is the only way an account comes into existence; without it, Story 1
 cannot happen. There is no self-service registration (constitution V: no public sign-up).
@@ -154,7 +154,7 @@ is silently treated as authenticated.
    **When** the backend evaluates it, **Then** it is rejected and never treated as coming from an
    authenticated user.
 3. **Given** the production environment variables are all present and valid, **When** the site is
-   exercised end-to-end by a real evaluator account, **Then** login, chat, rate limiting and the
+   exercised end-to-end by a real reviewer account, **Then** login, chat, rate limiting and the
    daily budget all behave as specified above in the live deployment, not only in local tests.
 
 ---
@@ -172,7 +172,7 @@ is silently treated as authenticated.
   not per tab/session, so both tabs draw from the same counters.
 - The database used for login/limits is briefly unreachable: the system must fail closed (refuse
   the request) rather than fail open (let every request through unauthenticated or unmetered).
-- An evaluator account's password is forgotten: there is no self-service reset; the project owner
+- An reviewer account's password is forgotten: there is no self-service reset; the project owner
   re-provisions the account (acceptable for this scale, see Assumptions).
 - Repeated wrong passwords for one username (brute force / typo loop): after 5 failed attempts
   within 15 minutes, further sign-in attempts for that username are refused for 15 minutes, even
@@ -230,13 +230,13 @@ is silently treated as authenticated.
 - **FR-016**: The production deployment MUST document the environment variables and deploy/redeploy
   steps needed to run this feature, and the provider-side workspace spend limit used as a backstop
   (configured outside this repo, documented here).
-- **FR-017**: The production deployment MUST be verified end-to-end with a real evaluator account:
+- **FR-017**: The production deployment MUST be verified end-to-end with a real reviewer account:
   login, a real chat answer, a rate-limit refusal, and (where practical without waiting a full day)
   a simulated daily-budget refusal.
 
 ### Key Entities
 
-- **Account**: an evaluator's login identity — username, hashed password, created-at. One or a
+- **Account**: an reviewer's login identity — username, hashed password, created-at. One or a
   handful of these exist for the whole deployment; there is no self-service lifecycle beyond
   creation and (via re-running the CLI or a manual deletion) removal.
 - **Rate/budget counters**: per-account request count for the current minute and per-account
@@ -255,7 +255,7 @@ is silently treated as authenticated.
 
 - **SC-001**: An unauthenticated visit to any chat URL in production reaches a login page 100% of
   the time; no chat content or tool result is ever visible before sign-in.
-- **SC-002**: A provisioned evaluator can go from the login page to a real, working answer in
+- **SC-002**: A provisioned reviewer can go from the login page to a real, working answer in
   production in under 1 minute.
 - **SC-003**: Across 25 rapid requests from one account within a minute, no more than 20 succeed;
   the rest receive a clear "try again" response instead of an error page or a hang.
@@ -264,14 +264,14 @@ is silently treated as authenticated.
   same account.
 - **SC-005**: Simulating a missing or invalid inter-service secret in a non-production check shows
   100% of chat requests rejected, with zero requests treated as authenticated.
-- **SC-006**: The production URL, shared with an evaluator who has never seen the project, lets
+- **SC-006**: The production URL, shared with an reviewer who has never seen the project, lets
   them sign in and have a working conversation without the project owner needing to be present.
 - **SC-007**: Two different signed-in accounts that happen to use the same conversation id never
   see each other's verified order data, demonstrated by a test with two accounts and one shared id.
 
 ## Assumptions
 
-- Scale is one to a handful of named evaluator accounts (this is a solo take-home deliverable, not
+- Scale is one to a handful of named reviewer accounts (this is a solo project, not
   a multi-tenant product); no self-service registration, password reset, or account-management UI
   is in scope. The project owner re-provisions an account by re-running the CLI step if needed.
 - "Fail closed" means: on missing/invalid required config, prefer refusing traffic over guessing a
@@ -287,5 +287,5 @@ is silently treated as authenticated.
   repository; this feature only requires it to be configured and the value documented, not
   enforced in code.
 - Out of scope for this feature: multi-factor auth, OAuth/social login, role-based permissions
-  (all evaluator accounts are equivalent), and per-request (as opposed to per-minute/per-day)
+  (all reviewer accounts are equivalent), and per-request (as opposed to per-minute/per-day)
   pricing controls.

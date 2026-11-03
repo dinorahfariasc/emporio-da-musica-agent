@@ -6,7 +6,7 @@
 
 **Status**: Draft (revised after the PR #27 QA + senior review: scope cut to 2 implementation PRs)
 
-**Input**: User description: "Data foundation (epic #5): reproducible ETL that validates the challenge CSVs, applies the DL-002 correction rules, normalizes text to NFC, and loads the store database (catalog, orders, order items, customers, promotions); generates docs/data-quality-report.md listing every anomaly, rule applied and counts; chunks the policy PDF per section (number/title metadata) and indexes products (name + specs, + description except IDs 135–144) with Portuguese full-text + vector search; embeddings behind an interface (real provider | deterministic fake), query-embedding cache, full-text fallback when the embeddings provider fails; seed command works against any database URL (local and production)."
+**Input**: User description: "Data foundation (epic #5): reproducible ETL that validates the source CSVs, applies the DL-002 correction rules, normalizes text to NFC, and loads the store database (catalog, orders, order items, customers, promotions); generates docs/data-quality-report.md listing every anomaly, rule applied and counts; chunks the policy PDF per section (number/title metadata) and indexes products (name + specs, + description except IDs 135–144) with Portuguese full-text + vector search; embeddings behind an interface (real provider | deterministic fake), query-embedding cache, full-text fallback when the embeddings provider fails; seed command works against any database URL (local and production)."
 
 **Source of truth**: GitHub issue #5 (scope and acceptance criteria), DL-001 (findings), DL-002 (correction rules).
 
@@ -23,7 +23,7 @@
 
 The "users" of this feature are (a) the developer/operator who seeds an environment, (b) the
 agent tools built in later epics (#6), which read clean facts and search the policy manual and
-the catalog, and (c) the challenge evaluator, who reads the data quality report.
+the catalog, and (c) the reviewer, who reads the data quality report.
 
 Delivery: **PR A** = US1 + US2 + US5 safety (store data, report, safe seed command).
 **PR B** = US3 + US4 + production seed (retrieval).
@@ -31,7 +31,7 @@ Delivery: **PR A** = US1 + US2 + US5 safety (store data, report, safe seed comma
 ### User Story 1 - Seed a clean, trustworthy store database (Priority: P1) · PR A
 
 An operator runs one seed command against a target database. The command reads the read-only
-challenge files, validates every row, applies the documented correction rules, normalizes text,
+source files, validates every row, applies the documented correction rules, normalizes text,
 and loads catalog, customers, orders, order items and promotions. Running it again yields the
 exact same database.
 
@@ -70,7 +70,7 @@ with the committed `docs/data-quality-report.md`.
 
 **Acceptance Scenarios**:
 
-1. **Given** the challenge dataset, **When** the report is rendered, **Then** it lists each anomaly type with its description, rule, affected IDs and count, and every DL-001 finding maps to an anomaly type or to "enforced by validation".
+1. **Given** the dataset, **When** the report is rendered, **Then** it lists each anomaly type with its description, rule, affected IDs and count, and every DL-001 finding maps to an anomaly type or to "enforced by validation".
 2. **Given** an unchanged dataset, **When** the report is rendered in CI, **Then** it is byte-identical to the committed report.
 3. **Given** a row that fails schema validation, **When** the seed runs, **Then** it fails with a message naming the file, row and field, and the database is unchanged.
 
@@ -82,7 +82,7 @@ Agent tools search the store policy manual and get back the relevant section(s),
 section number, title and parent breadcrumb, so answers can cite "§4 > 4.1".
 
 **Why this priority**: policy questions (returns, shipping, warranty, payment) are a core part of
-the challenge; retrieval quality drives answer quality.
+the project; retrieval quality drives answer quality.
 
 **Independent Test**: index the manual with the deterministic fake embedder; run fixed queries
 and check the top results.
@@ -146,7 +146,7 @@ against production with confirmation (succeeds).
 - Embeddings provider rate limit (Gemini free tier: 100 requests and 30K tokens per minute, 1,000 requests per day) during seeding: requests are batched by token budget and `Retry-After` is honoured; if it still fails, the seed aborts with the database unchanged.
 - Another feature's table has a foreign key to an owned table: the seed fails rather than touching that table.
 - Two seeds started at the same time: the second waits for the first (lock) and then runs on its own.
-- The source CSVs use CRLF line endings and the last row has no trailing newline: parsed values never carry a trailing `\r`, and the last row is read like any other. Git never rewrites the bytes of the challenge files.
+- The source CSVs use CRLF line endings and the last row has no trailing newline: parsed values never carry a trailing `\r`, and the last row is read like any other. Git never rewrites the bytes of the source files.
 
 ## Requirements *(mandatory)*
 
@@ -154,7 +154,7 @@ against production with confirmation (succeeds).
 
 **Ingestion and validation**
 
-- **FR-001**: The system MUST read the challenge CSVs and policy PDF from `challenge/` without modifying them, and the repository MUST keep their bytes unchanged (no line-ending conversion).
+- **FR-001**: The system MUST read the source CSVs and policy PDF from `inputs/` without modifying them, and the repository MUST keep their bytes unchanged (no line-ending conversion).
 - **FR-002**: The system MUST validate every row against a typed schema (types, required fields, allowed status/payment values, per-category specs keys, referential integrity between orders, items, customers, products, categories and promotions) before loading anything. Empty cells MUST become NULL for nullable columns and MUST be a validation error for required ones.
 - **FR-003**: On any validation or configuration error the system MUST exit with a non-zero code and a message naming the file, row and field (or the setting), leaving the target database unchanged.
 - **FR-004**: The system MUST normalize all text fields to Unicode NFC before storing, comparing or indexing, and CSV parsing MUST NOT leave line-ending characters in values.
