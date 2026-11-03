@@ -195,3 +195,35 @@ def test_history_window_never_starts_with_the_assistant_and_merges_runs():
     assert pairs[0][0] == "human"
     assert [r for r, _ in pairs] == ["human"]  # [a0, u1, u2] -> leading ai dropped, runs merged
     assert all(len(t) <= 5 for _, t in pairs)
+
+
+def test_history_keeps_the_items_of_an_order_looked_up_earlier():
+    from app.api.chat import prepare_history
+
+    order = {
+        "type": "tool-get_order_status",
+        "state": "output-available",
+        "output": {
+            "order_id": 7,
+            "status": "delivered",
+            "items": [{"name": "Shelby SU-21S Soprano Sunburst", "quantity": 1}],
+        },
+    }
+    request = p.ChatRequest.model_validate(
+        {
+            "id": "c",
+            "trigger": "submit-message",
+            "messages": [
+                {"id": "u0", "role": "user", "parts": [{"type": "text", "text": "pedido 7"}]},
+                {
+                    "id": "a0",
+                    "role": "assistant",
+                    "parts": [order, {"type": "text", "text": "Encontrei o pedido."}],
+                },
+                {"id": "u1", "role": "user", "parts": [{"type": "text", "text": "e agora?"}]},
+            ],
+        }
+    )
+    pairs = prepare_history(request, Settings(_env_file=None))
+    assert "Shelby SU-21S Soprano Sunburst x1" in pairs[1][1]
+    assert pairs[1][1].startswith("Encontrei o pedido.")

@@ -158,6 +158,10 @@ The Figma file is ready and #18 applies it. Spec: `specs/008-figma-branding`. Br
 
 Keep entries to 3–5 lines (Done / Fixed / Next). Condense older ones once there are ~15.
 
+### 2026-11-03 — Specific-product answers and order context (DL-BE-009)
+- **Fixed:** payment calculation by name (no more false "Não consegui consultar agora" tag when the model asks for installments in the same step as get_product); a question about one product no longer lists every promotion (prompt + tool docstring); the items of an order looked up earlier now survive in the history, so Melody stops guessing the product from earlier chat. Backend rebuilt locally, 388 tests pass.
+- **Next:** commit on its own branch/PR (not on `docs/project-overview`); screenshots for the overview PDF.
+
 ### 2026-11-03 — Issues review, models documented
 - **Done:** commented all open issues with the decision; closed #16 (Playwright) and #17 (routing bench) as not planned (DL-DOCS-002); "Models used" section in both READMEs; empty-alternatives wording fix in the prompt (pushed on `feat/mcp-read-only`, no PR yet).
 - **Next:** open the PR so CI runs; fix issue numbers in README "Limitations" (HITL is #14, judge is #23); commit the uncommitted UI changes (Melody avatar, FAB, greeting bubble, refresh icon).

@@ -54,3 +54,19 @@ async def test_several_promoted_units_keep_the_promo_and_no_pix(tool_ctx):
 
     assert options.amount_brl == D("878.40")  # 2 × R$ 439,20
     assert not options.pix.applies
+
+
+async def test_product_can_be_given_by_name_for_several_units(tool_ctx):
+    by_name = await calculate_payment_options(tool_ctx, name="Takamine GD20", quantity=2)
+    by_id = await calculate_payment_options(tool_ctx, product_id=95, quantity=2)
+
+    assert by_name.amount_brl == by_id.amount_brl
+
+
+async def test_unknown_name_is_not_found_and_no_argument_is_invalid(tool_ctx):
+    with pytest.raises(ToolError) as missing:
+        await calculate_payment_options(tool_ctx, name="zzzz produto inexistente")
+    assert missing.value.code in ("not_found", "invalid_input")
+    with pytest.raises(ToolError) as empty:
+        await calculate_payment_options(tool_ctx)
+    assert empty.value.code == "invalid_input"

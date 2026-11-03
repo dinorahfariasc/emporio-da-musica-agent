@@ -801,3 +801,29 @@ a benchmark nobody will read before the demo).
 
 **Role of AI.** Claude Code listed what was documented and wrote the section; the owner decided
 what to drop.
+
+## DL-BE-009 — Specific-product answers stay specific; order items survive in the history (2026-11-03)
+
+**Problem.** Two failures in a hand-driven chat. (1) "Pode ser o Tagima, dá pra parcelar em quantas
+vezes? tem algum desconto?" made the model call `get_active_promotions` with no filter, so the
+answer carried the cards of every discounted product. (2) After a return request for order 7, the
+model said the product was the Tagima discussed earlier: the history sent to the model holds text
+parts only, so the items of an order looked up in a previous turn were lost.
+
+**Decision.**
+
+| Choice | Why |
+|---|---|
+| Prompt: for a specific product answer only about it and read its discount from `get_product`; `get_active_promotions` only for general "what is on sale?" questions (also in the tool docstring and the `promotions` intent block) | The discount of one product is already in `get_product`; the all-products list is what produced the unrelated cards |
+| Prompt: the product of an order only comes from `get_order_status`; never assume it is the product discussed earlier | The customer may have bought something else |
+| `prepare_history` appends a short note (`[Pedidos consultados: pedido 7 (delivered): ...]`, at most 400 chars) to assistant turns that called `get_order_status` | The model sees only text parts; this keeps the order's items across turns with no new state or storage |
+| `calculate_payment_options` accepts `name` besides `product_id` (resolved with the same lookup as `get_product`; an ambiguous name is `invalid_input`) | The model calls it in the same step as `get_product`, before it knows the id. The call failed with `invalid_input`, the model retried and answered correctly, but the UI showed "Não consegui consultar agora" on a correct answer |
+| Prompt: answer installments in one or two lines (PIX plus "até Nx de R$ X sem juros"), no intermediate examples, and mention the minimum instalment only when the customer asks for more instalments than allowed | The minimum instalment is an internal rule; repeating it and listing "alguns exemplos" read as padding |
+
+Checked live on the local stack: the Tagima question now calls only `get_product` and
+`calculate_payment_options`, a general discount question still returns the promoted products, and
+"qual era o produto desse pedido?" answers from the earlier lookup. Unit test for the history note
+in `tests/test_chat_api.py`.
+
+**Role of AI.** Claude Code reproduced both failures through the API, wrote the fixes and the test;
+Dinorah reported the cases and the expected behaviour.
