@@ -1,4 +1,5 @@
 import { Music } from "lucide-react";
+import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
@@ -52,19 +53,19 @@ export function Logo({ name, subtitle, className, nameClassName, subtitleClassNa
   );
 }
 
-type MelodyAvatarProps = { className?: string; iconClassName?: string };
+type MelodyAvatarProps = { className?: string };
 
-// `.avatar`: 32 px circle, accent/subtle with the note in accent/on-subtle.
-export function MelodyAvatar({ className, iconClassName }: MelodyAvatarProps) {
+// `.avatar`: 32 px circle with Melody's face. Decorative: the adjacent name names her.
+export function MelodyAvatar({ className }: MelodyAvatarProps) {
   return (
     <span
       aria-hidden
       className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-full bg-brand-subtle text-on-brand-subtle",
+        "relative size-8 shrink-0 overflow-hidden rounded-full bg-brand-subtle",
         className,
       )}
     >
-      <Music className={cn("size-4", iconClassName)} strokeWidth={2.2} />
+      <Image src="/melody.jpg" alt="" fill sizes="72px" className="object-cover" />
     </span>
   );
 }

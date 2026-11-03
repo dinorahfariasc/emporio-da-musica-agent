@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, SquarePen } from "lucide-react";
+import { LogOut, RefreshCw } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 import { LanguageSwitch } from "@/components/chat/language-switch";
@@ -36,7 +36,7 @@ export function ChatHeader({ onNewChat }: { onNewChat?: () => void }) {
             title={app.newChat}
             onClick={onNewChat}
           >
-            <SquarePen aria-hidden className="size-5 md:size-[18px]" />
+            <RefreshCw aria-hidden className="size-5 md:size-[18px]" />
           </Button>
         ) : null}
         <LanguageSwitch />

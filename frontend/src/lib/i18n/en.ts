@@ -326,6 +326,7 @@ export const en: Messages = {
   widget: {
     open: "Open chat with Melody",
     openUnread: "Open chat with Melody (new message)",
+    greeting: "Hi, I'm Melody, how can I help?",
     minimize: "Minimise chat",
     maximize: "Maximise chat",
     restore: "Restore chat size",
