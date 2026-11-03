@@ -80,24 +80,52 @@ def _text(message: p.UIMessage) -> str:
     return "".join(part.text for part in message.parts if isinstance(part, p.TextUIPart))
 
 
+_NOTE_MAX = 400
+
+
+def _order_note(message: p.UIMessage) -> str:
+    """The orders an assistant message looked up, as plain text. The model only sees text parts
+    of the history, so without this it forgets which product an order holds and may guess it
+    from whatever was discussed earlier in the chat."""
+    notes: list[str] = []
+    for part in message.parts:
+        if not isinstance(part, dict) or part.get("type") != "tool-get_order_status":
+            continue
+        out = part.get("output")
+        if not isinstance(out, dict) or "order_id" not in out:
+            continue
+        items = ", ".join(
+            f"{i.get('name')} x{i.get('quantity')}"
+            for i in out.get("items") or []
+            if isinstance(i, dict)
+        )
+        notes.append(f"pedido {out.get('order_id')} ({out.get('status')}): {items}")
+    return f"\n[Pedidos consultados: {'; '.join(notes)}]"[:_NOTE_MAX] if notes else ""
+
+
 def prepare_history(request: p.ChatRequest, settings: Settings) -> list[tuple[str, str]]:
     """(role, text) pairs: regenerate drops the trailing answer, history is trimmed, the latest
-    user text is truncated."""
+    user text is truncated. Assistant turns also carry the orders they looked up."""
     messages = list(request.messages)
     if request.trigger == "regenerate-message" and messages and messages[-1].role == "assistant":
         messages.pop()
     pairs = [
-        ("human" if m.role == "user" else "ai", _text(m))
+        (
+            "human" if m.role == "user" else "ai",
+            _text(m)[: settings.input_max_chars]
+            + (_order_note(m) if m.role == "assistant" else ""),
+        )
         for m in messages
         if m.role in ("user", "assistant") and _text(m).strip()
     ][-settings.history_max_messages :]
     merged: list[tuple[str, str]] = []
-    for role, text in ((r, t[: settings.input_max_chars]) for r, t in pairs):
+    for role, text in pairs:
         if merged and merged[-1][0] == role:
             merged[-1] = (role, f"{merged[-1][1]}\n{text}")
         elif merged or role == "human":  # a window never starts with the assistant
             merged.append((role, text))
-    return [(role, text[: settings.input_max_chars]) for role, text in merged]
+    extra = {"human": 0, "ai": _NOTE_MAX}
+    return [(role, text[: settings.input_max_chars + extra[role]]) for role, text in merged]
 
 
 def _latest_user_text(request: p.ChatRequest, settings: Settings) -> str:

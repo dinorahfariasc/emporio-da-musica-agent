@@ -223,7 +223,11 @@ async def find_similar_products(
 
 @tool
 async def get_active_promotions(ctx: ToolContext, category_id: int | None = None) -> ProductsResult:
-    """List products with an active promotion, with original price, promo price and percent."""
+    """List ALL products with an active promotion (original price, promo price, percent).
+
+    Only for general questions such as "which products are on sale?". For the discount of one
+    specific product, read `promo_price_brl` and `discount_percent` from get_product instead.
+    """
     async with ctx.pool.connection() as conn:
         async with conn.cursor() as cur:
             await cur.execute(

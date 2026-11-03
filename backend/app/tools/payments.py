@@ -7,7 +7,7 @@ from pydantic import Field
 
 from app.policies.payments import PaymentOptions, payment_options
 from app.tools.context import ToolContext, ToolError
-from app.tools.products import product_cards, views_by_ids
+from app.tools.products import get_product, product_cards, views_by_ids
 from app.tools.registry import tool
 
 
@@ -17,11 +17,18 @@ async def calculate_payment_options(
     product_id: int | None = None,
     amount_brl: Decimal | None = None,
     quantity: Annotated[int, Field(ge=1)] = 1,
+    name: str | None = None,
 ) -> PaymentOptions:
     """Compute PIX and installment options for a product (uses its current price, times
-    `quantity` units) or an amount."""
+    `quantity` units) or an amount. Identify the product by `product_id`, or by `name` when the
+    id is not known yet (for example, in the same step as get_product)."""
+    if product_id is None and amount_brl is None and (name or "").strip():
+        found = (await get_product(ctx, name=name)).product
+        if found is None:
+            raise ToolError("invalid_input", "ambiguous name: call get_product and pass product_id")
+        product_id = found.product_id
     if product_id is None and amount_brl is None:
-        raise ToolError("invalid_input", "give product_id or amount_brl")
+        raise ToolError("invalid_input", "give product_id, name or amount_brl")
     if product_id is None:
         if amount_brl <= 0:  # type: ignore[operator]
             raise ToolError("invalid_input", "amount_brl must be positive")
